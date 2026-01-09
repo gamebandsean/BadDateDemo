@@ -19,12 +19,12 @@ function ChatPhase() {
     scrollToBottom()
   }, [chatMessages])
   
-  // Initial greeting from Dater
+  // Initial greeting from Dater - asks what they want to know
   useEffect(() => {
     if (chatMessages.length === 0 && !greetingSentRef.current) {
       greetingSentRef.current = true
       setTimeout(() => {
-        addChatMessage(`Hey! 👋 Nice to match with you! I'm ${selectedDater.name}. What brings you to Bad Date tonight?`, false)
+        addChatMessage(`Hey! 👋 So, what do you want to know about me? Ask away!`, false)
       }, 1000)
     }
   }, [])
@@ -79,10 +79,8 @@ function ChatPhase() {
           <div className="chat-profile">
             <img src={selectedDater.photo} alt={selectedDater.name} />
             <div className="profile-info">
-              <h3>{selectedDater.name}</h3>
-              <span className="online-status">
-                <span className="status-dot" /> Online
-              </span>
+              <h3>{selectedDater.name}, {selectedDater.age}</h3>
+              <span className="profile-archetype">{selectedDater.archetype}</span>
             </div>
           </div>
           <div className="chat-actions">
@@ -97,12 +95,24 @@ function ChatPhase() {
           </div>
         </div>
         
-        <div className="chat-messages">
-          <div className="chat-intro">
-            <span className="match-badge">🎉 It's a Match!</span>
-            <p>Chat with {selectedDater.name} to learn more about them before your date. The more you discover, the better you can shape your avatar!</p>
+        {/* Concise character card */}
+        <div className="character-card">
+          <div className="card-row">
+            <span className="card-label">📍</span>
+            <span>{selectedDater.hometown}</span>
           </div>
-          
+          <div className="card-row">
+            <span className="card-label">💫</span>
+            <span>{selectedDater.tagline}</span>
+          </div>
+          <div className="card-traits">
+            {selectedDater.talkingTraits.slice(0, 3).map((trait, i) => (
+              <span key={i} className="mini-trait">{trait}</span>
+            ))}
+          </div>
+        </div>
+        
+        <div className="chat-messages">
           <AnimatePresence>
             {chatMessages.map((msg) => (
               <motion.div
@@ -147,7 +157,7 @@ function ChatPhase() {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={`Ask ${selectedDater.name} something...`}
+            placeholder={`Ask ${selectedDater.name} a question...`}
             autoFocus
             disabled={isTyping}
           />
@@ -164,18 +174,19 @@ function ChatPhase() {
       </div>
       
       <div className="chat-tips">
-        <h4>💡 Pro Tips</h4>
+        <h4>🔍 Interrogate Your Date</h4>
         <ul>
-          <li>Ask about their job, interests, and dealbreakers</li>
-          <li>Discover what they're looking for in a partner</li>
-          <li>Use this intel to shape your avatar later!</li>
+          <li>Ask about their background & upbringing</li>
+          <li>Discover their values and beliefs</li>
+          <li>Find out their dealbreakers</li>
+          <li>Learn what they're looking for</li>
         </ul>
         
         <div className="api-status">
           {import.meta.env.VITE_ANTHROPIC_API_KEY ? (
-            <span className="status-active">🤖 AI-Powered Responses</span>
+            <span className="status-active">🤖 AI-Powered</span>
           ) : (
-            <span className="status-fallback">📝 Demo Mode (add API key for AI)</span>
+            <span className="status-fallback">📝 Demo Mode</span>
           )}
         </div>
       </div>

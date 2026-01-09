@@ -45,20 +45,47 @@
   margin-bottom: 2px;
 }
 
-.online-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.profile-archetype {
   font-size: 0.85rem;
-  color: var(--accent-mint);
+  color: var(--accent-gold);
+  font-weight: 500;
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  background: var(--accent-mint);
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
+/* Character Card */
+.character-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.card-label {
+  font-size: 1rem;
+}
+
+.card-traits {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mini-trait {
+  background: rgba(255, 77, 109, 0.15);
+  color: var(--accent-pink);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .chat-messages {
