@@ -25,7 +25,7 @@ export async function getChatResponse(messages, systemPrompt) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 200,
+        max_tokens: 150,
         system: systemPrompt,
         messages: messages.map(msg => ({
           role: msg.role,
@@ -114,13 +114,12 @@ ${attributesList}
 CONTEXT: You're on a first date at a nice restaurant. You're charming and engaged.
 
 RULES:
-- Keep responses brief (1-2 sentences max)
-- Be warm, friendly, and conversational
-- Answer questions your date asks
-- Ask follow-up questions back to your date
-- If you have specific traits, naturally mention them when relevant
-- Stay light and flirty - it's a first date!
-- Don't be mysterious or evasive - engage openly`
+- Keep responses VERY brief (1 short sentence only)
+- Be warm and conversational
+- Answer questions concisely
+- Occasionally ask a brief follow-up question
+- If you have traits, mention them naturally but briefly
+- Stay light - it's a first date!`
   
   // Convert conversation history - from Avatar's perspective, Dater messages are "user"
   let messages = conversationHistory.map(msg => ({

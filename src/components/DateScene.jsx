@@ -118,19 +118,19 @@ function DateScene() {
       if (greetingStarted) return
       greetingStarted = true
       
-      await new Promise(r => setTimeout(r, 1500))
-      if (!isMounted) return
-      
-      // Double-check no messages were added while we waited
-      const currentMessages = useGameStore.getState().dateConversation
-      if (currentMessages.length > 0) return
-      
-      const greeting = `So... here we are! I have to say, ${avatar.name}, you seem really interesting. What made you want to meet up tonight?`
-      addDateMessage('dater', greeting)
-      lastSpeakerRef.current = 'dater'
-      
-      // Avatar responds after a short delay
-      await new Promise(r => setTimeout(r, 2500))
+        await new Promise(r => setTimeout(r, 2000))
+        if (!isMounted) return
+        
+        // Double-check no messages were added while we waited
+        const currentMessages = useGameStore.getState().dateConversation
+        if (currentMessages.length > 0) return
+        
+        const greeting = `So... here we are! I have to say, ${avatar.name}, you seem really interesting. What made you want to meet up tonight?`
+        addDateMessage('dater', greeting)
+        lastSpeakerRef.current = 'dater'
+        
+        // Avatar responds after a delay (slower for readability)
+        await new Promise(r => setTimeout(r, 4000))
       if (!isMounted) return
       
       const avatarResponse = await getAvatarDateResponse(avatar, selectedDater, [
@@ -147,7 +147,7 @@ function DateScene() {
       startConversation()
     }
     
-    // Set up continuous conversation - runs every 5-8 seconds
+    // Set up continuous conversation - runs every 8-12 seconds (slower for readability)
     const runConversation = async () => {
       if (conversationActiveRef.current && isMounted) {
         await generateNextTurn()
@@ -156,8 +156,8 @@ function DateScene() {
     
     // Start conversation loop after initial exchange
     const startDelay = setTimeout(() => {
-      conversationIntervalRef.current = setInterval(runConversation, 5000 + Math.random() * 3000)
-    }, 6000)
+      conversationIntervalRef.current = setInterval(runConversation, 8000 + Math.random() * 4000)
+    }, 8000)
     
     return () => {
       isMounted = false
