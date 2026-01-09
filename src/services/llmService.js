@@ -77,7 +77,16 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
   
   // Special instruction if a new attribute was just revealed
   const latestAttrContext = latestAttribute
-    ? `\n\n⚠️ JUST REVEALED: Your date just revealed they "${latestAttribute}". React to this revelation with 35% more intensity than normal - be slightly more melodramatic in your response (surprised, delighted, concerned, or intrigued depending on how it fits your personality and dealbreakers). But still keep it to 1-2 sentences.`
+    ? `\n\n🚨 BREAKING NEWS - YOUR DATE JUST REVEALED: "${latestAttribute}"
+
+YOU MUST REACT TO THIS DIRECTLY AND DRAMATICALLY:
+- This is a BIG moment - react with genuine shock, excitement, horror, fascination, or delight
+- Actually acknowledge what they just said - don't ignore it!
+- If it's weird/alarming (like "giant spider"), be visibly taken aback or intrigued
+- If it's positive for you, show real excitement
+- If it hits a dealbreaker, show visible concern or discomfort
+- Your reaction should be 2-3x more intense than your normal responses
+- Still keep it to 1-2 sentences, but make them COUNT`
     : ''
   
   const fullPrompt = systemPrompt + avatarContext + latestAttrContext

@@ -232,15 +232,7 @@ function DateScene() {
     return () => clearInterval(timer)
   }, [tickTimer])
   
-  // Transition to hot seat after applying
-  useEffect(() => {
-    if (phase === 'applying') {
-      setTimeout(() => {
-        selectRandomHotSeat()
-        setPhase('hotseat')
-      }, 6000)
-    }
-  }, [phase, selectRandomHotSeat, setPhase])
+  // Single player: just return to smalltalk after applying (handled in store)
   
   const handleSubmitAttribute = (e) => {
     e.preventDefault()
