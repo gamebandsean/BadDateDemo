@@ -266,7 +266,7 @@ function DateScene() {
             } : {}}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <div className="compatibility-label">Compatibility</div>
+            <div className="compatibility-label">💗 Compatibility</div>
             <motion.div 
               className="compatibility-value"
               animate={compatibilityFlash ? {
