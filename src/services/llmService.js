@@ -166,6 +166,14 @@ RULES:
 - Just speak naturally - avoid *action descriptions* like *smiles* or *leans in*
 - Only use an action tag VERY rarely (once every 5+ messages at most)
 - Stay light - it's a first date!`
+
+  // DEBUG: Log the prompt being sent
+  console.log('🤖 AVATAR PROMPT:', {
+    hasRealAttributes,
+    realAttributes,
+    latestAttribute,
+    promptPreview: behaviorInstructions.substring(0, 100) + '...'
+  })
   
   // Convert conversation history - from Avatar's perspective, Dater messages are "user"
   let messages = conversationHistory.map(msg => ({

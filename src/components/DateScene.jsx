@@ -211,14 +211,18 @@ function DateScene() {
       if (nextSpeaker === 'dater') {
         // Get Dater's response via LLM (with heightened reaction only if reactions left)
         const daterAttr = reactionsLeft > 0 ? currentLatestAttr : null
+        console.log(`🎭 DATER turn | reactionsLeft: ${reactionsLeft} | latestAttr: ${daterAttr}`)
         response = await getDaterDateResponse(selectedDater, currentAvatar, currentConversation, daterAttr)
+        console.log(`🎭 DATER response:`, response ? response.substring(0, 80) + '...' : 'NULL/FAILED')
         // Consume one heightened reaction after Dater speaks
         if (response && reactionsLeft > 0) {
           useGameStore.getState().consumeDaterReaction()
         }
       } else {
         // Get Avatar's response via LLM (with latest attribute to work in subtly)
+        console.log(`🤖 AVATAR turn | latestAttr: ${currentLatestAttr} | attributes:`, currentAvatar.attributes)
         response = await getAvatarDateResponse(currentAvatar, selectedDater, currentConversation, currentLatestAttr)
+        console.log(`🤖 AVATAR response:`, response ? response.substring(0, 80) + '...' : 'NULL/FAILED')
       }
       
       if (response && conversationActiveRef.current) {
@@ -233,20 +237,18 @@ function DateScene() {
           }
         }
       } else if (conversationActiveRef.current) {
-        // Fallback to scripted dialogue - use expected speaker
-        const fallback = getFallbackDateDialogue(nextSpeaker, currentAvatar, selectedDater)
-        addDateMessage(fallback.speaker, fallback.message)
-        lastSpeakerRef.current = fallback.speaker
+        // LLM FAILED - show error instead of silent fallback
+        console.error(`❌ LLM FAILED for ${nextSpeaker} - NO FALLBACK (debugging mode)`)
+        addDateMessage(nextSpeaker, `[LLM ERROR: ${nextSpeaker} response failed - check console]`)
+        lastSpeakerRef.current = nextSpeaker
       }
     } catch (error) {
-      console.error('Error generating conversation:', error)
-      // Fallback - use expected speaker
+      console.error('❌ CONVERSATION ERROR:', error)
+      // Show error instead of silent fallback
       const nextSpeaker = lastSpeakerRef.current === 'dater' ? 'avatar' : 'dater'
-      const currentAvatar = useGameStore.getState().avatar
-      const fallback = getFallbackDateDialogue(nextSpeaker, currentAvatar, selectedDater)
       if (conversationActiveRef.current) {
-        addDateMessage(fallback.speaker, fallback.message)
-        lastSpeakerRef.current = fallback.speaker
+        addDateMessage(nextSpeaker, `[ERROR: ${error.message || 'LLM call failed'} - check console]`)
+        lastSpeakerRef.current = nextSpeaker
       }
     }
     
