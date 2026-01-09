@@ -78,10 +78,20 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory) {
   const fullPrompt = systemPrompt + avatarContext
   
   // Convert conversation history to Claude format
-  const messages = conversationHistory.map(msg => ({
+  let messages = conversationHistory.map(msg => ({
     role: msg.speaker === 'dater' ? 'assistant' : 'user',
     content: msg.message,
   }))
+  
+  // Claude requires at least one message - add a prompt if empty
+  if (messages.length === 0) {
+    messages = [{ role: 'user', content: 'The date just started. Say something to break the ice!' }]
+  }
+  
+  // Ensure conversation ends with user message (Avatar's turn just happened)
+  if (messages[messages.length - 1]?.role === 'assistant') {
+    messages.push({ role: 'user', content: '...' })
+  }
   
   const response = await getChatResponse(messages, fullPrompt)
   return response
@@ -113,10 +123,20 @@ RULES:
 - Don't be mysterious or evasive - engage openly`
   
   // Convert conversation history - from Avatar's perspective, Dater messages are "user"
-  const messages = conversationHistory.map(msg => ({
+  let messages = conversationHistory.map(msg => ({
     role: msg.speaker === 'avatar' ? 'assistant' : 'user',
     content: msg.message,
   }))
+  
+  // Claude requires at least one message - add a prompt if empty
+  if (messages.length === 0) {
+    messages = [{ role: 'user', content: 'Your date just said hello. Respond warmly!' }]
+  }
+  
+  // Ensure conversation ends with user message (Dater's turn just happened)
+  if (messages[messages.length - 1]?.role === 'assistant') {
+    messages.push({ role: 'user', content: '...' })
+  }
   
   const response = await getChatResponse(messages, systemPrompt)
   return response
