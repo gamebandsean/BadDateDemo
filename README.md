@@ -33,6 +33,19 @@ npm run dev
 npm run build
 ```
 
+## 🤖 AI-Powered Conversations (Optional)
+
+For dynamic, LLM-powered conversations with Claude, add your Anthropic API key:
+
+1. Create a `.env` file in the project root:
+```bash
+VITE_ANTHROPIC_API_KEY=your_api_key_here
+```
+
+2. Get your API key from [Anthropic Console](https://console.anthropic.com/)
+
+Without an API key, the game runs in **Demo Mode** with scripted responses.
+
 ## 🎨 Features
 
 - **Tinder-style swiping** for matchmaking

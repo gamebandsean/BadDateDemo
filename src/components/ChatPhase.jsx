@@ -1,56 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
+import { getDaterChatResponse, getFallbackDaterResponse } from '../services/llmService'
 import './ChatPhase.css'
-
-// Simulated Dater responses based on personality
-const generateDaterResponse = (dater, playerMessage) => {
-  const lowerMsg = playerMessage.toLowerCase()
-  const { hiddenAttributes } = dater
-  
-  // Simple keyword matching for demo
-  if (lowerMsg.includes('job') || lowerMsg.includes('work') || lowerMsg.includes('do for')) {
-    return `I'm a ${hiddenAttributes.job}! It keeps me pretty busy but I love it. What about you?`
-  }
-  if (lowerMsg.includes('weekend') || lowerMsg.includes('free time') || lowerMsg.includes('fun')) {
-    return `On weekends? Honestly, I'm usually into ${hiddenAttributes.interests.slice(0, 2).join(' or ')}. What's your ideal weekend look like?`
-  }
-  if (lowerMsg.includes('pet') || lowerMsg.includes('dog') || lowerMsg.includes('cat') || lowerMsg.includes('animal')) {
-    if (hiddenAttributes.interests.includes('dogs')) {
-      return "I'm such a dog person! 🐕 Do you have any pets?"
-    }
-    if (hiddenAttributes.interests.includes('cats')) {
-      return "Cats are my spirit animal tbh 🐱 Are you a pet person?"
-    }
-    return "I love animals! Don't have any right now but definitely want some in the future."
-  }
-  if (lowerMsg.includes('music') || lowerMsg.includes('listen')) {
-    if (hiddenAttributes.interests.includes('music')) {
-      return "Music is LIFE. I'm always discovering new artists. What kind of music are you into?"
-    }
-    return "I like a bit of everything, honestly. Depends on my mood!"
-  }
-  if (lowerMsg.includes('food') || lowerMsg.includes('eat') || lowerMsg.includes('restaurant')) {
-    return "Omg I love trying new restaurants! What's your go-to cuisine?"
-  }
-  if (lowerMsg.includes('deal breaker') || lowerMsg.includes('dealbreaker') || lowerMsg.includes('hate') || lowerMsg.includes('can\'t stand')) {
-    return `Hmm good question... I'd say ${hiddenAttributes.dealbreakers[0]} is a big one for me. You?`
-  }
-  if (lowerMsg.includes('looking for') || lowerMsg.includes('ideal') || lowerMsg.includes('type')) {
-    return `I really value someone who's ${hiddenAttributes.idealPartner.slice(0, 2).join(' and ')}. But honestly, chemistry is everything!`
-  }
-  
-  // Default responses
-  const defaults = [
-    "Haha that's such a good question! 😄",
-    "Honestly? I've never thought about it that way before!",
-    "Ooh interesting... tell me more about yourself though!",
-    `${hiddenAttributes.personality.split('.')[0]}... but I'm curious about you!`,
-    "Love that energy! What else should I know about you?",
-  ]
-  
-  return defaults[Math.floor(Math.random() * defaults.length)]
-}
 
 function ChatPhase() {
   const { selectedDater, chatMessages, addChatMessage, startDate } = useGameStore()
@@ -77,21 +29,47 @@ function ChatPhase() {
     }
   }, [])
   
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault()
-    if (!inputValue.trim()) return
+    if (!inputValue.trim() || isTyping) return
     
     const playerMsg = inputValue.trim()
     addChatMessage(playerMsg, true)
     setInputValue('')
     
-    // Simulate Dater typing
+    // Show typing indicator
     setIsTyping(true)
-    setTimeout(() => {
-      setIsTyping(false)
-      const response = generateDaterResponse(selectedDater, playerMsg)
-      addChatMessage(response, false)
-    }, 1500 + Math.random() * 1000)
+    
+    // Try LLM response first, fallback to hardcoded
+    try {
+      // Build conversation history for LLM
+      const conversationHistory = [
+        ...chatMessages,
+        { text: playerMsg, isPlayer: true }
+      ]
+      
+      const llmResponse = await getDaterChatResponse(selectedDater, conversationHistory)
+      
+      if (llmResponse) {
+        setIsTyping(false)
+        addChatMessage(llmResponse, false)
+      } else {
+        // Fallback to hardcoded responses
+        setTimeout(() => {
+          setIsTyping(false)
+          const fallbackResponse = getFallbackDaterResponse(selectedDater, playerMsg)
+          addChatMessage(fallbackResponse, false)
+        }, 1000)
+      }
+    } catch (error) {
+      console.error('Error getting LLM response:', error)
+      // Fallback
+      setTimeout(() => {
+        setIsTyping(false)
+        const fallbackResponse = getFallbackDaterResponse(selectedDater, playerMsg)
+        addChatMessage(fallbackResponse, false)
+      }, 1000)
+    }
   }
   
   return (
@@ -171,13 +149,14 @@ function ChatPhase() {
             onChange={(e) => setInputValue(e.target.value)}
             placeholder={`Ask ${selectedDater.name} something...`}
             autoFocus
+            disabled={isTyping}
           />
           <motion.button
             type="submit"
             className="send-btn"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || isTyping}
           >
             ➤
           </motion.button>
@@ -191,10 +170,17 @@ function ChatPhase() {
           <li>Discover what they're looking for in a partner</li>
           <li>Use this intel to shape your avatar later!</li>
         </ul>
+        
+        <div className="api-status">
+          {import.meta.env.VITE_ANTHROPIC_API_KEY ? (
+            <span className="status-active">🤖 AI-Powered Responses</span>
+          ) : (
+            <span className="status-fallback">📝 Demo Mode (add API key for AI)</span>
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
 export default ChatPhase
-

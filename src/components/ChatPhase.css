@@ -239,6 +239,30 @@
   color: var(--accent-pink);
 }
 
+.api-status {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+.status-active {
+  color: var(--accent-mint);
+  background: rgba(6, 214, 160, 0.1);
+  display: block;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.status-fallback {
+  color: var(--accent-gold);
+  background: rgba(255, 209, 102, 0.1);
+  display: block;
+  padding: 8px;
+  border-radius: 8px;
+}
+
 @media (max-width: 800px) {
   .chat-tips {
     display: none;

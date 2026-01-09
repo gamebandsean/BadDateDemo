@@ -1,16 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
+import { 
+  getDaterDateResponse, 
+  getAvatarDateResponse, 
+  getFallbackDateDialogue 
+} from '../services/llmService'
 import './DateScene.css'
-
-// Simulated date conversation
-const dateDialogues = [
-  { speaker: 'dater', text: "So... here we are! I have to say, you seem interesting." },
-  { speaker: 'avatar', text: "Thanks! I've been looking forward to this." },
-  { speaker: 'dater', text: "What made you swipe right on me?" },
-  { speaker: 'avatar', text: "Something about your profile just... clicked, you know?" },
-  { speaker: 'dater', text: "I love that. So tell me about yourself!" },
-]
 
 function DateScene() {
   const {
@@ -21,6 +17,7 @@ function DateScene() {
     submittedAttributes,
     appliedAttributes,
     hotSeatPlayer,
+    compatibility,
     addDateMessage,
     submitAttribute,
     voteForAttribute,
@@ -35,8 +32,11 @@ function DateScene() {
   const [inputValue, setInputValue] = useState('')
   const [votedAttributes, setVotedAttributes] = useState(new Set())
   const [hotSeatInput, setHotSeatInput] = useState('')
+  const [isConversing, setIsConversing] = useState(false)
   const conversationRef = useRef(null)
-  const dialogueIndexRef = useRef(0)
+  const conversationIntervalRef = useRef(null)
+  const lastSpeakerRef = useRef(null)
+  const conversationActiveRef = useRef(true)
   
   // Auto-scroll conversation
   useEffect(() => {
@@ -45,53 +45,145 @@ function DateScene() {
     }
   }, [dateConversation])
   
-  // Initial conversation and timer
-  useEffect(() => {
-    // Start initial dialogue
-    const startDialogue = () => {
-      if (dialogueIndexRef.current < dateDialogues.length && dateConversation.length < dateDialogues.length) {
-        const dialogue = dateDialogues[dialogueIndexRef.current]
-        addDateMessage(dialogue.speaker, dialogue.text)
-        dialogueIndexRef.current++
+  // Generate next conversation turn using LLM
+  const generateNextTurn = useCallback(async () => {
+    if (isConversing || !conversationActiveRef.current) return
+    
+    setIsConversing(true)
+    
+    try {
+      // Alternate speakers, starting with dater
+      const nextSpeaker = lastSpeakerRef.current === 'dater' ? 'avatar' : 'dater'
+      
+      let response = null
+      
+      if (nextSpeaker === 'dater') {
+        // Get Dater's response via LLM
+        response = await getDaterDateResponse(selectedDater, avatar, dateConversation)
+      } else {
+        // Get Avatar's response via LLM
+        response = await getAvatarDateResponse(avatar, selectedDater, dateConversation)
+      }
+      
+      if (response && conversationActiveRef.current) {
+        addDateMessage(nextSpeaker, response)
+        lastSpeakerRef.current = nextSpeaker
+        
+        // Update compatibility based on conversation (simplified for demo)
+        if (nextSpeaker === 'dater') {
+          // Check if dater's response suggests positive or negative reaction
+          const lowerResponse = response.toLowerCase()
+          if (lowerResponse.includes('love') || lowerResponse.includes('amazing') || 
+              lowerResponse.includes('perfect') || lowerResponse.includes('wow')) {
+            updateCompatibility(Math.floor(Math.random() * 5) + 3)
+          } else if (lowerResponse.includes('hmm') || lowerResponse.includes('interesting') ||
+                     lowerResponse.includes('really?') || lowerResponse.includes('oh...')) {
+            updateCompatibility(Math.floor(Math.random() * 5) - 2)
+          }
+        }
+      } else if (conversationActiveRef.current) {
+        // Fallback to scripted dialogue
+        const fallback = getFallbackDateDialogue(dateConversation.length, avatar, selectedDater)
+        addDateMessage(fallback.speaker, fallback.message)
+        lastSpeakerRef.current = fallback.speaker
+      }
+    } catch (error) {
+      console.error('Error generating conversation:', error)
+      // Fallback
+      const fallback = getFallbackDateDialogue(dateConversation.length, avatar, selectedDater)
+      if (conversationActiveRef.current) {
+        addDateMessage(fallback.speaker, fallback.message)
+        lastSpeakerRef.current = fallback.speaker
       }
     }
     
-    const dialogueTimer = setInterval(startDialogue, 2500)
-    startDialogue() // Start immediately
+    setIsConversing(false)
+  }, [selectedDater, avatar, dateConversation, addDateMessage, updateCompatibility, isConversing])
+  
+  // Start and maintain continuous conversation
+  useEffect(() => {
+    conversationActiveRef.current = true
     
-    return () => clearInterval(dialogueTimer)
-  }, [])
+    // Initial greeting from dater
+    if (dateConversation.length === 0) {
+      setTimeout(() => {
+        addDateMessage('dater', `So... here we are! I have to say, ${avatar.name}, you seem really interesting. What made you want to meet up tonight?`)
+        lastSpeakerRef.current = 'dater'
+      }, 1500)
+    }
+    
+    // Set up continuous conversation - runs every 6-10 seconds
+    const runConversation = () => {
+      if (conversationActiveRef.current && !isConversing) {
+        generateNextTurn()
+      }
+    }
+    
+    // Start conversation loop after initial delay
+    const startDelay = setTimeout(() => {
+      conversationIntervalRef.current = setInterval(runConversation, 7000 + Math.random() * 3000)
+    }, 4000)
+    
+    return () => {
+      conversationActiveRef.current = false
+      clearTimeout(startDelay)
+      if (conversationIntervalRef.current) {
+        clearInterval(conversationIntervalRef.current)
+      }
+    }
+  }, []) // Only run on mount
+  
+  // React to newly applied attributes with a special conversation beat
+  useEffect(() => {
+    if (appliedAttributes.length > 0 && phase === 'applying') {
+      const latestAttributes = appliedAttributes.slice(-3)
+      
+      // Give the avatar something to say based on new attributes
+      setTimeout(async () => {
+        const attributeReveal = latestAttributes[Math.floor(Math.random() * latestAttributes.length)]
+        
+        // Get LLM response for avatar revealing this attribute
+        const avatarResponse = await getAvatarDateResponse(
+          { ...avatar, attributes: [...avatar.attributes] },
+          selectedDater,
+          [...dateConversation, { speaker: 'dater', message: "Tell me more about yourself..." }]
+        )
+        
+        if (avatarResponse) {
+          addDateMessage('avatar', avatarResponse)
+          lastSpeakerRef.current = 'avatar'
+          
+          // Dater reacts after a delay
+          setTimeout(async () => {
+            const daterReaction = await getDaterDateResponse(
+              selectedDater,
+              { ...avatar, attributes: [...avatar.attributes] },
+              [...dateConversation, { speaker: 'avatar', message: avatarResponse }]
+            )
+            
+            if (daterReaction) {
+              addDateMessage('dater', daterReaction)
+              lastSpeakerRef.current = 'dater'
+              
+              // Adjust compatibility based on reaction
+              const lowerReaction = daterReaction.toLowerCase()
+              if (lowerReaction.includes('!') && (lowerReaction.includes('love') || lowerReaction.includes('amazing'))) {
+                updateCompatibility(8)
+              } else if (lowerReaction.includes('...') || lowerReaction.includes('oh')) {
+                updateCompatibility(-5)
+              }
+            }
+          }, 3000)
+        }
+      }, 2000)
+    }
+  }, [appliedAttributes.length, phase])
   
   // Timer tick
   useEffect(() => {
     const timer = setInterval(tickTimer, 1000)
     return () => clearInterval(timer)
-  }, [])
-  
-  // Handle attribute-related conversation
-  useEffect(() => {
-    if (appliedAttributes.length > 0 && phase === 'applying') {
-      const lastAttribute = appliedAttributes[appliedAttributes.length - 1]
-      
-      setTimeout(() => {
-        addDateMessage('avatar', `By the way, ${lastAttribute.toLowerCase()}...`)
-        
-        // Dater reacts
-        setTimeout(() => {
-          const reactions = [
-            "Oh wow, really? That's... interesting!",
-            "Haha, I didn't expect that! Tell me more!",
-            "Wait, seriously? That changes things...",
-            "Okay, I have SO many questions now!",
-          ]
-          addDateMessage('dater', reactions[Math.floor(Math.random() * reactions.length)])
-          
-          // Update compatibility randomly for demo
-          updateCompatibility(Math.floor(Math.random() * 21) - 10)
-        }, 2000)
-      }, 1500)
-    }
-  }, [appliedAttributes.length, phase])
+  }, [tickTimer])
   
   // Transition to hot seat after applying
   useEffect(() => {
@@ -99,9 +191,9 @@ function DateScene() {
       setTimeout(() => {
         selectRandomHotSeat()
         setPhase('hotseat')
-      }, 5000)
+      }, 6000)
     }
-  }, [phase])
+  }, [phase, selectRandomHotSeat, setPhase])
   
   const handleSubmitAttribute = (e) => {
     e.preventDefault()
@@ -125,6 +217,7 @@ function DateScene() {
   
   const handleFinishVoting = () => {
     applyTopAttributes()
+    setVotedAttributes(new Set())
   }
   
   return (
@@ -150,7 +243,7 @@ function DateScene() {
             </div>
             {avatar.attributes.length > 0 && (
               <div className="character-attributes">
-                {avatar.attributes.slice(-3).map((attr, i) => (
+                {avatar.attributes.slice(-4).map((attr, i) => (
                   <motion.span 
                     key={i}
                     className="attr-tag"
@@ -167,7 +260,16 @@ function DateScene() {
           
           {/* VS */}
           <div className="vs-badge">
-            <span className="animate-heartbeat">💕</span>
+            <motion.span 
+              className="animate-heartbeat"
+              animate={{ 
+                scale: compatibility > 70 ? [1, 1.2, 1] : [1, 1.05, 1],
+                color: compatibility > 70 ? '#06d6a0' : compatibility > 40 ? '#ff4d6d' : '#9d4edd'
+              }}
+              transition={{ duration: 1, repeat: Infinity }}
+            >
+              {compatibility > 70 ? '💕' : compatibility > 40 ? '💗' : '💔'}
+            </motion.span>
           </div>
           
           {/* Dater */}
@@ -186,7 +288,7 @@ function DateScene() {
           </motion.div>
         </div>
         
-        {/* Conversation */}
+        {/* Conversation - ALWAYS VISIBLE */}
         <div className="conversation-area" ref={conversationRef}>
           <AnimatePresence>
             {dateConversation.map((msg, i) => (
@@ -206,6 +308,28 @@ function DateScene() {
               </motion.div>
             ))}
           </AnimatePresence>
+          
+          {isConversing && (
+            <motion.div 
+              className="dialogue typing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <div className="dialogue-bubble">
+                <div className="typing-dots">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+        
+        {/* Conversation status indicator */}
+        <div className="conversation-status">
+          <span className="pulse-dot" />
+          <span>Conversation in progress...</span>
         </div>
       </div>
       
@@ -258,6 +382,10 @@ function DateScene() {
                 </button>
               )}
             </div>
+            
+            <div className="conversation-reminder">
+              <p>👀 Keep watching the conversation for more intel!</p>
+            </div>
           </motion.div>
         )}
         
@@ -297,6 +425,10 @@ function DateScene() {
             >
               Apply Top Attributes! ✨
             </motion.button>
+            
+            <div className="conversation-reminder">
+              <p>👀 The date continues while you vote!</p>
+            </div>
           </motion.div>
         )}
         
@@ -316,7 +448,7 @@ function DateScene() {
               </motion.span>
             </div>
             <h3>Transforming Avatar...</h3>
-            <p>Your avatar is absorbing new traits!</p>
+            <p>Watch how {selectedDater.name} reacts!</p>
             
             <div className="applied-attrs">
               {appliedAttributes.slice(-3).map((attr, i) => (
@@ -377,6 +509,10 @@ function DateScene() {
                 🔥 Apply Now!
               </button>
             </form>
+            
+            <div className="conversation-reminder">
+              <p>👀 Watch {selectedDater.name}'s reaction live!</p>
+            </div>
           </motion.div>
         )}
       </div>
@@ -385,4 +521,3 @@ function DateScene() {
 }
 
 export default DateScene
-
