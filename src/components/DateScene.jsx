@@ -37,6 +37,7 @@ function DateScene() {
   const conversationIntervalRef = useRef(null)
   const lastSpeakerRef = useRef(null)
   const conversationActiveRef = useRef(true)
+  const greetingSentRef = useRef(false)
   
   // Auto-scroll conversation
   useEffect(() => {
@@ -106,11 +107,15 @@ function DateScene() {
     let isMounted = true
     
     const startConversation = async () => {
-      // Initial greeting from dater
-      if (dateConversation.length === 0) {
+      // Initial greeting from dater - only send once
+      if (dateConversation.length === 0 && !greetingSentRef.current) {
+        greetingSentRef.current = true
+        
         await new Promise(r => setTimeout(r, 1500))
         if (!isMounted) return
-        addDateMessage('dater', `So... here we are! I have to say, ${avatar.name}, you seem really interesting. What made you want to meet up tonight?`)
+        
+        const greeting = `So... here we are! I have to say, ${avatar.name}, you seem really interesting. What made you want to meet up tonight?`
+        addDateMessage('dater', greeting)
         lastSpeakerRef.current = 'dater'
         
         // Avatar responds after a short delay
@@ -118,7 +123,7 @@ function DateScene() {
         if (!isMounted) return
         
         const avatarResponse = await getAvatarDateResponse(avatar, selectedDater, [
-          { speaker: 'dater', message: `So... here we are! I have to say, ${avatar.name}, you seem really interesting. What made you want to meet up tonight?` }
+          { speaker: 'dater', message: greeting }
         ])
         
         if (avatarResponse && isMounted) {
