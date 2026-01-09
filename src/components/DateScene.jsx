@@ -252,7 +252,7 @@ function DateScene() {
         const currentMessages = useGameStore.getState().dateConversation
         if (currentMessages.length > 0) return
         
-        const greeting = `So... here we are! I have to say, ${avatar.name}, you seem really interesting. What made you want to meet up tonight?`
+        const greeting = `Well, this place is nice! I have to say, ${avatar.name}, you're not quite what I expected... in a good way, I think.`
         addDateMessage('dater', greeting)
         lastSpeakerRef.current = 'dater'
         
