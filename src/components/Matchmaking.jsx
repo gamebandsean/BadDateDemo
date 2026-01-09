@@ -89,12 +89,6 @@ function Matchmaking() {
               </h2>
               <p className="dater-archetype">{currentDater.archetype}</p>
               <p className="dater-tagline">{currentDater.tagline}</p>
-              
-              <div className="dater-traits">
-                {currentDater.talkingTraits.slice(0, 3).map((trait, i) => (
-                  <span key={i} className="trait-tag">{trait}</span>
-                ))}
-              </div>
             </div>
           </motion.div>
         </AnimatePresence>

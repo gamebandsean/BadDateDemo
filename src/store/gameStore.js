@@ -25,6 +25,7 @@ export const useGameStore = create((set, get) => ({
   
   // Chat phase
   chatMessages: [],
+  discoveredTraits: [], // Traits revealed through conversation
   
   // Date phase
   avatar: { ...initialAvatar },
@@ -96,6 +97,14 @@ export const useGameStore = create((set, get) => ({
       timestamp: new Date(),
     }
     set({ chatMessages: [...chatMessages, newMessage] })
+  },
+  
+  addDiscoveredTrait: (trait) => {
+    const { discoveredTraits } = get()
+    // Avoid duplicates
+    if (!discoveredTraits.includes(trait)) {
+      set({ discoveredTraits: [...discoveredTraits, trait] })
+    }
   },
   
   startDate: () => {

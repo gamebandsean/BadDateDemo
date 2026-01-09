@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
-import { getDaterChatResponse, getFallbackDaterResponse } from '../services/llmService'
+import { getDaterChatResponse, getFallbackDaterResponse, extractTraitFromResponse } from '../services/llmService'
 import './ChatPhase.css'
 
 function ChatPhase() {
-  const { selectedDater, chatMessages, addChatMessage, startDate } = useGameStore()
+  const { selectedDater, chatMessages, addChatMessage, startDate, discoveredTraits, addDiscoveredTrait } = useGameStore()
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef(null)
@@ -53,12 +53,24 @@ function ChatPhase() {
       if (llmResponse) {
         setIsTyping(false)
         addChatMessage(llmResponse, false)
+        
+        // Extract a trait from the response
+        const trait = await extractTraitFromResponse(playerMsg, llmResponse)
+        if (trait) {
+          addDiscoveredTrait(trait)
+        }
       } else {
         // Fallback to hardcoded responses
         setTimeout(() => {
           setIsTyping(false)
           const fallbackResponse = getFallbackDaterResponse(selectedDater, playerMsg)
           addChatMessage(fallbackResponse, false)
+          
+          // Extract trait from fallback too
+          const trait = extractTraitFromResponse(playerMsg, fallbackResponse)
+          if (trait) {
+            addDiscoveredTrait(trait)
+          }
         }, 1000)
       }
     } catch (error) {
@@ -105,10 +117,29 @@ function ChatPhase() {
             <span className="card-label">💫</span>
             <span>{selectedDater.tagline}</span>
           </div>
-          <div className="card-traits">
-            {selectedDater.talkingTraits.slice(0, 3).map((trait, i) => (
-              <span key={i} className="mini-trait">{trait}</span>
-            ))}
+          
+          {/* Discovered traits - revealed through conversation */}
+          <div className="discovered-traits">
+            <span className="discovered-label">🔍 Discovered:</span>
+            {discoveredTraits.length === 0 ? (
+              <span className="no-traits-yet">Ask questions to learn more...</span>
+            ) : (
+              <div className="trait-chips">
+                <AnimatePresence>
+                  {discoveredTraits.map((trait, i) => (
+                    <motion.span
+                      key={trait}
+                      className="discovered-chip"
+                      initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 400, delay: i * 0.05 }}
+                    >
+                      {trait}
+                    </motion.span>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
         </div>
         

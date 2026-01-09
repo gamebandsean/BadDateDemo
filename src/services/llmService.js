@@ -227,6 +227,111 @@ export function getFallbackDaterResponse(dater, playerMessage) {
   return defaults[Math.floor(Math.random() * defaults.length)]
 }
 
+/**
+ * Extract a 1-2 word trait from a Dater's response
+ * This helps players discover who the Dater is through conversation
+ */
+export async function extractTraitFromResponse(question, response) {
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+  
+  if (!apiKey) {
+    // Fallback: simple keyword extraction
+    return extractTraitSimple(question, response)
+  }
+  
+  try {
+    const result = await fetch(ANTHROPIC_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 20,
+        system: `You extract 1-2 word personality traits from dating app conversations.
+Given a question and answer, respond with ONLY a 1-2 word trait that was revealed.
+Examples: "artistic", "adventurous", "Portland native", "values honesty", "hates small talk", "loves travel"
+If nothing specific was revealed, respond with just "NONE".`,
+        messages: [{
+          role: 'user',
+          content: `Question: "${question}"\nAnswer: "${response}"\n\nExtracted trait (1-2 words only):`
+        }],
+      }),
+    })
+    
+    if (!result.ok) {
+      return extractTraitSimple(question, response)
+    }
+    
+    const data = await result.json()
+    const trait = data.content[0].text.trim()
+    
+    // Return null if nothing specific was found
+    if (trait === 'NONE' || trait.length > 25) {
+      return null
+    }
+    
+    return trait
+  } catch (error) {
+    console.error('Error extracting trait:', error)
+    return extractTraitSimple(question, response)
+  }
+}
+
+/**
+ * Simple keyword-based trait extraction fallback
+ */
+function extractTraitSimple(question, response) {
+  const lowerQ = question.toLowerCase()
+  const lowerR = response.toLowerCase()
+  
+  // Job-related
+  if (lowerQ.includes('job') || lowerQ.includes('work') || lowerQ.includes('do for')) {
+    if (lowerR.includes('designer')) return 'designer'
+    if (lowerR.includes('architect')) return 'architect'
+    if (lowerR.includes('artist') || lowerR.includes('paint')) return 'artist'
+    if (lowerR.includes('content') || lowerR.includes('creator')) return 'content creator'
+    if (lowerR.includes('freelance')) return 'freelancer'
+  }
+  
+  // Hobby-related
+  if (lowerQ.includes('fun') || lowerQ.includes('hobby') || lowerQ.includes('free time')) {
+    if (lowerR.includes('travel')) return 'loves travel'
+    if (lowerR.includes('paint')) return 'painter'
+    if (lowerR.includes('read')) return 'reader'
+    if (lowerR.includes('surf')) return 'surfer'
+    if (lowerR.includes('skate')) return 'skater'
+    if (lowerR.includes('music')) return 'music lover'
+  }
+  
+  // Values-related
+  if (lowerQ.includes('looking for') || lowerQ.includes('type') || lowerQ.includes('ideal')) {
+    if (lowerR.includes('adventure') || lowerR.includes('spontan')) return 'seeks adventure'
+    if (lowerR.includes('honest')) return 'values honesty'
+    if (lowerR.includes('intellect') || lowerR.includes('smart')) return 'values intellect'
+    if (lowerR.includes('passion')) return 'wants passion'
+  }
+  
+  // Dealbreakers
+  if (lowerQ.includes('hate') || lowerQ.includes('deal') || lowerQ.includes('can\'t stand')) {
+    if (lowerR.includes('cynic')) return 'anti-cynicism'
+    if (lowerR.includes('small talk')) return 'hates small talk'
+    if (lowerR.includes('boring') || lowerR.includes('routine')) return 'hates routine'
+  }
+  
+  // Location
+  if (lowerQ.includes('from') || lowerQ.includes('where') || lowerQ.includes('grow up')) {
+    if (lowerR.includes('portland')) return 'Portland native'
+    if (lowerR.includes('new york') || lowerR.includes('nyc')) return 'New Yorker'
+    if (lowerR.includes('la') || lowerR.includes('los angeles')) return 'LA raised'
+  }
+  
+  return null // Nothing specific detected
+}
+
 // Track used fallback lines to avoid repetition
 const usedDaterLines = new Set()
 const usedAvatarLines = new Set()
