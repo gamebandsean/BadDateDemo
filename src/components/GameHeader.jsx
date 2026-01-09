@@ -53,39 +53,14 @@ function GameHeader() {
       
       <div className="header-right">
         {showDateUI && (
-          <>
-            <motion.div 
-              className="compatibility-meter"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
-              <span className="meter-label">💕 Match</span>
-              <div className="meter-bar">
-                <motion.div 
-                  className="meter-fill"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${compatibility}%` }}
-                  style={{
-                    background: compatibility >= 80 
-                      ? 'var(--gradient-success)' 
-                      : compatibility >= 50 
-                        ? 'var(--gradient-love)'
-                        : 'var(--gradient-chaos)'
-                  }}
-                />
-              </div>
-              <span className="meter-value">{compatibility}%</span>
-            </motion.div>
-            
-            <motion.div 
-              className="timer"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
-              <span className="timer-icon">⏱️</span>
-              <span className="timer-value">{formatTime(dateTimer)}</span>
-            </motion.div>
-          </>
+          <motion.div 
+            className="timer timer-large"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <span className="timer-icon">⏱️</span>
+            <span className="timer-value">{formatTime(dateTimer)}</span>
+          </motion.div>
         )}
       </div>
     </header>

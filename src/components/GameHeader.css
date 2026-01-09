@@ -119,3 +119,20 @@
   color: var(--accent-gold);
 }
 
+/* Large timer variant */
+.timer.timer-large {
+  padding: 12px 24px;
+  gap: 12px;
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(255, 209, 102, 0.1) 100%);
+  border: 2px solid rgba(255, 209, 102, 0.3);
+}
+
+.timer.timer-large .timer-icon {
+  font-size: 1.6rem;
+}
+
+.timer.timer-large .timer-value {
+  font-size: 1.8rem;
+  letter-spacing: 0.05em;
+}
+
