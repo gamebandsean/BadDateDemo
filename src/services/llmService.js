@@ -67,7 +67,7 @@ export async function getDaterChatResponse(dater, conversationHistory) {
 /**
  * Get Dater response during the date
  */
-export async function getDaterDateResponse(dater, avatar, conversationHistory) {
+export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null) {
   const systemPrompt = buildDaterAgentPrompt(dater, 'date')
   
   // Add context about the Avatar's revealed attributes
@@ -75,7 +75,12 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory) {
     ? `\n\nYOUR DATE'S REVEALED TRAITS SO FAR: ${avatar.attributes.join(', ')}. React to these naturally based on whether they align with what you're looking for or hit your dealbreakers.`
     : ''
   
-  const fullPrompt = systemPrompt + avatarContext
+  // Special instruction if a new attribute was just revealed
+  const latestAttrContext = latestAttribute
+    ? `\n\n⚠️ JUST REVEALED: Your date just revealed they "${latestAttribute}". React to this revelation with 35% more intensity than normal - be slightly more melodramatic in your response (surprised, delighted, concerned, or intrigued depending on how it fits your personality and dealbreakers). But still keep it to 1-2 sentences.`
+    : ''
+  
+  const fullPrompt = systemPrompt + avatarContext + latestAttrContext
   
   // Convert conversation history to Claude format
   let messages = conversationHistory.map(msg => ({
@@ -100,12 +105,17 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory) {
 /**
  * Get Avatar response during the date (for auto-conversation)
  */
-export async function getAvatarDateResponse(avatar, dater, conversationHistory) {
+export async function getAvatarDateResponse(avatar, dater, conversationHistory, latestAttribute = null) {
   const { name, age, occupation, attributes } = avatar
   
   const attributesList = attributes.length > 0 
     ? `YOUR TRAITS: ${attributes.join(', ')}`
     : 'You are a mystery - share generic pleasantries.'
+  
+  // Special instruction if a new attribute was just added
+  const latestAttrInstruction = latestAttribute
+    ? `\n\n⚠️ NEW TRAIT JUST ADDED: You just gained the trait "${latestAttribute}". Work this into your response SUBTLY and naturally - don't announce it, just let it color what you say. Be appropriate to the conversation flow.`
+    : ''
   
   const systemPrompt = `You are ${name}, a ${age}-year-old ${occupation} on a first date with ${dater.name}.
 
@@ -119,7 +129,7 @@ RULES:
 - Only use an action tag VERY rarely (once every 5+ messages at most)
 - Answer questions concisely
 - Occasionally ask a brief follow-up question
-- Stay light - it's a first date!`
+- Stay light - it's a first date!${latestAttrInstruction}`
   
   // Convert conversation history - from Avatar's perspective, Dater messages are "user"
   let messages = conversationHistory.map(msg => ({

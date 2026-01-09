@@ -36,6 +36,9 @@ export const useGameStore = create((set, get) => ({
   submittedAttributes: [],
   attributeVotes: {},
   appliedAttributes: [],
+  latestAttribute: null, // Most recently added attribute (for special reactions)
+  latestAttributeReactionsLeft: 0, // How many heightened Dater reactions remain (1-2)
+  attributeCooldown: false, // 10 second cooldown between attributes
   
   // Hot seat
   hotSeatPlayer: null,
@@ -110,9 +113,12 @@ export const useGameStore = create((set, get) => ({
     })
   },
   
-  // Attribute submission - SINGLE PLAYER: immediately apply, no voting
+  // Attribute submission - SINGLE PLAYER: immediately apply with cooldown
   submitAttribute: (attribute) => {
-    const { avatar, appliedAttributes } = get()
+    const { avatar, appliedAttributes, attributeCooldown } = get()
+    
+    // Check cooldown
+    if (attributeCooldown) return false
     
     // Immediately apply the attribute to the avatar
     set({
@@ -121,11 +127,32 @@ export const useGameStore = create((set, get) => ({
         attributes: [...avatar.attributes, attribute],
       },
       appliedAttributes: [...appliedAttributes, attribute],
+      latestAttribute: attribute, // Track for special reactions
+      latestAttributeReactionsLeft: 2, // Dater gets 1-2 heightened reactions
       phase: 'applying', // Brief visual feedback
+      attributeCooldown: true, // Start 10 second cooldown
     })
     
     // Return to small talk after brief delay
     setTimeout(() => set({ phase: 'smalltalk' }), 1500)
+    
+    // Clear cooldown after 10 seconds
+    setTimeout(() => set({ attributeCooldown: false }), 10000)
+    
+    return true
+  },
+  
+  // Called after Dater speaks to decrement heightened reaction counter
+  consumeDaterReaction: () => {
+    const { latestAttributeReactionsLeft } = get()
+    if (latestAttributeReactionsLeft > 0) {
+      const newCount = latestAttributeReactionsLeft - 1
+      set({ 
+        latestAttributeReactionsLeft: newCount,
+        // Clear latestAttribute when no reactions left
+        latestAttribute: newCount === 0 ? null : get().latestAttribute,
+      })
+    }
   },
   
   // Legacy voting functions (kept for compatibility, not used in single player)

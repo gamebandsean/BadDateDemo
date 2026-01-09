@@ -16,10 +16,14 @@ function DateScene() {
     dateConversation,
     submittedAttributes,
     appliedAttributes,
+    latestAttribute,
+    latestAttributeReactionsLeft,
+    attributeCooldown,
     hotSeatPlayer,
     compatibility,
     addDateMessage,
     submitAttribute,
+    consumeDaterReaction,
     voteForAttribute,
     applyTopAttributes,
     selectRandomHotSeat,
@@ -53,9 +57,11 @@ function DateScene() {
     setIsConversing(true)
     
     try {
-      // Get FRESH conversation from store (avoid stale closure)
+      // Get FRESH state from store (avoid stale closure)
       const currentConversation = useGameStore.getState().dateConversation
       const currentAvatar = useGameStore.getState().avatar
+      const currentLatestAttr = useGameStore.getState().latestAttribute
+      const reactionsLeft = useGameStore.getState().latestAttributeReactionsLeft
       
       // Alternate speakers, starting with dater
       const nextSpeaker = lastSpeakerRef.current === 'dater' ? 'avatar' : 'dater'
@@ -63,11 +69,16 @@ function DateScene() {
       let response = null
       
       if (nextSpeaker === 'dater') {
-        // Get Dater's response via LLM
-        response = await getDaterDateResponse(selectedDater, currentAvatar, currentConversation)
+        // Get Dater's response via LLM (with heightened reaction only if reactions left)
+        const daterAttr = reactionsLeft > 0 ? currentLatestAttr : null
+        response = await getDaterDateResponse(selectedDater, currentAvatar, currentConversation, daterAttr)
+        // Consume one heightened reaction after Dater speaks
+        if (response && reactionsLeft > 0) {
+          useGameStore.getState().consumeDaterReaction()
+        }
       } else {
-        // Get Avatar's response via LLM
-        response = await getAvatarDateResponse(currentAvatar, selectedDater, currentConversation)
+        // Get Avatar's response via LLM (with latest attribute to work in subtly)
+        response = await getAvatarDateResponse(currentAvatar, selectedDater, currentConversation, currentLatestAttr)
       }
       
       if (response && conversationActiveRef.current) {
@@ -390,11 +401,19 @@ function DateScene() {
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="e.g., 'went to Harvard', 'loves cats'..."
                 maxLength={50}
+                disabled={attributeCooldown}
               />
-              <button type="submit" className="btn btn-primary">
-                Add Trait
+              <button 
+                type="submit" 
+                className={`btn btn-primary ${attributeCooldown ? 'cooldown' : ''}`}
+                disabled={attributeCooldown}
+              >
+                {attributeCooldown ? '⏳ Wait...' : 'Add Trait'}
               </button>
             </form>
+            {attributeCooldown && (
+              <p className="cooldown-hint">New trait available in a few seconds...</p>
+            )}
             
             {/* Show applied attributes */}
             <div className="applied-list">

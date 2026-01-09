@@ -223,6 +223,20 @@
   margin: 16px 0;
 }
 
+/* Cooldown state */
+.btn.cooldown {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cooldown-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 8px;
+  text-align: center;
+}
+
 /* Voting Panel */
 .voting-list {
   flex: 1;
