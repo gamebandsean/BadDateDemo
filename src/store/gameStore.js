@@ -108,7 +108,12 @@ export const useGameStore = create((set, get) => ({
   },
   
   startDate: () => {
-    set({ phase: 'smalltalk', dateConversation: [], submittedAttributes: [] })
+    set({ 
+      phase: 'smalltalk', 
+      dateConversation: [], 
+      submittedAttributes: [],
+      discoveredTraits: [], // Hide traits discovered during chat
+    })
   },
   
   // Date conversation
