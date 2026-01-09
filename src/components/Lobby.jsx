@@ -31,7 +31,7 @@ function Lobby() {
                 ease: 'linear'
               }}
             >
-              {['💔', '💕', '❤️', '💘', '😬', '🙈', '😅'][Math.floor(Math.random() * 7)]}
+              {['💔', '💕', '❤️', '💘', '💗', '💖', '💝'][Math.floor(Math.random() * 7)]}
             </motion.span>
           ))}
         </div>
@@ -80,19 +80,19 @@ function Lobby() {
           transition={{ delay: 0.6 }}
         >
           <div className="feature">
-            <span className="feature-icon">👆</span>
+            <span className="feature-icon">💘</span>
             <span>Swipe to pick your date</span>
           </div>
           <div className="feature">
-            <span className="feature-icon">🕵️</span>
+            <span className="feature-icon">💕</span>
             <span>Chat to gather intel</span>
           </div>
           <div className="feature">
-            <span className="feature-icon">🎭</span>
+            <span className="feature-icon">💗</span>
             <span>Shape who you become</span>
           </div>
           <div className="feature">
-            <span className="feature-icon">😈</span>
+            <span className="feature-icon">💔</span>
             <span>Watch it all go wrong</span>
           </div>
         </motion.div>
@@ -115,7 +115,7 @@ function Lobby() {
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
         >
-          🎮 2-200 players • ⏱️ ~15 min sessions
+          💕 2-200 players • 💖 ~15 min sessions
         </motion.p>
       </motion.div>
     </div>
