@@ -392,30 +392,25 @@ function DateScene() {
                 maxLength={50}
               />
               <button type="submit" className="btn btn-primary">
-                Submit
+                Add Trait
               </button>
             </form>
             
-            <div className="submitted-list">
-              <h4>Submitted ({submittedAttributes.length}/6)</h4>
-              {submittedAttributes.map((attr) => (
+            {/* Show applied attributes */}
+            <div className="applied-list">
+              <h4>Avatar's Traits</h4>
+              {appliedAttributes.map((attr, idx) => (
                 <motion.div 
-                  key={attr.id}
-                  className="submitted-attr"
+                  key={idx}
+                  className="applied-attr"
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                 >
-                  {attr.text}
+                  ✓ {attr}
                 </motion.div>
               ))}
-              
-              {submittedAttributes.length >= 4 && (
-                <button 
-                  className="btn btn-secondary"
-                  onClick={() => setPhase('voting')}
-                >
-                  Ready to Vote! →
-                </button>
+              {appliedAttributes.length === 0 && (
+                <p className="no-traits-hint">Add traits to shape who Avatar becomes!</p>
               )}
             </div>
             
@@ -425,50 +420,9 @@ function DateScene() {
           </motion.div>
         )}
         
-        {/* Voting Phase */}
-        {phase === 'voting' && (
-          <motion.div 
-            className="sidebar-panel voting-panel"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <h3>🗳️ Vote for Attributes</h3>
-            <p className="panel-desc">
-              Pick up to 3 attributes to apply to your avatar!
-            </p>
-            
-            <div className="voting-list">
-              {submittedAttributes.map((attr) => (
-                <motion.button
-                  key={attr.id}
-                  className={`vote-option ${votedAttributes.has(attr.id) ? 'voted' : ''}`}
-                  onClick={() => handleVote(attr.id)}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  disabled={votedAttributes.has(attr.id) || (votedAttributes.size >= 3 && !votedAttributes.has(attr.id))}
-                >
-                  <span className="vote-text">{attr.text}</span>
-                  <span className="vote-count">{attr.votes} 👍</span>
-                </motion.button>
-              ))}
-            </div>
-            
-            <motion.button
-              className="btn btn-success finish-vote-btn"
-              onClick={handleFinishVoting}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Apply Top Attributes! ✨
-            </motion.button>
-            
-            <div className="conversation-reminder">
-              <p>👀 The date continues while you vote!</p>
-            </div>
-          </motion.div>
-        )}
+        {/* Voting Phase - Removed for single player */}
         
-        {/* Applying Phase */}
+        {/* Applying Phase - Brief feedback when trait is added */}
         {phase === 'applying' && (
           <motion.div 
             className="sidebar-panel applying-panel"
@@ -477,80 +431,19 @@ function DateScene() {
           >
             <div className="applying-animation">
               <motion.span
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                animate={{ scale: [1, 1.3, 1] }}
+                transition={{ duration: 0.5, repeat: Infinity }}
               >
                 ✨
               </motion.span>
             </div>
-            <h3>Transforming Avatar...</h3>
-            <p>Watch how {selectedDater.name} reacts!</p>
-            
-            <div className="applied-attrs">
-              {appliedAttributes.slice(-3).map((attr, i) => (
-                <motion.div
-                  key={i}
-                  className="applied-attr"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.3 }}
-                >
-                  ✓ {attr}
-                </motion.div>
-              ))}
-            </div>
+            <h3>Trait Added!</h3>
+            <p className="latest-trait">"{appliedAttributes[appliedAttributes.length - 1]}"</p>
+            <p>Watch how {selectedDater.name} reacts...</p>
           </motion.div>
         )}
         
-        {/* Hot Seat Phase */}
-        {phase === 'hotseat' && (
-          <motion.div 
-            className="sidebar-panel hotseat-panel"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <div className="hotseat-spotlight">
-              <motion.div
-                className="spotlight-ring"
-                animate={{ 
-                  boxShadow: [
-                    '0 0 20px var(--accent-coral)',
-                    '0 0 60px var(--accent-coral)',
-                    '0 0 20px var(--accent-coral)',
-                  ]
-                }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              />
-              <span className="fire-icon">🔥</span>
-            </div>
-            
-            <h3>HOT SEAT!</h3>
-            <p className="hotseat-player">
-              <strong>{hotSeatPlayer?.name || 'Player 1'}</strong> is in control!
-            </p>
-            <p className="panel-desc">
-              Add ANY attribute instantly. No voting. Pure power.
-            </p>
-            
-            <form onSubmit={handleHotSeatSubmit} className="hotseat-form">
-              <input
-                type="text"
-                value={hotSeatInput}
-                onChange={(e) => setHotSeatInput(e.target.value)}
-                placeholder="Your moment of power..."
-                autoFocus
-                maxLength={50}
-              />
-              <button type="submit" className="btn btn-chaos">
-                🔥 Apply Now!
-              </button>
-            </form>
-            
-            <div className="conversation-reminder">
-              <p>👀 Watch {selectedDater.name}'s reaction live!</p>
-            </div>
-          </motion.div>
-        )}
+        {/* Hot Seat Phase - Removed for single player */}
       </div>
     </div>
   )

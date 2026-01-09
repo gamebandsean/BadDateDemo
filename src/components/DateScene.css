@@ -181,12 +181,12 @@
 }
 
 /* Submitted List */
-.submitted-list {
+.submitted-list, .applied-list {
   flex: 1;
   overflow-y: auto;
 }
 
-.submitted-list h4 {
+.submitted-list h4, .applied-list h4 {
   font-size: 0.9rem;
   color: var(--text-muted);
   margin-bottom: 12px;
@@ -198,6 +198,29 @@
   border-radius: 12px;
   margin-bottom: 8px;
   font-size: 0.9rem;
+}
+
+.applied-attr {
+  background: rgba(78, 205, 196, 0.15);
+  color: var(--accent-mint);
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  border-left: 3px solid var(--accent-mint);
+}
+
+.no-traits-hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.latest-trait {
+  font-size: 1.1rem;
+  color: var(--accent-gold);
+  font-weight: 600;
+  margin: 16px 0;
 }
 
 /* Voting Panel */

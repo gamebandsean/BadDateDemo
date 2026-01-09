@@ -110,51 +110,31 @@ export const useGameStore = create((set, get) => ({
     })
   },
   
-  // Attribute submission
+  // Attribute submission - SINGLE PLAYER: immediately apply, no voting
   submitAttribute: (attribute) => {
-    const { submittedAttributes } = get()
-    if (submittedAttributes.length < 10) {
-      set({
-        submittedAttributes: [
-          ...submittedAttributes,
-          { id: Date.now(), text: attribute, votes: 0 },
-        ],
-      })
-    }
+    const { avatar, appliedAttributes } = get()
     
-    // Auto-transition to voting when threshold reached
-    if (submittedAttributes.length >= 5) {
-      set({ phase: 'voting' })
-    }
-  },
-  
-  voteForAttribute: (attributeId) => {
-    const { submittedAttributes } = get()
-    const updated = submittedAttributes.map(attr =>
-      attr.id === attributeId ? { ...attr, votes: attr.votes + 1 } : attr
-    )
-    set({ submittedAttributes: updated })
-  },
-  
-  applyTopAttributes: () => {
-    const { submittedAttributes, avatar, appliedAttributes } = get()
-    const topAttributes = [...submittedAttributes]
-      .sort((a, b) => b.votes - a.votes)
-      .slice(0, 3)
-      .map(a => a.text)
-    
+    // Immediately apply the attribute to the avatar
     set({
       avatar: {
         ...avatar,
-        attributes: [...avatar.attributes, ...topAttributes],
+        attributes: [...avatar.attributes, attribute],
       },
-      appliedAttributes: [...appliedAttributes, ...topAttributes],
-      submittedAttributes: [],
-      phase: 'applying',
+      appliedAttributes: [...appliedAttributes, attribute],
+      phase: 'applying', // Brief visual feedback
     })
     
-    // After applying, go to hot seat
-    setTimeout(() => set({ phase: 'hotseat' }), 3000)
+    // Return to small talk after brief delay
+    setTimeout(() => set({ phase: 'smalltalk' }), 1500)
+  },
+  
+  // Legacy voting functions (kept for compatibility, not used in single player)
+  voteForAttribute: (attributeId) => {
+    // No-op in single player mode
+  },
+  
+  applyTopAttributes: () => {
+    // No-op in single player mode
   },
   
   // Hot seat
