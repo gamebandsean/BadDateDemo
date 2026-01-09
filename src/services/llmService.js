@@ -11,14 +11,16 @@ export function buildDaterSystemPrompt(dater, phase = 'chat') {
   
   const chatPhaseContext = `You're chatting on a dating app before meeting in person. 
 
-YOUR GOAL: You want the other person to ASK YOU QUESTIONS so they can learn about you. This is their chance to find out what you're like before the date.
+YOUR GOAL: The other person is trying to learn about you before the date. Let them interrogate you - this is THEIR chance to gather intel.
 
 BEHAVIOR:
-- If they ask you a question, answer it naturally and maybe hint at more they could discover
+- If they ask you a question, answer it naturally and maybe hint at more they could discover about you
 - If they DON'T ask a question (they just make a statement or tell you about themselves), gently redirect them to ask YOU something instead
 - Examples of redirecting: "Haha interesting! But enough about you - what do you want to know about me?", "That's cool but I'm curious what questions you have for me!", "Save the mystery for the date 😉 Ask me something!"
-- Be flirty but keep pushing them to learn about you
-- Keep responses brief (1-3 sentences)`
+- DO NOT ask them questions back - this is about them learning about YOU
+- Be flirty and open to answering, but don't turn it into an interview of them
+- Keep responses brief (1-3 sentences)
+- End responses with openness to more questions, not questions for them`
 
   const datePhaseContext = `You're on a first date at a nice restaurant. The conversation is flowing.
 
@@ -210,39 +212,39 @@ export function getFallbackDaterResponse(dater, playerMessage) {
   }
   
   if (lowerMsg.includes('job') || lowerMsg.includes('work') || lowerMsg.includes('do for')) {
-    return `I'm a ${hiddenAttributes.job}! It keeps me pretty busy but I love it. What else do you want to know?`
+    return `I'm a ${hiddenAttributes.job}! It keeps me pretty busy but I love it. There's a lot more to that story though... 😉`
   }
   if (lowerMsg.includes('weekend') || lowerMsg.includes('free time') || lowerMsg.includes('fun')) {
-    return `On weekends? Honestly, I'm usually into ${hiddenAttributes.interests.slice(0, 2).join(' or ')}. Good question! What else?`
+    return `On weekends? Honestly, I'm usually into ${hiddenAttributes.interests.slice(0, 2).join(' or ')}. Pretty typical for me!`
   }
   if (lowerMsg.includes('pet') || lowerMsg.includes('dog') || lowerMsg.includes('cat')) {
     if (hiddenAttributes.interests.includes('dogs')) {
-      return "I'm such a dog person! 🐕 They're the best. Any other questions for me?"
+      return "I'm such a dog person! 🐕 They're honestly the best. Can't imagine life without them."
     }
     if (hiddenAttributes.interests.includes('cats')) {
-      return "Cats are my spirit animal tbh 🐱 What else do you want to know?"
+      return "Cats are my spirit animal tbh 🐱 So independent and mysterious."
     }
-    return "I love animals! Don't have any right now but definitely want some. Keep the questions coming!"
+    return "I love animals! Don't have any right now but definitely want some in the future."
   }
   if (lowerMsg.includes('music') || lowerMsg.includes('listen')) {
     if (hiddenAttributes.interests.includes('music')) {
-      return "Music is LIFE. I'm always discovering new artists. Great question! What else?"
+      return "Music is LIFE. I'm always discovering new artists. It's kind of an obsession honestly 🎵"
     }
-    return "I like a bit of everything, honestly. Depends on my mood! What else you got?"
+    return "I like a bit of everything, honestly. Depends on my mood!"
   }
   if (lowerMsg.includes('deal breaker') || lowerMsg.includes('dealbreaker') || lowerMsg.includes('hate')) {
-    return `Hmm good question... I'd say ${hiddenAttributes.dealbreakers[0]} is a big one for me. Anything else?`
+    return `Hmm good question... I'd say ${hiddenAttributes.dealbreakers[0]} is a big one for me. Definitely can't deal with that.`
   }
   if (lowerMsg.includes('looking for') || lowerMsg.includes('ideal') || lowerMsg.includes('type')) {
-    return `I really value someone who's ${hiddenAttributes.idealPartner.slice(0, 2).join(' and ')}. But honestly, chemistry is everything! What else do you want to know?`
+    return `I really value someone who's ${hiddenAttributes.idealPartner.slice(0, 2).join(' and ')}. But honestly, chemistry is everything!`
   }
   
   const defaults = [
-    "Haha that's such a good question! 😄 Keep 'em coming!",
-    "Honestly? I've never thought about it that way before! What else you curious about?",
-    "Ooh interesting question! What else do you want to know about me?",
-    `${hiddenAttributes.personality.split('.')[0]}... got more questions?`,
-    "Love that question! What else should you know about me? 😉",
+    "Haha that's such a good question! 😄",
+    "Honestly? I've never thought about it that way before!",
+    "Ooh interesting question! Let me think...",
+    `${hiddenAttributes.personality.split('.')[0]}...`,
+    "Love that you asked that! 😉",
   ]
   
   return defaults[Math.floor(Math.random() * defaults.length)]
