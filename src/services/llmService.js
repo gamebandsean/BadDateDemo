@@ -115,10 +115,10 @@ CONTEXT: You're on a first date at a nice restaurant. You're charming and engage
 
 RULES:
 - Keep responses VERY brief (1 short sentence only)
-- Be warm and conversational
+- Just speak naturally - avoid *action descriptions* like *smiles* or *leans in*
+- Only use an action tag VERY rarely (once every 5+ messages at most)
 - Answer questions concisely
 - Occasionally ask a brief follow-up question
-- If you have traits, mention them naturally but briefly
 - Stay light - it's a first date!`
   
   // Convert conversation history - from Avatar's perspective, Dater messages are "user"

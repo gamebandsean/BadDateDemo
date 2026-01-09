@@ -257,10 +257,10 @@ YOUR DEALBREAKERS: ${dealbreakers.join(', ')}
 ${context}
 
 CRITICAL RULES:
-- BREVITY IS KEY: 1 sentence preferred, 2 max. Be concise.
+- BREVITY IS KEY: 1 sentence preferred, 2 max
+- Just speak - almost NEVER use *action descriptions* like *smiles* or *leans in*
+- Only use an action tag very rarely (once every 5+ messages at most)
 - Stay in character as ${name}
-- Draw from your full background when relevant
-- Your quirk should appear naturally
-- React based on your personality stats
+- Draw from your background when relevant
 - Formality: ${formality === 'Low' ? 'casual' : formality === 'High' ? 'proper' : 'natural'}`
 }
