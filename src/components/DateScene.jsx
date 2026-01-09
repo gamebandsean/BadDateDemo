@@ -180,51 +180,70 @@ function DateScene() {
     }
   }, []) // Only run on mount
   
-  // React to newly applied attributes with a special conversation beat
+  // React to newly applied attributes with IMMEDIATE conversation
   useEffect(() => {
     if (appliedAttributes.length > 0 && phase === 'applying') {
-      const latestAttributes = appliedAttributes.slice(-3)
+      // Get fresh state for the latest attribute
+      const currentLatestAttr = useGameStore.getState().latestAttribute
       
-      // Give the avatar something to say based on new attributes
+      // After brief "applying" feedback, trigger immediate reactions
       setTimeout(async () => {
-        const attributeReveal = latestAttributes[Math.floor(Math.random() * latestAttributes.length)]
+        const freshConversation = useGameStore.getState().dateConversation
+        const freshAvatar = useGameStore.getState().avatar
+        const freshLatestAttr = useGameStore.getState().latestAttribute
         
-        // Get LLM response for avatar revealing this attribute
+        console.log('Triggering attribute reaction for:', freshLatestAttr)
+        
+        // Avatar works in the new attribute subtly
         const avatarResponse = await getAvatarDateResponse(
-          { ...avatar, attributes: [...avatar.attributes] },
+          freshAvatar,
           selectedDater,
-          [...dateConversation, { speaker: 'dater', message: "Tell me more about yourself..." }]
+          freshConversation,
+          freshLatestAttr // Pass the latest attribute!
         )
         
         if (avatarResponse) {
           addDateMessage('avatar', avatarResponse)
           lastSpeakerRef.current = 'avatar'
           
-          // Dater reacts after a delay
+          // Dater reacts with heightened intensity after a delay
           setTimeout(async () => {
+            const newestConversation = useGameStore.getState().dateConversation
+            const newestAvatar = useGameStore.getState().avatar
+            const newestLatestAttr = useGameStore.getState().latestAttribute
+            const reactionsLeft = useGameStore.getState().latestAttributeReactionsLeft
+            
+            console.log('Dater reacting to:', newestLatestAttr, 'reactions left:', reactionsLeft)
+            
             const daterReaction = await getDaterDateResponse(
               selectedDater,
-              { ...avatar, attributes: [...avatar.attributes] },
-              [...dateConversation, { speaker: 'avatar', message: avatarResponse }]
+              newestAvatar,
+              newestConversation,
+              reactionsLeft > 0 ? newestLatestAttr : null // Heightened reaction!
             )
             
             if (daterReaction) {
               addDateMessage('dater', daterReaction)
               lastSpeakerRef.current = 'dater'
               
+              // Consume one heightened reaction
+              if (reactionsLeft > 0) {
+                useGameStore.getState().consumeDaterReaction()
+              }
+              
               // Adjust compatibility based on reaction
               const lowerReaction = daterReaction.toLowerCase()
               if (lowerReaction.includes('!') && (lowerReaction.includes('love') || lowerReaction.includes('amazing'))) {
-                updateCompatibility(8)
-              } else if (lowerReaction.includes('...') || lowerReaction.includes('oh')) {
-                updateCompatibility(-5)
+                updateCompatibility(10)
+              } else if (lowerReaction.includes('spider') || lowerReaction.includes('what') || lowerReaction.includes('wait')) {
+                updateCompatibility(-8)
               }
             }
           }, 3000)
         }
-      }, 2000)
+      }, 1800) // After the "applying" phase ends
     }
-  }, [appliedAttributes.length, phase])
+  }, [appliedAttributes.length, phase, selectedDater, addDateMessage, updateCompatibility])
   
   // Timer tick
   useEffect(() => {
@@ -280,21 +299,6 @@ function DateScene() {
               <h3>{avatar.name}</h3>
               <span>{avatar.age} • {avatar.occupation}</span>
             </div>
-            {avatar.attributes.length > 0 && (
-              <div className="character-attributes">
-                {avatar.attributes.slice(-4).map((attr, i) => (
-                  <motion.span 
-                    key={i}
-                    className="attr-tag"
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: i * 0.1 }}
-                  >
-                    {attr}
-                  </motion.span>
-                ))}
-              </div>
-            )}
           </motion.div>
           
           {/* VS */}
