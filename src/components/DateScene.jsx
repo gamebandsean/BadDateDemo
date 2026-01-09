@@ -37,11 +37,26 @@ function DateScene() {
   const [votedAttributes, setVotedAttributes] = useState(new Set())
   const [hotSeatInput, setHotSeatInput] = useState('')
   const [isConversing, setIsConversing] = useState(false)
+  const [compatibilityFlash, setCompatibilityFlash] = useState(null) // 'positive' | 'negative' | null
+  const prevCompatibilityRef = useRef(compatibility)
   const conversationRef = useRef(null)
   const conversationIntervalRef = useRef(null)
   const lastSpeakerRef = useRef(null)
   const conversationActiveRef = useRef(true)
   const greetingSentRef = useRef(false)
+  
+  // Track compatibility changes for flash animation
+  useEffect(() => {
+    if (compatibility !== prevCompatibilityRef.current) {
+      const delta = compatibility - prevCompatibilityRef.current
+      setCompatibilityFlash(delta > 0 ? 'positive' : 'negative')
+      prevCompatibilityRef.current = compatibility
+      
+      // Clear flash after animation
+      const timer = setTimeout(() => setCompatibilityFlash(null), 800)
+      return () => clearTimeout(timer)
+    }
+  }, [compatibility])
   
   // Auto-scroll conversation
   useEffect(() => {
@@ -301,19 +316,43 @@ function DateScene() {
             </div>
           </motion.div>
           
-          {/* VS */}
-          <div className="vs-badge">
-            <motion.span 
-              className="animate-heartbeat"
-              animate={{ 
-                scale: compatibility > 70 ? [1, 1.2, 1] : [1, 1.05, 1],
-                color: compatibility > 70 ? '#06d6a0' : compatibility > 40 ? '#ff4d6d' : '#9d4edd'
-              }}
-              transition={{ duration: 1, repeat: Infinity }}
+          {/* Compatibility Meter */}
+          <motion.div 
+            className={`compatibility-meter ${compatibilityFlash || ''}`}
+            animate={compatibilityFlash ? {
+              scale: [1, 1.3, 1],
+              boxShadow: compatibilityFlash === 'positive' 
+                ? ['0 0 0px #06d6a0', '0 0 30px #06d6a0', '0 0 0px #06d6a0']
+                : ['0 0 0px #ff4d6d', '0 0 30px #ff4d6d', '0 0 0px #ff4d6d']
+            } : {}}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+          >
+            <div className="compatibility-label">Compatibility</div>
+            <motion.div 
+              className="compatibility-value"
+              animate={compatibilityFlash ? {
+                scale: [1, 1.2, 1],
+                color: compatibilityFlash === 'positive' ? '#06d6a0' : '#ff4d6d'
+              } : {}}
+              transition={{ duration: 0.5 }}
             >
-              {compatibility > 70 ? '💕' : compatibility > 40 ? '💗' : '💔'}
-            </motion.span>
-          </div>
+              {compatibility}%
+            </motion.div>
+            <div className="compatibility-bar">
+              <motion.div 
+                className="compatibility-fill"
+                initial={{ width: '50%' }}
+                animate={{ 
+                  width: `${compatibility}%`,
+                  backgroundColor: compatibility > 70 ? '#06d6a0' : compatibility > 40 ? '#ffd166' : '#ff4d6d'
+                }}
+                transition={{ duration: 0.5 }}
+              />
+            </div>
+            <div className="compatibility-emoji">
+              {compatibility > 80 ? '💕' : compatibility > 60 ? '💗' : compatibility > 40 ? '💛' : compatibility > 20 ? '😬' : '💔'}
+            </div>
+          </motion.div>
           
           {/* Dater */}
           <motion.div 
