@@ -1,20 +1,45 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import './Matchmaking.css'
 
 function Matchmaking() {
   const { daters, currentDaterIndex, swipeDater } = useGameStore()
   const [swipeDirection, setSwipeDirection] = useState(null)
+  const [isDragging, setIsDragging] = useState(false)
   
   const currentDater = daters[currentDaterIndex]
+  
+  // Motion values for drag
+  const x = useMotionValue(0)
+  const rotate = useTransform(x, [-200, 0, 200], [-25, 0, 25])
+  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 1, 1, 1, 0.5])
+  
+  // Transform for swipe indicators
+  const likeOpacity = useTransform(x, [0, 100], [0, 1])
+  const nopeOpacity = useTransform(x, [-100, 0], [1, 0])
   
   const handleSwipe = (direction) => {
     setSwipeDirection(direction)
     setTimeout(() => {
       swipeDater(currentDater.id, direction)
       setSwipeDirection(null)
+      x.set(0) // Reset position
     }, 300)
+  }
+  
+  const handleDragEnd = (event, info) => {
+    setIsDragging(false)
+    const swipeThreshold = 100
+    
+    if (info.offset.x > swipeThreshold) {
+      handleSwipe('right')
+    } else if (info.offset.x < -swipeThreshold) {
+      handleSwipe('left')
+    } else {
+      // Snap back to center
+      x.set(0)
+    }
   }
   
   return (
@@ -23,30 +48,39 @@ function Matchmaking() {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentDater.id}
-            className={`dater-card ${swipeDirection ? `swiping-${swipeDirection}` : ''}`}
+            className={`dater-card ${swipeDirection ? `swiping-${swipeDirection}` : ''} ${isDragging ? 'dragging' : ''}`}
+            style={{ x, rotate, opacity }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={1}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={handleDragEnd}
             initial={{ opacity: 0, scale: 0.8, y: 50 }}
             animate={{ 
-              opacity: 1, 
               scale: 1, 
               y: 0,
-              x: swipeDirection === 'left' ? -300 : swipeDirection === 'right' ? 300 : 0,
-              rotate: swipeDirection === 'left' ? -20 : swipeDirection === 'right' ? 20 : 0,
+              x: swipeDirection === 'left' ? -400 : swipeDirection === 'right' ? 400 : undefined,
             }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            whileTap={{ cursor: 'grabbing' }}
           >
-            {swipeDirection && (
-              <motion.div 
-                className={`swipe-indicator ${swipeDirection}`}
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-              >
-                {swipeDirection === 'right' ? '💚 MATCH!' : '❌ PASS'}
-              </motion.div>
-            )}
+            {/* Live swipe indicators while dragging */}
+            <motion.div 
+              className="swipe-indicator right"
+              style={{ opacity: likeOpacity }}
+            >
+              💚 MATCH!
+            </motion.div>
+            <motion.div 
+              className="swipe-indicator left"
+              style={{ opacity: nopeOpacity }}
+            >
+              ❌ PASS
+            </motion.div>
             
             <div className="dater-photo">
-              <img src={currentDater.photo} alt={currentDater.name} />
+              <img src={currentDater.photo} alt={currentDater.name} draggable={false} />
             </div>
             
             <div className="dater-info">
@@ -88,13 +122,7 @@ function Matchmaking() {
       
       <div className="swipe-instructions">
         <p className="instant-match-notice">
-          💘 <strong>Swipe right to instantly match!</strong>
-        </p>
-        <p>
-          Type <span className="key">Yes</span> or <span className="key">Swipe Right</span> to match
-        </p>
-        <p>
-          Type <span className="key">No</span> or <span className="key">Swipe Left</span> to pass
+          💘 <strong>Drag the card or tap the buttons!</strong>
         </p>
       </div>
       
