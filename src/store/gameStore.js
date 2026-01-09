@@ -146,21 +146,19 @@ export const useGameStore = create((set, get) => ({
     
     set({ votes: newVotes })
     
-    // Check if we should advance (80% voted - simplified for demo)
-    const totalVotes = newVotes[daterId].yes + newVotes[daterId].no
-    if (totalVotes >= 3) { // Simplified threshold for demo
-      // Check if we have 3 candidates with enough yes votes
-      const yesVotedDaters = daters.filter(d => newVotes[d.id]?.yes >= 1)
-      
-      if (yesVotedDaters.length >= 3) {
-        // Sort by yes votes and take top 3
-        const topThree = [...yesVotedDaters]
-          .sort((a, b) => (newVotes[b.id]?.yes || 0) - (newVotes[a.id]?.yes || 0))
-          .slice(0, 3)
-        set({ topThreeDaters: topThree, showingTopThree: true })
-      } else if (currentDaterIndex < daters.length - 1) {
-        set({ currentDaterIndex: currentDaterIndex + 1 })
-      }
+    // For single-player demo: advance immediately after each vote
+    // Check if we have 3 candidates with yes votes
+    const yesVotedDaters = daters.filter(d => newVotes[d.id]?.yes >= 1)
+    
+    if (yesVotedDaters.length >= 3) {
+      // Sort by yes votes and take top 3
+      const topThree = [...yesVotedDaters]
+        .sort((a, b) => (newVotes[b.id]?.yes || 0) - (newVotes[a.id]?.yes || 0))
+        .slice(0, 3)
+      set({ topThreeDaters: topThree, showingTopThree: true })
+    } else if (currentDaterIndex < daters.length - 1) {
+      // Move to next card
+      set({ currentDaterIndex: currentDaterIndex + 1 })
     }
   },
   
