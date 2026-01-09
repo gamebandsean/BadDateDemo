@@ -181,7 +181,7 @@ function Results() {
           
           {appliedAttributes.length > 0 && (
             <div className="applied-summary">
-              <h4>Your Avatar Became:</h4>
+              <h4>Avatar Became:</h4>
               <div className="attr-list">
                 {appliedAttributes.map((attr, i) => (
                   <span key={i} className="attr-badge">{attr}</span>

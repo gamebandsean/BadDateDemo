@@ -234,7 +234,7 @@ function DateScene() {
             <div className="character-image">
               <img 
                 src="https://api.dicebear.com/7.x/avataaars/svg?seed=Avatar&backgroundColor=b6e3f4"
-                alt="Your Avatar" 
+                alt="Avatar" 
               />
             </div>
             <div className="character-info">
@@ -342,7 +342,7 @@ function DateScene() {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <h3>🎭 Shape Your Avatar</h3>
+            <h3>🎭 Shape the Avatar</h3>
             <p className="panel-desc">
               Submit attributes to add to your avatar. What kind of person are they?
             </p>

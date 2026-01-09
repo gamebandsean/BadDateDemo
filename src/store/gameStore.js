@@ -1,13 +1,17 @@
 import { create } from 'zustand'
 import { daters } from '../data/daters'
 
-// Initial Avatar state
+// Initial Avatar state - starts with generic attributes so conversation can flow
 const initialAvatar = {
-  name: 'Your Avatar',
+  name: 'Avatar',
   age: 27,
-  occupation: 'Mystery Person',
-  attributes: [],
-  personality: 'A blank slate waiting to be shaped by the crowd.',
+  occupation: 'Professional',
+  attributes: [
+    'seems friendly',
+    'has a nice smile',
+    'appears well-dressed',
+  ],
+  personality: 'A pleasant person with enough baseline traits to hold a conversation, waiting to be shaped by the crowd.',
 }
 
 export const useGameStore = create((set, get) => ({

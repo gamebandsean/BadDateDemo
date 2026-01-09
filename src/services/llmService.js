@@ -94,21 +94,23 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory) 
   const { name, age, occupation, attributes } = avatar
   
   const attributesList = attributes.length > 0 
-    ? `YOUR KNOWN TRAITS: ${attributes.join(', ')}`
-    : 'You have no specific traits yet - you are a blank slate.'
+    ? `YOUR TRAITS: ${attributes.join(', ')}`
+    : 'You are a mystery - share generic pleasantries.'
   
   const systemPrompt = `You are ${name}, a ${age}-year-old ${occupation} on a first date with ${dater.name}.
 
 ${attributesList}
 
-CONTEXT: You're on a first date at a nice restaurant. Keep the conversation going naturally. 
+CONTEXT: You're on a first date at a nice restaurant. You're charming and engaged.
 
 RULES:
-- Stay in character based on your traits
-- Keep responses brief (1-2 sentences)
-- Be conversational and engage with what your date says
-- If you have specific traits, naturally weave them into conversation
-- React to your date's questions and statements authentically`
+- Keep responses brief (1-2 sentences max)
+- Be warm, friendly, and conversational
+- Answer questions your date asks
+- Ask follow-up questions back to your date
+- If you have specific traits, naturally mention them when relevant
+- Stay light and flirty - it's a first date!
+- Don't be mysterious or evasive - engage openly`
   
   // Convert conversation history - from Avatar's perspective, Dater messages are "user"
   const messages = conversationHistory.map(msg => ({
