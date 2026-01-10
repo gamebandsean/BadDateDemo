@@ -719,26 +719,374 @@
   margin: 0;
 }
 
+/* ============================================
+   TABLET RESPONSIVE (max-width: 900px)
+   ============================================ */
 @media (max-width: 900px) {
   .date-scene {
     flex-direction: column;
+    padding: 12px;
+    gap: 12px;
   }
   
   .date-sidebar {
     width: 100%;
-    max-height: 300px;
+    max-height: none;
+    order: 2; /* Move sidebar below main content */
+  }
+  
+  .date-main {
+    order: 1;
   }
   
   .date-characters {
     flex-wrap: wrap;
-    gap: 20px;
-    padding: 20px;
-    margin-left: 0; /* Reset offset on mobile */
+    gap: 16px;
+    padding: 16px;
+    padding-left: 16px; /* Reset offset */
   }
   
   .character-image {
     width: 70px;
     height: 70px;
+  }
+  
+  .compatibility-meter {
+    min-width: 220px;
+    padding: 12px 20px;
+  }
+  
+  .compatibility-value {
+    font-size: 1.8rem;
+  }
+}
+
+/* ============================================
+   MOBILE PORTRAIT (max-width: 768px)
+   ============================================ */
+@media (max-width: 768px) {
+  .date-scene {
+    flex-direction: column;
+    padding: 8px;
+    gap: 8px;
+    max-height: none;
+    height: auto;
+    min-height: calc(100vh - 70px);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
+  .date-main {
+    flex: none;
+    min-height: 0;
+    border-radius: 16px;
+  }
+  
+  /* Stack characters vertically on mobile */
+  .date-characters {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    padding-left: 12px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, transparent 100%);
+  }
+  
+  /* Top row: Avatar + Compatibility + Dater */
+  .date-characters {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto;
+    align-items: center;
+    justify-items: center;
+  }
+  
+  .avatar-character {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  
+  .compatibility-meter {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: auto;
+    padding: 10px 16px;
+    margin: 0 8px;
+  }
+  
+  .dater-character {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  
+  .character {
+    gap: 6px;
+  }
+  
+  .character-image {
+    width: 56px;
+    height: 56px;
+    border-width: 2px;
+  }
+  
+  .character-info h3 {
+    font-size: 0.9rem;
+  }
+  
+  .character-info span {
+    font-size: 0.7rem;
+  }
+  
+  .character-attributes {
+    display: none; /* Hide on mobile to save space */
+  }
+  
+  .compatibility-label {
+    font-size: 0.65rem;
+  }
+  
+  .compatibility-value {
+    font-size: 1.5rem;
+  }
+  
+  .compatibility-bar {
+    height: 6px;
+  }
+  
+  .compatibility-emoji {
+    font-size: 1.2rem;
+    margin-top: 2px;
+  }
+  
+  .mood-indicator {
+    font-size: 1.2rem;
+    bottom: -2px;
+    right: -2px;
+  }
+  
+  /* Conversation area */
+  .conversation-area {
+    padding: 12px;
+    gap: 12px;
+    flex: 1;
+    min-height: 200px;
+    max-height: 35vh;
+  }
+  
+  .dialogue {
+    max-width: 85%;
+  }
+  
+  .dialogue-bubble {
+    padding: 10px 14px;
+    border-radius: 16px;
+  }
+  
+  .dialogue-bubble p {
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+  
+  .dialogue-speaker {
+    font-size: 0.7rem;
+    margin-top: 2px;
+  }
+  
+  /* Sidebar becomes bottom panel */
+  .date-sidebar {
+    width: 100%;
+    max-height: none;
+    flex: none;
+  }
+  
+  .sidebar-panel {
+    border-radius: 16px;
+    padding: 16px;
+    height: auto;
+    max-height: none;
+  }
+  
+  .sidebar-panel h3 {
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+  }
+  
+  .panel-desc {
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+  
+  .attribute-form {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .attribute-form input {
+    padding: 14px 16px;
+    font-size: 16px; /* Prevents iOS zoom */
+    border-radius: 12px;
+  }
+  
+  .attribute-form .btn {
+    padding: 14px 20px;
+  }
+  
+  .submitted-list h4, .applied-list h4 {
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+  }
+  
+  .submitted-attr {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+  }
+  
+  .applied-attr {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+  
+  .latest-trait {
+    font-size: 0.95rem;
+    margin: 10px 0;
+  }
+  
+  .cooldown-hint {
+    font-size: 0.75rem;
+  }
+  
+  /* Debug panel mobile */
+  .compatibility-debug {
+    min-width: 280px;
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+  
+  .debug-factor {
+    grid-template-columns: 20px 60px 1fr 28px 28px;
+    gap: 4px;
+    padding: 3px 4px;
+  }
+  
+  .factor-name {
+    font-size: 0.7rem;
+  }
+  
+  .factor-value {
+    font-size: 0.75rem;
+  }
+  
+  .conversation-status {
+    padding: 10px 14px;
+    font-size: 0.8rem;
+  }
+}
+
+/* ============================================
+   SMALL MOBILE (max-width: 380px)
+   ============================================ */
+@media (max-width: 380px) {
+  .date-scene {
+    padding: 4px;
+    gap: 4px;
+  }
+  
+  .date-characters {
+    padding: 8px;
+    gap: 8px;
+  }
+  
+  .character-image {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .character-info h3 {
+    font-size: 0.8rem;
+  }
+  
+  .compatibility-meter {
+    padding: 8px 12px;
+  }
+  
+  .compatibility-value {
+    font-size: 1.3rem;
+  }
+  
+  .conversation-area {
+    padding: 8px;
+    gap: 8px;
+    max-height: 30vh;
+  }
+  
+  .dialogue-bubble p {
+    font-size: 0.8rem;
+  }
+  
+  .sidebar-panel {
+    padding: 12px;
+  }
+  
+  .sidebar-panel h3 {
+    font-size: 1rem;
+  }
+  
+  .panel-desc {
+    font-size: 0.75rem;
+  }
+}
+
+/* ============================================
+   LANDSCAPE PHONE (height constrained)
+   ============================================ */
+@media (max-width: 900px) and (orientation: landscape) {
+  .date-scene {
+    flex-direction: row;
+    max-height: calc(100vh - 60px);
+    overflow: hidden;
+  }
+  
+  .date-main {
+    flex: 1;
+    max-width: 60%;
+  }
+  
+  .date-sidebar {
+    width: 40%;
+    max-height: none;
+    order: 0;
+  }
+  
+  .date-characters {
+    display: flex;
+    flex-direction: row;
+    padding: 8px 12px;
+    gap: 12px;
+  }
+  
+  .character-image {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .compatibility-meter {
+    padding: 6px 12px;
+    min-width: 160px;
+  }
+  
+  .compatibility-value {
+    font-size: 1.3rem;
+  }
+  
+  .conversation-area {
+    max-height: calc(100vh - 200px);
+    padding: 10px;
+  }
+  
+  .sidebar-panel {
+    padding: 12px;
   }
 }
 

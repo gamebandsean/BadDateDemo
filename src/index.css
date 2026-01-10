@@ -221,3 +221,68 @@ input::placeholder, textarea::placeholder {
   margin: 0 auto;
   padding: 0 20px;
 }
+
+/* ============================================
+   MOBILE RESPONSIVE STYLES
+   ============================================ */
+
+/* Mobile-first media query - Portrait phones */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  .btn {
+    padding: 14px 24px;
+    font-size: 0.95rem;
+    /* Larger touch targets */
+    min-height: 48px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  input[type="text"], textarea {
+    padding: 16px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    border-radius: 12px;
+  }
+
+  .container {
+    padding: 0 12px;
+  }
+
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.6rem; }
+  h3 { font-size: 1.3rem; }
+
+  /* Hide scrollbars on mobile for cleaner look */
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+  body {
+    font-size: 13px;
+  }
+
+  .btn {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+
+  h1 { font-size: 1.8rem; }
+  h2 { font-size: 1.4rem; }
+  h3 { font-size: 1.2rem; }
+}
+
+/* Landscape phone orientation */
+@media (max-width: 900px) and (orientation: landscape) {
+  body {
+    font-size: 13px;
+  }
+}
