@@ -85,11 +85,11 @@ export const useGameStore = create((set, get) => ({
   
   // 5-factor compatibility system
   compatibilityFactors: {
-    physicalAttraction: 60, // Starting higher for easier gameplay
-    similarInterests: 60,
-    similarValues: 60,
-    similarTastes: 60,
-    similarIntelligence: 60,
+    physicalAttraction: 50, // Neutral baseline - rises/falls based on conversation
+    similarInterests: 50,
+    similarValues: 50,
+    similarTastes: 50,
+    similarIntelligence: 50,
   },
   // Track which factors have been "activated" (discussed in conversation)
   // Unactivated factors contribute only 10% to the overall calculation
@@ -189,11 +189,11 @@ export const useGameStore = create((set, get) => ({
       discoveredTraits: [], // Hide traits discovered during chat
       conversationTurns: 0,
       compatibilityFactors: {
-        physicalAttraction: 60, // Starting higher for easier gameplay
-        similarInterests: 60,
-        similarValues: 60,
-        similarTastes: 60,
-        similarIntelligence: 60,
+        physicalAttraction: 50, // Neutral baseline
+        similarInterests: 50,
+        similarValues: 50,
+        similarTastes: 50,
+        similarIntelligence: 50,
       },
       factorsActivated: {
         physicalAttraction: false,
@@ -358,7 +358,7 @@ export const useGameStore = create((set, get) => ({
    * @param {number} change - Positive or negative change amount
    */
   updateCompatibilityFactor: (factor, change) => {
-    const { compatibilityFactors, factorsActivated } = get()
+    const { compatibilityFactors, factorsActivated, compatibility: currentCompatibility } = get()
     
     // Map short names to full names
     const factorMap = {
@@ -376,8 +376,22 @@ export const useGameStore = create((set, get) => ({
       targetFactor = factorMap[factors[Math.floor(Math.random() * factors.length)]]
     }
     
-    // Update the specific factor
-    const newValue = Math.max(0, Math.min(100, compatibilityFactors[targetFactor] + change))
+    const wasActivated = factorsActivated[targetFactor]
+    const isFirstActivation = !wasActivated
+    
+    // Get the starting value for this factor
+    let startingValue = compatibilityFactors[targetFactor]
+    
+    // KEY FIX: When a factor is activated for the FIRST time with a POSITIVE change,
+    // start it from 50 (neutral) so it doesn't drag down the score.
+    // If the change is negative, it should start from 50 and go down.
+    if (isFirstActivation) {
+      // First activation - start from neutral baseline of 50
+      startingValue = 50
+    }
+    
+    // Calculate new value
+    const newValue = Math.max(0, Math.min(100, startingValue + change))
     const newFactors = { ...compatibilityFactors, [targetFactor]: newValue }
     
     // Mark this factor as activated (it's now been discussed)
@@ -392,7 +406,7 @@ export const useGameStore = create((set, get) => ({
     const newCompat = get().calculateCompatibility()
     set({ compatibility: newCompat })
     
-    return { factor: targetFactor, oldValue: compatibilityFactors[targetFactor], newValue, overallCompat: newCompat }
+    return { factor: targetFactor, oldValue: startingValue, newValue, overallCompat: newCompat, isFirstActivation }
   },
   
   // Increment conversation turn counter (called after each exchange)
@@ -430,11 +444,11 @@ export const useGameStore = create((set, get) => ({
       dateConversation: [],
       compatibility: 50,
       compatibilityFactors: {
-        physicalAttraction: 60, // Starting higher for easier gameplay
-        similarInterests: 60,
-        similarValues: 60,
-        similarTastes: 60,
-        similarIntelligence: 60,
+        physicalAttraction: 50, // Neutral baseline
+        similarInterests: 50,
+        similarValues: 50,
+        similarTastes: 50,
+        similarIntelligence: 50,
       },
       factorsActivated: {
         physicalAttraction: false,
