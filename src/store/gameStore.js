@@ -423,11 +423,17 @@ export const useGameStore = create((set, get) => ({
   
   // Increment conversation turn counter (called after each exchange)
   incrementConversationTurn: () => {
-    const { conversationTurns } = get()
+    const { conversationTurns, compatibility: currentCompatibility } = get()
     set({ conversationTurns: conversationTurns + 1 })
     // Recalculate compatibility with new weights
     const newCompat = get().calculateCompatibility()
-    set({ compatibility: newCompat })
+    // PROTECTION: Only update if the new compatibility is higher or equal
+    // Weight changes shouldn't cause drops - only explicit negative sentiment should
+    // Allow small drops (up to 2 points) for natural fluctuation
+    if (newCompat >= currentCompatibility - 2) {
+      set({ compatibility: newCompat })
+    }
+    // If it would drop more than 2 points, keep the current value
   },
   
   // Legacy function - update random factor

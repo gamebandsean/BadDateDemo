@@ -201,13 +201,15 @@ function evaluateDaterSentiment(response, reactionsLeft = 0, avatarMessage = '')
   let score = Math.round(baseScore * multiplier)
   
   // KEY FIX: When reacting to a just-added attribute (reactionsLeft > 0),
-  // ensure there's a minimum positive boost UNLESS the response was explicitly negative.
-  // This prevents neutral responses from causing compatibility drops after adding traits.
+  // ensure there's a SIGNIFICANT positive boost UNLESS the response was explicitly negative.
+  // This prevents the complex weight calculations from causing compatibility drops after adding traits.
   if (reactionsLeft > 0 && score >= 0) {
-    // First reaction (reactionsLeft === 2): minimum +8 boost
-    // Second reaction (reactionsLeft === 1): minimum +4 boost
-    const minBoost = reactionsLeft === 2 ? 8 : 4
-    score = Math.max(score, minBoost)
+    // First reaction (reactionsLeft === 2): LARGE boost (+15-20)
+    // Second reaction (reactionsLeft === 1): medium boost (+8-12)
+    const minBoost = reactionsLeft === 2 ? 15 : 8
+    const maxBoost = reactionsLeft === 2 ? 20 : 12
+    const boost = minBoost + Math.floor(Math.random() * (maxBoost - minBoost + 1))
+    score = Math.max(score, boost)
   }
   
   // Add some randomness for natural variation
