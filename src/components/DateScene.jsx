@@ -200,14 +200,29 @@ function evaluateDaterSentiment(response, reactionsLeft = 0, avatarMessage = '')
   // Apply the multiplier based on attribute timing
   let score = Math.round(baseScore * multiplier)
   
+  // KEY FIX: When reacting to a just-added attribute (reactionsLeft > 0),
+  // ensure there's a minimum positive boost UNLESS the response was explicitly negative.
+  // This prevents neutral responses from causing compatibility drops after adding traits.
+  if (reactionsLeft > 0 && score >= 0) {
+    // First reaction (reactionsLeft === 2): minimum +8 boost
+    // Second reaction (reactionsLeft === 1): minimum +4 boost
+    const minBoost = reactionsLeft === 2 ? 8 : 4
+    score = Math.max(score, minBoost)
+  }
+  
   // Add some randomness for natural variation
   if (score === 0) {
     // Neutral exchanges now lean slightly positive (easier gameplay)
     score = Math.floor(Math.random() * 4) // 0 to +3 (was -1 to +1)
   } else {
-    // Add ±15% variance to non-zero scores
+    // Add ±15% variance to non-zero scores (but don't let positive become negative)
     const variance = Math.floor(Math.abs(score) * 0.2)
-    score += Math.floor(Math.random() * (variance * 2 + 1)) - variance
+    const randomAdjust = Math.floor(Math.random() * (variance * 2 + 1)) - variance
+    score += randomAdjust
+    // Ensure post-attribute reactions stay positive if they started positive
+    if (reactionsLeft > 0 && score < 1) {
+      score = 1
+    }
   }
   
   return { score, factor }
