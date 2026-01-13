@@ -460,6 +460,10 @@ function DateScene() {
     setIsConversing(false)
   }, [selectedDater, addDateMessage, isConversing])
   
+  // Track when a new attribute is added to trigger immediate response
+  const lastKnownAttributeCountRef = useRef(0)
+  const pendingAttributeResponseRef = useRef(false)
+  
   // Start and maintain continuous conversation
   useEffect(() => {
     conversationActiveRef.current = true
@@ -500,16 +504,33 @@ function DateScene() {
       startConversation()
     }
     
-    // Set up continuous conversation - runs every 8-12 seconds (slower for readability)
+    // Dynamic conversation timing based on traits
+    const getConversationDelay = () => {
+      const { submittedAttributes } = useGameStore.getState()
+      if (submittedAttributes.length === 0) {
+        // SLOW before first trait - give player time to read and think
+        return 15000 + Math.random() * 5000 // 15-20 seconds
+      } else {
+        // Normal speed once traits are being added
+        return 8000 + Math.random() * 4000 // 8-12 seconds
+      }
+    }
+    
+    // Set up continuous conversation with dynamic timing
     const runConversation = async () => {
       if (conversationActiveRef.current && isMounted) {
         await generateNextTurn()
+        
+        // Schedule next turn with dynamic delay
+        if (isMounted && conversationActiveRef.current) {
+          conversationIntervalRef.current = setTimeout(runConversation, getConversationDelay())
+        }
       }
     }
     
     // Start conversation loop after initial exchange
     const startDelay = setTimeout(() => {
-      conversationIntervalRef.current = setInterval(runConversation, 8000 + Math.random() * 4000)
+      runConversation()
     }, 8000)
     
     return () => {
@@ -517,10 +538,56 @@ function DateScene() {
       conversationActiveRef.current = false
       clearTimeout(startDelay)
       if (conversationIntervalRef.current) {
-        clearInterval(conversationIntervalRef.current)
+        clearTimeout(conversationIntervalRef.current)
       }
     }
   }, []) // Only run on mount
+  
+  // Watch for new attributes and trigger immediate Avatar response
+  useEffect(() => {
+    const currentCount = submittedAttributes.length
+    
+    if (currentCount > lastKnownAttributeCountRef.current && currentCount > 0) {
+      console.log('🎯 NEW TRAIT DETECTED! Triggering immediate Avatar response...')
+      
+      // Mark that we need an immediate Avatar response
+      pendingAttributeResponseRef.current = true
+      
+      // Cancel any pending conversation timeout
+      if (conversationIntervalRef.current) {
+        clearTimeout(conversationIntervalRef.current)
+      }
+      
+      // Force Avatar to speak next (immediately after the brief "applying" phase)
+      const triggerImmediateResponse = async () => {
+        // Wait for the applying phase animation (1.5s)
+        await new Promise(r => setTimeout(r, 1800))
+        
+        if (!conversationActiveRef.current) return
+        
+        // Force the next speaker to be Avatar regardless of whose turn it was
+        lastSpeakerRef.current = 'dater' // This makes Avatar speak next
+        
+        // Trigger immediate conversation turn
+        await generateNextTurn()
+        
+        pendingAttributeResponseRef.current = false
+        
+        // Resume normal conversation loop
+        const { submittedAttributes: attrs } = useGameStore.getState()
+        const delay = attrs.length > 0 ? (8000 + Math.random() * 4000) : (15000 + Math.random() * 5000)
+        conversationIntervalRef.current = setTimeout(async () => {
+          if (conversationActiveRef.current) {
+            await generateNextTurn()
+          }
+        }, delay)
+      }
+      
+      triggerImmediateResponse()
+    }
+    
+    lastKnownAttributeCountRef.current = currentCount
+  }, [submittedAttributes.length, generateNextTurn])
   
   // Attribute reactions are now handled naturally by the conversation loop
   // The latestAttribute is stored in the store and will be picked up on the next turn
