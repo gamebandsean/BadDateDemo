@@ -556,80 +556,43 @@ function DateScene() {
   // Track when a new attribute is added to trigger immediate response
   const lastKnownAttributeCountRef = useRef(0)
   const pendingAttributeResponseRef = useRef(false)
+  const conversationStartedRef = useRef(false) // Track if conversation has begun after first attribute
   
-  // Start and maintain continuous conversation
+  // Start with dater's opening line, then WAIT for first attribute
   useEffect(() => {
     conversationActiveRef.current = true
     let isMounted = true
     let greetingStarted = false
     
-    const startConversation = async () => {
-      // Only start if no messages exist and we haven't started
+    const showOpeningLine = async () => {
+      // Only show opening if no messages exist and we haven't started
       if (greetingStarted) return
       greetingStarted = true
       
-        await new Promise(r => setTimeout(r, 2000))
-        if (!isMounted) return
-        
-        // Double-check no messages were added while we waited
-        const currentMessages = useGameStore.getState().dateConversation
-        if (currentMessages.length > 0) return
-        
-        const greeting = `Well, this place is nice! I have to say, ${avatar.name}, you're not quite what I expected... in a good way, I think.`
-        addDateMessage('dater', greeting)
-        lastSpeakerRef.current = 'dater'
-        
-        // Avatar responds after a delay (slower for readability)
-        await new Promise(r => setTimeout(r, 4000))
+      await new Promise(r => setTimeout(r, 2000))
       if (!isMounted) return
       
-      const avatarResponse = await getAvatarDateResponse(avatar, selectedDater, [
-        { speaker: 'dater', message: greeting }
-      ])
+      // Double-check no messages were added while we waited
+      const currentMessages = useGameStore.getState().dateConversation
+      if (currentMessages.length > 0) return
       
-      if (avatarResponse && isMounted) {
-        addDateMessage('avatar', avatarResponse)
-        lastSpeakerRef.current = 'avatar'
-      }
+      // Dater says opening line
+      const greeting = `Well, this place is nice! I have to say, ${avatar.name}, you're not quite what I expected... in a good way, I think.`
+      addDateMessage('dater', greeting)
+      lastSpeakerRef.current = 'dater'
+      
+      // NOTE: We do NOT continue the conversation here!
+      // The game waits for the player to add an attribute.
+      // The useEffect below watching submittedAttributes will trigger the continuation.
     }
     
     if (dateConversation.length === 0) {
-      startConversation()
+      showOpeningLine()
     }
-    
-    // Dynamic conversation timing based on traits
-    const getConversationDelay = () => {
-      const { submittedAttributes } = useGameStore.getState()
-      if (submittedAttributes.length === 0) {
-        // SLOW before first trait - give player time to read and think
-        return 15000 + Math.random() * 5000 // 15-20 seconds
-      } else {
-        // Normal speed once traits are being added
-        return 8000 + Math.random() * 4000 // 8-12 seconds
-      }
-    }
-    
-    // Set up continuous conversation with dynamic timing
-    const runConversation = async () => {
-      if (conversationActiveRef.current && isMounted) {
-        await generateNextTurn()
-        
-        // Schedule next turn with dynamic delay
-        if (isMounted && conversationActiveRef.current) {
-          conversationIntervalRef.current = setTimeout(runConversation, getConversationDelay())
-        }
-      }
-    }
-    
-    // Start conversation loop after initial exchange
-    const startDelay = setTimeout(() => {
-      runConversation()
-    }, 8000)
     
     return () => {
       isMounted = false
       conversationActiveRef.current = false
-      clearTimeout(startDelay)
       if (conversationIntervalRef.current) {
         clearTimeout(conversationIntervalRef.current)
       }
@@ -637,11 +600,14 @@ function DateScene() {
   }, []) // Only run on mount
   
   // Watch for new attributes and trigger immediate Avatar response
+  // Also starts the continuous conversation loop after the FIRST attribute
   useEffect(() => {
     const currentCount = submittedAttributes.length
     
     if (currentCount > lastKnownAttributeCountRef.current && currentCount > 0) {
       console.log('🎯 NEW TRAIT DETECTED! Triggering immediate Avatar response...')
+      
+      const isFirstAttribute = !conversationStartedRef.current
       
       // Mark that we need an immediate Avatar response
       pendingAttributeResponseRef.current = true
@@ -666,14 +632,29 @@ function DateScene() {
         
         pendingAttributeResponseRef.current = false
         
-        // Resume normal conversation loop
-        const { submittedAttributes: attrs } = useGameStore.getState()
-        const delay = attrs.length > 0 ? (8000 + Math.random() * 4000) : (15000 + Math.random() * 5000)
-        conversationIntervalRef.current = setTimeout(async () => {
+        // If this is the FIRST attribute, start the continuous conversation loop
+        // The conversation will now continue indefinitely even without more attributes
+        if (isFirstAttribute) {
+          console.log('🚀 First attribute added! Starting continuous conversation loop...')
+          conversationStartedRef.current = true
+        }
+        
+        // Set up the next turn in the ongoing conversation loop
+        const runContinuousConversation = async () => {
+          if (!conversationActiveRef.current) return
+          
+          await generateNextTurn()
+          
+          // Schedule next turn (normal speed since we have at least one trait)
           if (conversationActiveRef.current) {
-            await generateNextTurn()
+            const delay = 8000 + Math.random() * 4000 // 8-12 seconds
+            conversationIntervalRef.current = setTimeout(runContinuousConversation, delay)
           }
-        }, delay)
+        }
+        
+        // Start the loop after a delay
+        const delay = 8000 + Math.random() * 4000
+        conversationIntervalRef.current = setTimeout(runContinuousConversation, delay)
       }
       
       triggerImmediateResponse()
