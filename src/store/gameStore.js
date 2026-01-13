@@ -361,8 +361,9 @@ export const useGameStore = create((set, get) => ({
    * Update a specific compatibility factor
    * @param {string} factor - One of: 'physical', 'interests', 'values', 'tastes', 'intelligence', or 'random'
    * @param {number} change - Positive or negative change amount
+   * @param {string} reason - Optional descriptive reason sentence for the change
    */
-  updateCompatibilityFactor: (factor, change) => {
+  updateCompatibilityFactor: (factor, change, reason = null) => {
     const { compatibilityFactors, factorsActivated, compatibility: currentCompatibility } = get()
     
     // Map short names to full names
@@ -421,21 +422,25 @@ export const useGameStore = create((set, get) => ({
       newCompat = get().calculateCompatibility()
     }
     
-    // Generate a brief reason for the change
+    // Set compatibility reason - use provided sentence or generate fallback
     const actualChange = newCompat - currentCompatibility
     if (actualChange !== 0) {
-      const factorLabels = {
-        'physicalAttraction': 'looks',
-        'similarInterests': 'interests',
-        'similarValues': 'values',
-        'similarTastes': 'taste',
-        'similarIntelligence': 'connection',
+      // Use provided reason if available, otherwise generate a short fallback
+      let displayReason = reason
+      if (!displayReason) {
+        const factorLabels = {
+          'physicalAttraction': 'looks',
+          'similarInterests': 'interests',
+          'similarValues': 'values',
+          'similarTastes': 'taste',
+          'similarIntelligence': 'connection',
+        }
+        const label = factorLabels[targetFactor] || 'vibe'
+        displayReason = actualChange > 0 
+          ? `+${actualChange} ${label} ✨`
+          : `${actualChange} ${label}`
       }
-      const label = factorLabels[targetFactor] || 'vibe'
-      const reason = actualChange > 0 
-        ? `+${actualChange} ${label} ✨`
-        : `${actualChange} ${label}`
-      set({ compatibility: newCompat, compatibilityReason: reason })
+      set({ compatibility: newCompat, compatibilityReason: displayReason })
     } else {
       set({ compatibility: newCompat })
     }

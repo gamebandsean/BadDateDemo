@@ -86,13 +86,14 @@ function determineAffectedFactor(response, avatarMessage = '') {
 
 /**
  * Evaluate the Dater's response to determine compatibility change
- * Returns { score, factor }: score is positive = good, negative = bad, 0 = neutral
+ * Returns { score, factor, reason }: score is positive = good, negative = bad, 0 = neutral
  * 
  * @param {string} response - The Dater's response text
  * @param {number} reactionsLeft - How many heightened reactions remain (2 = first reaction, 1 = second, 0 = normal)
  * @param {string} avatarMessage - The Avatar's previous message (for context)
+ * @param {string} daterName - The Dater's name for personalized reasons
  */
-function evaluateDaterSentiment(response, reactionsLeft = 0, avatarMessage = '') {
+function evaluateDaterSentiment(response, reactionsLeft = 0, avatarMessage = '', daterName = 'They') {
   const lower = response.toLowerCase()
   
   // Determine which factor this affects
@@ -227,7 +228,60 @@ function evaluateDaterSentiment(response, reactionsLeft = 0, avatarMessage = '')
     }
   }
   
-  return { score, factor }
+  // Generate a descriptive reason sentence based on what was detected
+  let reason = ''
+  const factorLabels = {
+    'physicalAttraction': 'your looks',
+    'similarInterests': 'shared interests',
+    'similarValues': 'your values',
+    'similarTastes': 'similar tastes',
+    'similarIntelligence': 'the connection',
+  }
+  const factorLabel = factorLabels[factor] || 'the vibe'
+  
+  if (score > 10) {
+    const positiveReasons = [
+      `${daterName} is really into ${factorLabel}!`,
+      `${daterName} loved that moment.`,
+      `${daterName} seems genuinely excited!`,
+      `That really resonated with ${daterName}.`,
+      `${daterName} is feeling the chemistry.`,
+    ]
+    reason = positiveReasons[Math.floor(Math.random() * positiveReasons.length)]
+  } else if (score > 5) {
+    const mildPositiveReasons = [
+      `${daterName} appreciated ${factorLabel}.`,
+      `${daterName} liked that.`,
+      `Good impression on ${daterName}.`,
+      `${daterName} is warming up to you.`,
+      `${daterName} seems interested.`,
+    ]
+    reason = mildPositiveReasons[Math.floor(Math.random() * mildPositiveReasons.length)]
+  } else if (score > 0) {
+    const slightPositiveReasons = [
+      `${daterName} noticed ${factorLabel}.`,
+      `${daterName} seems okay with that.`,
+      `Slight positive from ${daterName}.`,
+    ]
+    reason = slightPositiveReasons[Math.floor(Math.random() * slightPositiveReasons.length)]
+  } else if (score < -5) {
+    const negativeReasons = [
+      `${daterName} didn't like that.`,
+      `${daterName} seems put off.`,
+      `That rubbed ${daterName} the wrong way.`,
+      `${daterName} is having second thoughts.`,
+    ]
+    reason = negativeReasons[Math.floor(Math.random() * negativeReasons.length)]
+  } else if (score < 0) {
+    const mildNegativeReasons = [
+      `${daterName} seemed uncertain.`,
+      `Slight hesitation from ${daterName}.`,
+      `${daterName} isn't sure about that.`,
+    ]
+    reason = mildNegativeReasons[Math.floor(Math.random() * mildNegativeReasons.length)]
+  }
+  
+  return { score, factor, reason }
 }
 
 /**
@@ -469,9 +523,9 @@ function DateScene() {
           if (submittedAttributes.length > 0) {
             // Get the Avatar's last message for context
             const lastAvatarMsg = currentConversation.filter(m => m.speaker === 'avatar').pop()?.message || ''
-            const { score, factor } = evaluateDaterSentiment(response, reactionsLeft, lastAvatarMsg)
+            const { score, factor, reason } = evaluateDaterSentiment(response, reactionsLeft, lastAvatarMsg, selectedDater.name)
             if (score !== 0) {
-              useGameStore.getState().updateCompatibilityFactor(factor, score)
+              useGameStore.getState().updateCompatibilityFactor(factor, score, reason)
             }
             // Increment conversation turn counter (affects weight calculation)
             useGameStore.getState().incrementConversationTurn()
