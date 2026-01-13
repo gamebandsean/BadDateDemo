@@ -238,8 +238,8 @@ function evaluateDaterSentiment(response, reactionsLeft = 0, avatarMessage = '')
  * @param {object} dater - the dater's data (for personality-based actions)
  */
 function getSpontaneousAction(speaker, compatibility, dater) {
-  // Only ~10% chance of a spontaneous action
-  if (Math.random() > 0.10) return null
+  // Only ~5% chance of a spontaneous action (rare, not overwhelming)
+  if (Math.random() > 0.05) return null
   
   // Actions for when things are going well
   const positiveActions = [
@@ -443,19 +443,20 @@ function DateScene() {
       }
       
       if (response && conversationActiveRef.current) {
-        // Check if we should add a spontaneous non-verbal action
+        // Add the verbal response first (never start with action)
+        addDateMessage(nextSpeaker, response)
+        
+        // Check if we should add a spontaneous non-verbal action AFTER the verbal response
+        // This keeps actions rare and never at the start of a line
         const currentCompat = useGameStore.getState().compatibility
         const spontaneousAction = getSpontaneousAction(nextSpeaker, currentCompat, selectedDater)
         
-        if (spontaneousAction) {
-          // Add the action, then the verbal response after a short delay
-          addDateMessage(nextSpeaker, spontaneousAction)
-          await new Promise(r => setTimeout(r, 1500))
+        if (spontaneousAction && conversationActiveRef.current) {
+          // Add the action as a separate message after a brief pause
+          await new Promise(r => setTimeout(r, 800))
           if (conversationActiveRef.current) {
-            addDateMessage(nextSpeaker, response)
+            addDateMessage(nextSpeaker, spontaneousAction)
           }
-        } else {
-          addDateMessage(nextSpeaker, response)
         }
         
         lastSpeakerRef.current = nextSpeaker
