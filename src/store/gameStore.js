@@ -222,7 +222,7 @@ export const useGameStore = create((set, get) => ({
   // Attribute submission - SINGLE PLAYER: immediately apply with cooldown
   // NOTE: Compatibility does NOT change here - only when Dater reacts in conversation
   submitAttribute: (attribute) => {
-    const { avatar, appliedAttributes, attributeCooldown, timedBehaviors } = get()
+    const { avatar, appliedAttributes, submittedAttributes, attributeCooldown, timedBehaviors } = get()
     
     // Check cooldown
     if (attributeCooldown) return false
@@ -240,6 +240,7 @@ export const useGameStore = create((set, get) => ({
         attributes: [...avatar.attributes, attribute],
       },
       appliedAttributes: [...appliedAttributes, attribute],
+      submittedAttributes: [...submittedAttributes, attribute], // Track for scoring unlock
       latestAttribute: attribute, // Track for special reactions
       latestAttributeReactionsLeft: 2, // Dater gets 1-2 heightened reactions
       phase: 'applying', // Brief visual feedback
