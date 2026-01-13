@@ -102,6 +102,8 @@ export const useGameStore = create((set, get) => ({
   },
   // Computed overall compatibility (calculated from factors)
   compatibility: 50,
+  // Brief explanation of last compatibility change (fades out in UI)
+  compatibilityReason: null,
   
   // Attribute submission & voting
   submittedAttributes: [],
@@ -418,9 +420,31 @@ export const useGameStore = create((set, get) => ({
       newCompat = get().calculateCompatibility()
     }
     
-    set({ compatibility: newCompat })
+    // Generate a brief reason for the change
+    const actualChange = newCompat - currentCompatibility
+    if (actualChange !== 0) {
+      const factorLabels = {
+        'physicalAttraction': 'looks',
+        'similarInterests': 'interests',
+        'similarValues': 'values',
+        'similarTastes': 'taste',
+        'similarIntelligence': 'connection',
+      }
+      const label = factorLabels[targetFactor] || 'vibe'
+      const reason = actualChange > 0 
+        ? `+${actualChange} ${label} ✨`
+        : `${actualChange} ${label}`
+      set({ compatibility: newCompat, compatibilityReason: reason })
+    } else {
+      set({ compatibility: newCompat })
+    }
     
     return { factor: targetFactor, oldValue: startingValue, newValue, overallCompat: newCompat, isFirstActivation }
+  },
+  
+  // Clear the compatibility reason (called after fade-out)
+  clearCompatibilityReason: () => {
+    set({ compatibilityReason: null })
   },
   
   // Increment conversation turn counter (called after each exchange)
@@ -463,6 +487,7 @@ export const useGameStore = create((set, get) => ({
       avatar: { ...initialAvatar },
       dateConversation: [],
       compatibility: 50,
+      compatibilityReason: null,
       compatibilityFactors: {
         physicalAttraction: 50, // Neutral baseline
         similarInterests: 50,

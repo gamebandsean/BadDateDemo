@@ -314,6 +314,7 @@ function DateScene() {
     attributeCooldown,
     hotSeatPlayer,
     compatibility,
+    compatibilityReason,
     timedBehaviors,
     pendingTimedEvent,
     compatibilityFactors,
@@ -326,6 +327,7 @@ function DateScene() {
     consumeTimedEvent,
     updateCompatibilityFactor,
     incrementConversationTurn,
+    clearCompatibilityReason,
     voteForAttribute,
     applyTopAttributes,
     selectRandomHotSeat,
@@ -361,6 +363,14 @@ function DateScene() {
       return () => clearTimeout(timer)
     }
   }, [compatibility])
+  
+  // Auto-clear compatibility reason after a few seconds
+  useEffect(() => {
+    if (compatibilityReason) {
+      const timer = setTimeout(() => clearCompatibilityReason(), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [compatibilityReason, clearCompatibilityReason])
   
   // Auto-scroll conversation
   useEffect(() => {
@@ -752,6 +762,21 @@ function DateScene() {
             <div className="compatibility-emoji">
               {compatibility > 80 ? '💕' : compatibility > 60 ? '💗' : compatibility > 40 ? '🙂' : compatibility > 20 ? '😬' : '💔'}
             </div>
+            
+            {/* Brief reason for compatibility change */}
+            <AnimatePresence>
+              {compatibilityReason && (
+                <motion.div 
+                  className={`compatibility-reason ${compatibilityReason.startsWith('+') ? 'positive' : 'negative'}`}
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {compatibilityReason}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
           
           {/* Debug Panel - Hidden, accessible by clicking compatibility */}
