@@ -423,15 +423,23 @@ function DateScene() {
         lastSpeakerRef.current = nextSpeaker
         
         // Update compatibility based on Dater's reactions
+        // BUT only after player has submitted at least one trait
         if (nextSpeaker === 'dater') {
-          // Get the Avatar's last message for context
-          const lastAvatarMsg = currentConversation.filter(m => m.speaker === 'avatar').pop()?.message || ''
-          const { score, factor } = evaluateDaterSentiment(response, reactionsLeft, lastAvatarMsg)
-          if (score !== 0) {
-            useGameStore.getState().updateCompatibilityFactor(factor, score)
+          const { submittedAttributes } = useGameStore.getState()
+          
+          if (submittedAttributes.length > 0) {
+            // Get the Avatar's last message for context
+            const lastAvatarMsg = currentConversation.filter(m => m.speaker === 'avatar').pop()?.message || ''
+            const { score, factor } = evaluateDaterSentiment(response, reactionsLeft, lastAvatarMsg)
+            if (score !== 0) {
+              useGameStore.getState().updateCompatibilityFactor(factor, score)
+            }
+            // Increment conversation turn counter (affects weight calculation)
+            useGameStore.getState().incrementConversationTurn()
+          } else {
+            // No traits yet - compatibility is frozen
+            console.log('⏸️ Compatibility frozen - waiting for first trait')
           }
-          // Increment conversation turn counter (affects weight calculation)
-          useGameStore.getState().incrementConversationTurn()
         }
       } else if (conversationActiveRef.current) {
         // LLM FAILED - show error instead of silent fallback
