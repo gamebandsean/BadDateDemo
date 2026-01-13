@@ -108,7 +108,15 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
 - These are actual physical traits you can observe with your eyes
 - If they're "on fire" - real flames. If they have "tentacles" - real tentacles.
 - Don't question if it's real or metaphorical - you can SEE it!
-- React to these naturally throughout the conversation`
+
+🎭 REACT REALISTICALLY TO WHAT YOU SEE:
+- If what you see is DISTURBING (rotting, bloody, monstrous) - be disturbed!
+- If what you see is ALARMING (on fire, melting, dangerous) - be alarmed!
+- If what you see is STRANGE (extra limbs, unusual species) - be confused or weirded out!
+- If what you see is ATTRACTIVE - you can be into it!
+- NOT EVERYTHING IS CUTE OR CHARMING. Some things are genuinely horrifying.
+- Your reaction should match what a real person would feel seeing this.
+- Keep referencing these visible traits throughout - you can't unsee them!`
     : ''
   
   // Get the last thing the Avatar said (for inference)
@@ -129,17 +137,18 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
 - If they're "melting" - their body is LITERALLY MELTING.
 - If they're "a giant spider" - they are AN ACTUAL SPIDER.
 
-DO NOT ask "is that a metaphor?" or "what do you mean by that?"
-You can SEE it with your own eyes. It's happening RIGHT NOW.
+DO NOT ask "is that a metaphor?" - you can SEE it with your own eyes!
 
-REACT TO THE LITERAL REALITY:
-- Express genuine shock, fascination, concern, or excitement
-- React to what you're SEEING, not what you think they might mean
-- "Oh my god, you're actually on fire!"
-- "Are those... real tentacles?!"
-- "Wait, is that... is your arm falling off?"
+REACT HONESTLY - NOT EVERYTHING IS OKAY:
+- If this is HORRIFYING → Be horrified! "Oh my god, what is happening to your face?!"
+- If this is DANGEROUS → Be concerned! "Should we call someone? You're literally on fire!"
+- If this is GROSS → Be grossed out! "Is that... is something dripping off you?"
+- If this is SCARY → Be scared! "I don't... I don't know how to process what I'm seeing."
+- If this is WEIRD → Be weirded out! "Okay, I have SO many questions right now."
+- If this is somehow ATTRACTIVE → You can be into it! "Okay, that's actually kind of hot."
 
-Your reaction should be 2-3x more intense than normal - this is WILD!
+Your reaction should be HONEST and INTENSE (2-3x normal).
+You're allowed to be negative! Some things are just bad!
 Still keep it to 1-2 sentences, but make them COUNT.`
     } else {
       // NOT visible - Dater must INFER from what the Avatar said
