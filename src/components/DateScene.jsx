@@ -315,6 +315,7 @@ function DateScene() {
     hotSeatPlayer,
     compatibility,
     compatibilityReason,
+    discoveredTraits,
     timedBehaviors,
     pendingTimedEvent,
     compatibilityFactors,
@@ -338,6 +339,7 @@ function DateScene() {
   
   const timedBehaviorIntervalsRef = useRef({})
   const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [highlightedTrait, setHighlightedTrait] = useState(null) // { trait, type: 'positive'|'negative' }
   
   const [inputValue, setInputValue] = useState('')
   const [votedAttributes, setVotedAttributes] = useState(new Set())
@@ -367,10 +369,36 @@ function DateScene() {
   // Auto-clear compatibility reason after a few seconds
   useEffect(() => {
     if (compatibilityReason) {
-      const timer = setTimeout(() => clearCompatibilityReason(), 3000)
+      // Check if any discovered trait relates to this change
+      // The reason format is like "+5 interests ✨" or "-3 taste"
+      const isPositive = compatibilityReason.startsWith('+')
+      const reasonLower = compatibilityReason.toLowerCase()
+      
+      // Try to find a discovered trait that matches what was discussed
+      const matchingTrait = discoveredTraits.find(trait => {
+        const traitLower = trait.toLowerCase()
+        // Check for keyword overlap
+        const traitWords = traitLower.split(/\s+/)
+        return traitWords.some(word => 
+          word.length > 3 && (reasonLower.includes(word) || 
+          // Also check the last message for context
+          (useGameStore.getState().dateConversation.slice(-2).some(m => 
+            m.message.toLowerCase().includes(word)
+          )))
+        )
+      })
+      
+      if (matchingTrait) {
+        setHighlightedTrait({ trait: matchingTrait, type: isPositive ? 'positive' : 'negative' })
+      }
+      
+      const timer = setTimeout(() => {
+        clearCompatibilityReason()
+        setHighlightedTrait(null)
+      }, 3000)
       return () => clearTimeout(timer)
     }
-  }, [compatibilityReason, clearCompatibilityReason])
+  }, [compatibilityReason, clearCompatibilityReason, discoveredTraits])
   
   // Auto-scroll conversation
   useEffect(() => {
@@ -778,6 +806,31 @@ function DateScene() {
               )}
             </AnimatePresence>
           </motion.div>
+          
+          {/* Discovered traits about the dater */}
+          {discoveredTraits.length > 0 && (
+            <div className="discovered-traits-date">
+              {discoveredTraits.map((trait, i) => (
+                <motion.span
+                  key={i}
+                  className={`discovered-trait-chip ${
+                    highlightedTrait?.trait === trait 
+                      ? highlightedTrait.type === 'positive' ? 'highlight-positive' : 'highlight-negative'
+                      : ''
+                  }`}
+                  animate={highlightedTrait?.trait === trait ? {
+                    scale: [1, 1.15, 1],
+                    boxShadow: highlightedTrait.type === 'positive'
+                      ? ['0 0 0px #06d6a0', '0 0 15px #06d6a0', '0 0 5px #06d6a0']
+                      : ['0 0 0px #ff4d6d', '0 0 15px #ff4d6d', '0 0 5px #ff4d6d']
+                  } : {}}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                >
+                  {trait}
+                </motion.span>
+              ))}
+            </div>
+          )}
           
           {/* Debug Panel - Hidden, accessible by clicking compatibility */}
           <AnimatePresence>
