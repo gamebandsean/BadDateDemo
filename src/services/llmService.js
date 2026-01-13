@@ -102,9 +102,13 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
   
   // Context about what the Dater can SEE (not told, but observe)
   const avatarContext = visibleAttributes.length > 0
-    ? `\n\nWHAT YOU CAN SEE ABOUT YOUR DATE: ${visibleAttributes.join(', ')}
+    ? `\n\nWHAT YOU CAN PHYSICALLY SEE ABOUT YOUR DATE: ${visibleAttributes.join(', ')}
 
-These are things you can physically observe. React to them naturally - you don't need them to mention these, you can SEE them.`
+⚠️ THESE ARE LITERAL AND REAL - NOT METAPHORS:
+- These are actual physical traits you can observe with your eyes
+- If they're "on fire" - real flames. If they have "tentacles" - real tentacles.
+- Don't question if it's real or metaphorical - you can SEE it!
+- React to these naturally throughout the conversation`
     : ''
   
   // Get the last thing the Avatar said (for inference)
@@ -119,15 +123,24 @@ These are things you can physically observe. React to them naturally - you don't
       // Dater can SEE this - react immediately!
       latestAttrContext = `\n\n🚨 SOMETHING JUST CHANGED ABOUT YOUR DATE'S APPEARANCE: "${latestAttribute}"
 
-You NOTICE this immediately! React with surprise, curiosity, shock, or fascination:
-- "Wait, did you always have...?"
-- "Um, is that a...?"
-- "Whoa, when did THAT happen?"
+⚠️ THIS IS LITERAL, NOT A METAPHOR! Whatever "${latestAttribute}" means, it is PHYSICALLY REAL:
+- If they're "on fire" - they are ACTUALLY ON FIRE. Real flames.
+- If they "have tentacles" - REAL TENTACLES are right there.
+- If they're "melting" - their body is LITERALLY MELTING.
+- If they're "a giant spider" - they are AN ACTUAL SPIDER.
 
-REACT DRAMATICALLY:
-- This is a BIG visual change - react with genuine shock, excitement, horror, or fascination
-- Your reaction should be 2-3x more intense than normal
-- Still keep it to 1-2 sentences, but make them COUNT`
+DO NOT ask "is that a metaphor?" or "what do you mean by that?"
+You can SEE it with your own eyes. It's happening RIGHT NOW.
+
+REACT TO THE LITERAL REALITY:
+- Express genuine shock, fascination, concern, or excitement
+- React to what you're SEEING, not what you think they might mean
+- "Oh my god, you're actually on fire!"
+- "Are those... real tentacles?!"
+- "Wait, is that... is your arm falling off?"
+
+Your reaction should be 2-3x more intense than normal - this is WILD!
+Still keep it to 1-2 sentences, but make them COUNT.`
     } else {
       // NOT visible - Dater must INFER from what the Avatar said
       latestAttrContext = `\n\n🔍 ACTIVE LISTENING MODE - INFER FROM WHAT THEY JUST SAID:
