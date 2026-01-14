@@ -46,9 +46,19 @@ function LiveDateScene() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [userVote, setUserVote] = useState(null)
   const [showDaterValuesPopup, setShowDaterValuesPopup] = useState(false)
+  const [usingFallback, setUsingFallback] = useState(false)
   
   const chatEndRef = useRef(null)
   const phaseTimerRef = useRef(null)
+  
+  // Check if API key is available
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+    if (!apiKey) {
+      setUsingFallback(true)
+      console.warn('⚠️ No API key found - using fallback responses')
+    }
+  }, [])
   
   // Phase timer countdown
   useEffect(() => {
@@ -426,6 +436,13 @@ function LiveDateScene() {
   
   return (
     <div className="live-date-scene">
+      {/* Fallback Mode Warning */}
+      {usingFallback && (
+        <div className="fallback-warning">
+          ⚠️ NO API KEY - Using fallback responses (LLM not connected)
+        </div>
+      )}
+      
       {/* Header Section */}
       <div className="live-header">
         <div 
