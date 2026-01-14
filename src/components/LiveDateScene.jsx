@@ -80,15 +80,39 @@ function LiveDateScene() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [playerChat])
   
+  // Questions the Dater asks to prompt attribute suggestions
+  const promptQuestions = [
+    "Tell me something about yourself that would surprise me.",
+    "What's the most spontaneous thing you've ever done?",
+    "I'm curious - what are you looking for in a partner?",
+    "What do you think makes a good connection?",
+    "So what do you like to do for fun?",
+    "What's your favorite way to spend a weekend?",
+    "If you could travel anywhere tomorrow, where would you go?",
+    "What's something you're really passionate about?",
+    "Do you have any hidden talents?",
+  ]
+  
+  // Track which questions have been used this session
+  const usedQuestionsRef = useRef(new Set())
+  
   const getOpeningLine = () => {
-    const lines = [
-      "So... tell me something about yourself!",
-      "I'd love to know more about you. What's your deal?",
-      "Let's get to know each other. What makes you, you?",
-      "Okay, I'm curious - what should I know about you?",
-      "First impressions matter, so... who are you really?",
-    ]
-    return lines[Math.floor(Math.random() * lines.length)]
+    // Get unused questions
+    const unusedQuestions = promptQuestions.filter((_, i) => !usedQuestionsRef.current.has(i))
+    
+    // If all used, reset
+    if (unusedQuestions.length === 0) {
+      usedQuestionsRef.current.clear()
+      const idx = Math.floor(Math.random() * promptQuestions.length)
+      usedQuestionsRef.current.add(idx)
+      return promptQuestions[idx]
+    }
+    
+    // Pick a random unused question
+    const randomUnused = unusedQuestions[Math.floor(Math.random() * unusedQuestions.length)]
+    const idx = promptQuestions.indexOf(randomUnused)
+    usedQuestionsRef.current.add(idx)
+    return randomUnused
   }
   
   const handlePhaseEnd = async () => {
@@ -137,14 +161,8 @@ function LiveDateScene() {
   }
   
   const getFollowUpLine = () => {
-    const lines = [
-      "Interesting... what else should I know?",
-      "Okay, tell me more about yourself.",
-      "That's... something. Anything else?",
-      "I feel like there's more to you. Spill.",
-      "What other surprises do you have?",
-    ]
-    return lines[Math.floor(Math.random() * lines.length)]
+    // Use the same question pool as opening, ensuring variety
+    return getOpeningLine()
   }
   
   const generateDateConversation = async () => {
