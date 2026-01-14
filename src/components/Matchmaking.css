@@ -335,3 +335,193 @@
   }
 }
 
+/* ============================================
+   MOBILE RESPONSIVE MATCHMAKING
+   ============================================ */
+@media (max-width: 768px) {
+  .matchmaking {
+    padding: 20px 12px;
+    gap: 20px;
+    min-height: calc(100vh - 70px);
+    justify-content: flex-start;
+    padding-top: 30px;
+  }
+  
+  .swipe-container {
+    gap: 16px;
+    width: 100%;
+    max-width: 320px;
+  }
+  
+  .dater-card {
+    width: 100%;
+    max-width: 300px;
+    border-radius: 20px;
+  }
+  
+  .dater-photo {
+    height: 280px;
+  }
+  
+  .dater-info {
+    padding: 16px;
+  }
+  
+  .dater-name {
+    font-size: 1.5rem;
+    margin-bottom: 6px;
+  }
+  
+  .dater-tagline {
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+  }
+  
+  .dater-archetype {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+  
+  .dater-traits {
+    gap: 6px;
+  }
+  
+  .trait-tag {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .swipe-indicator {
+    padding: 8px 16px;
+    font-size: 1.2rem;
+    border-width: 3px;
+  }
+  
+  .swipe-buttons {
+    gap: 24px;
+    margin-top: 8px;
+  }
+  
+  .swipe-btn {
+    width: 64px;
+    height: 64px;
+    font-size: 1.8rem;
+  }
+  
+  .swipe-instructions {
+    gap: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .instant-match-notice {
+    font-size: 0.9rem;
+  }
+  
+  .key {
+    padding: 3px 8px;
+    font-size: 0.8rem;
+  }
+  
+  .progress-indicator {
+    gap: 8px;
+    font-size: 0.8rem;
+  }
+  
+  .progress-dots {
+    gap: 6px;
+  }
+  
+  .dot {
+    width: 8px;
+    height: 8px;
+  }
+  
+  /* Top Three Selection View */
+  .top-three-view {
+    padding: 30px 12px;
+  }
+  
+  .top-three-header {
+    margin-bottom: 24px;
+  }
+  
+  .top-three-header h2 {
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+  }
+  
+  .top-three-header p {
+    font-size: 0.95rem;
+  }
+  
+  .top-three-grid {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .top-three-card {
+    border-radius: 16px;
+  }
+  
+  .rank-badge {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+  
+  .card-photo {
+    height: 160px;
+  }
+  
+  .card-info {
+    padding: 16px;
+  }
+  
+  .card-info h3 {
+    font-size: 1.15rem;
+  }
+  
+  .card-info .tagline {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+  
+  .select-btn {
+    padding: 14px;
+    font-size: 0.9rem;
+  }
+  
+  .instruction-text {
+    font-size: 0.85rem;
+  }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+  .matchmaking {
+    padding: 16px 8px;
+    padding-top: 20px;
+  }
+  
+  .dater-card {
+    max-width: 280px;
+  }
+  
+  .dater-photo {
+    height: 240px;
+  }
+  
+  .dater-name {
+    font-size: 1.3rem;
+  }
+  
+  .dater-tagline {
+    font-size: 0.85rem;
+  }
+  
+  .swipe-btn {
+    width: 56px;
+    height: 56px;
+    font-size: 1.6rem;
+  }
+}

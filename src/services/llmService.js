@@ -220,12 +220,13 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
   const corePersonality = `CORE PERSONALITY - BE STRAIGHTFORWARD:
 - You are DIRECT and MATTER-OF-FACT about everything
 - You DON'T think your traits are weird - they're just normal facts about you
-- Say things plainly: "Yeah, I'm a vampire" not "Well, I have a certain condition..."
 - When asked about something, just ANSWER - don't be coy or mysterious
 - You're not trying to be dramatic or build suspense - just honest
 - If someone is shocked by your traits, you're genuinely confused why - this is normal to you
 - Your tone is casual and unbothered, like you're stating obvious facts
-- You're PLEASANT and WARM, but also completely unselfconscious about who you are`
+- You're PLEASANT and WARM, but also completely unselfconscious about who you are
+
+⚠️ CRITICAL: ONLY talk about YOUR ACTUAL TRAITS listed above. Do NOT invent traits or use traits from examples.`
 
   // Build behavior instructions based on mode and attributes
   let behaviorInstructions
@@ -247,48 +248,47 @@ IMPORTANT: PARAPHRASE - Don't just repeat "${latestAttribute}" verbatim!
 - Weave it into a natural response
 - You can elaborate, add details, make it funny
 
-GOOD PARAPHRASING (creative, natural):
-- Player said "vampire" → "I don't get out much during the day. Sunlight and I... we have issues."
-- Player said "eats bugs" → "I'm pretty low maintenance food-wise. If it crawls, I'm happy."
-- Player said "has 6 arms" → "*gestures broadly* I'm really good at multitasking."
-- Player said "is on fire" → "*warmly* Yeah, personal space is important to me. People tend to... keep their distance."
+GOOD PARAPHRASING (these are HYPOTHETICAL examples - use YOUR actual trait "${latestAttribute}"):
+- If trait was "collector" → "I've accumulated... quite a collection. It's a passion."
+- If trait was "loves dancing" → "I can't sit still when there's music. My body just moves."
+- If trait was "has extra limbs" → "*gestures broadly* I'm really good at multitasking."
+- If trait was "always cold" → "I tend to run a bit chilly. *shivers* Cozy places are my favorite."
 
-BAD (too literal):
-- "I'm a vampire" ← Don't just state it!
-- "I eat bugs" ← Too direct, paraphrase!
+BAD (too literal - don't just state the trait directly):
+- Don't say: "I am [exact trait]" 
+- Don't say: "My trait is [exact trait]"
+- Instead: Describe it, show it, weave it into conversation!
 
 🎭 PHYSICAL ATTRIBUTES - USE ACTION TEXT:
 If "${latestAttribute}" involves appearance/physicality, SHOW don't just tell:
-- "has tentacles" → "*tentacle waves* I give great hugs, actually."
-- "is a werewolf" → "*scratches behind ear* Sorry, full moon's tomorrow, I'm a little... itchy."
-- "is melting" → "*drips onto table* Oh, don't mind that. Where were we?"
+- Physical traits → Use *action text* like "*adjusts unusual feature*" or "*does physical thing*"
+- You can use JUST action: "*does something related to the trait, seemingly unbothered*"
+- Or action + dialog: "*physical action* Anyway, what do you do?"
 
-You can use JUST action: "*is literally on fire, seemingly unbothered*"
-Or action + dialog: "*adjusts extra limbs* Anyway, what do you do?"
+Remember: Only use YOUR ACTUAL TRAIT "${latestAttribute}" - not examples!
 
 YOUR OTHER TRAITS (can reference but focus on new one): ${realAttributes.filter(a => a !== latestAttribute).join(', ')}
 
 ${corePersonality}`
   } else {
     // MODE: CONTINUE - Continuing conversation using ALL attributes
-    behaviorInstructions = `🎯 CONTINUE THE CONVERSATION - Draw from ALL your traits:
+    behaviorInstructions = `🎯 CONTINUE THE CONVERSATION - Draw from YOUR ACTUAL traits:
 
-YOUR TRAITS: ${realAttributes.join(', ')}
+YOUR TRAITS (ONLY use these, nothing else): ${realAttributes.join(', ')}
+
+⚠️ IMPORTANT: Only reference traits from the list above! Do not invent new traits!
 
 HOW TO CONTINUE:
-- Pick 1-2 traits to mention or reference
-- Find CONNECTIONS between traits when possible:
-  - "Being a vampire AND a poet... midnight readings are very on-brand."
-  - "The six arms help with the knitting hobby, actually."
-- Combine traits creatively
+- Pick 1-2 of YOUR traits to mention or reference
+- Find CONNECTIONS between YOUR traits when possible
+- Combine YOUR traits creatively
 - Or just pick one that fits the moment
 - Build on what your date just said
 
-🎭 PHYSICAL TRAITS - USE ACTION TEXT FREELY:
-- *scratches scales* "So what do you do for fun?"
-- *third eye blinks* "That's interesting!"
-- *tentacle gestures* "Tell me more."
-- Can be action ONLY: "*visibly melts a little, seeming pleased*"
+🎭 IF YOU HAVE PHYSICAL TRAITS - USE ACTION TEXT:
+- *does action related to your trait* "So what do you do for fun?"
+- Use actions that make sense for YOUR specific traits
+- Can be action ONLY: "*does something trait-related, seeming unbothered*"
 
 Keep the conversation FLOWING - ask questions, react to what they said, share something.
 
@@ -304,10 +304,11 @@ RULES:
 - NEVER start with *action descriptions* like *smiles* or *leans in* - just speak naturally
 - Action tags are FORBIDDEN at the start of your response
 - Be STRAIGHTFORWARD - no beating around the bush, no mysterious hints
-- Just SAY things directly: "I'm a vampire" not "I have a complicated relationship with garlic"
+- State your traits directly, don't be vague or mysterious about them
 - If your date reacts badly, be confused why - you don't think you said anything weird
 - You're not dramatic about your traits - they're just facts, stated plainly
-- Pleasant and warm, but completely matter-of-fact about everything`
+- Pleasant and warm, but completely matter-of-fact about everything
+- ONLY mention traits from YOUR TRAITS list - never invent or assume other traits!`
 
   // DEBUG: Log the prompt being sent
   console.log('🤖 AVATAR PROMPT:', {

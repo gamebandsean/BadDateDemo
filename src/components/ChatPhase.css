@@ -326,6 +326,9 @@
   border-radius: 8px;
 }
 
+/* ============================================
+   MOBILE RESPONSIVE CHAT PHASE
+   ============================================ */
 @media (max-width: 800px) {
   .chat-tips {
     display: none;
@@ -336,3 +339,184 @@
   }
 }
 
+@media (max-width: 768px) {
+  .chat-phase {
+    padding: 8px;
+    gap: 0;
+    max-height: none;
+    height: auto;
+    min-height: calc(100vh - 70px);
+  }
+  
+  .chat-container {
+    border-radius: 16px;
+    max-width: 100%;
+  }
+  
+  .chat-header {
+    padding: 12px 14px;
+  }
+  
+  .chat-profile {
+    gap: 10px;
+  }
+  
+  .chat-profile img {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .profile-info h3 {
+    font-size: 1rem;
+  }
+  
+  .profile-archetype {
+    font-size: 0.8rem;
+  }
+  
+  .character-card {
+    padding: 10px 14px;
+    gap: 6px;
+  }
+  
+  .card-row {
+    font-size: 0.85rem;
+    gap: 8px;
+  }
+  
+  .card-label {
+    font-size: 0.9rem;
+  }
+  
+  .card-traits {
+    gap: 6px;
+  }
+  
+  .mini-trait {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+  }
+  
+  .discovered-traits {
+    margin-top: 6px;
+    padding-top: 8px;
+  }
+  
+  .discovered-label {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+  
+  .no-traits-yet {
+    font-size: 0.75rem;
+  }
+  
+  .trait-chips {
+    gap: 4px;
+  }
+  
+  .discovered-chip {
+    padding: 3px 10px;
+    font-size: 0.7rem;
+  }
+  
+  .chat-messages {
+    padding: 14px;
+    gap: 12px;
+    flex: 1;
+    min-height: 200px;
+  }
+  
+  .chat-intro {
+    padding: 14px;
+    margin-bottom: 8px;
+  }
+  
+  .match-badge {
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+  }
+  
+  .chat-intro p {
+    font-size: 0.85rem;
+  }
+  
+  .message {
+    max-width: 85%;
+    gap: 8px;
+  }
+  
+  .message-avatar {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .message-content {
+    padding: 10px 14px;
+    border-radius: 14px;
+  }
+  
+  .message-content p {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  
+  .chat-input-area {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  
+  .chat-input-area input {
+    padding: 12px 16px;
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+  
+  .send-btn {
+    width: 46px;
+    height: 46px;
+    font-size: 1.2rem;
+  }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+  .chat-phase {
+    padding: 4px;
+  }
+  
+  .chat-header {
+    padding: 10px 12px;
+  }
+  
+  .chat-profile img {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .profile-info h3 {
+    font-size: 0.9rem;
+  }
+  
+  .chat-messages {
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .message-content {
+    padding: 8px 12px;
+  }
+  
+  .message-content p {
+    font-size: 0.85rem;
+  }
+  
+  .chat-input-area {
+    padding: 10px 12px;
+  }
+  
+  .send-btn {
+    width: 42px;
+    height: 42px;
+  }
+}
