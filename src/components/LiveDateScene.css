@@ -291,27 +291,37 @@
   pointer-events: none;
 }
 
-/* Conversation Bubbles - Dedicated area above characters */
+/* Conversation Bubbles - Two columns, both always visible */
 .conversation-bubbles {
   flex: 1;
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
   align-items: flex-end;
-  padding: 15px 20px;
-  gap: 20px;
+  padding: 10px 15px;
+  gap: 15px;
   position: relative;
   z-index: 1;
   min-height: 0;
 }
 
+.bubble-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  max-width: 48%;
+  min-height: 80px;
+}
+
 .speech-bubble {
   background: var(--bg-card);
-  padding: 14px 18px;
-  border-radius: 16px;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  width: 45%;
-  max-width: 200px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  width: 100%;
+  max-width: 180px;
   text-align: center;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   color: var(--text-primary);
@@ -689,14 +699,18 @@
   }
   
   .conversation-bubbles {
-    padding: 10px 15px;
+    padding: 8px 10px;
+    gap: 10px;
+  }
+  
+  .bubble-column {
+    min-height: 60px;
   }
   
   .speech-bubble {
-    font-size: 0.78rem;
-    padding: 12px 14px;
-    width: 48%;
-    max-width: 180px;
+    font-size: 0.72rem;
+    padding: 10px 12px;
+    max-width: 160px;
   }
   
   .characters-container {
@@ -704,8 +718,8 @@
   }
   
   .character-image {
-    width: 60px;
-    height: 60px;
+    width: 55px;
+    height: 55px;
   }
   
   .chat-module {
@@ -737,14 +751,18 @@
   }
   
   .conversation-bubbles {
-    padding: 8px 10px;
+    padding: 6px 8px;
+    gap: 8px;
+  }
+  
+  .bubble-column {
+    min-height: 50px;
   }
   
   .speech-bubble {
-    font-size: 0.7rem;
-    padding: 10px 12px;
-    width: 48%;
-    max-width: 140px;
+    font-size: 0.65rem;
+    padding: 8px 10px;
+    max-width: 130px;
   }
   
   .characters-container {
@@ -752,8 +770,8 @@
   }
   
   .character-image {
-    width: 50px;
-    height: 50px;
+    width: 45px;
+    height: 45px;
   }
   
   .chat-module {

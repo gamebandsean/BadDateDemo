@@ -41,7 +41,8 @@ function LiveDateScene() {
   const adjustCompatibility = useGameStore((state) => state.adjustCompatibility)
   
   const [chatInput, setChatInput] = useState('')
-  const [currentBubble, setCurrentBubble] = useState({ speaker: null, text: '' })
+  const [avatarBubble, setAvatarBubble] = useState('')
+  const [daterBubble, setDaterBubble] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [userVote, setUserVote] = useState(null)
   const [showDaterValuesPopup, setShowDaterValuesPopup] = useState(false)
@@ -76,7 +77,8 @@ function LiveDateScene() {
     if (livePhase === 'phase1' && dateConversation.length === 0) {
       // Dater's opening question
       const openingLine = getOpeningLine()
-      setCurrentBubble({ speaker: 'dater', text: openingLine })
+      setDaterBubble(openingLine)
+      setAvatarBubble('') // Clear avatar bubble
       addDateMessage('dater', openingLine)
     }
   }, [livePhase])
@@ -176,7 +178,8 @@ function LiveDateScene() {
           setPhaseTimer(15)
           // Dater asks another question
           const followUpLine = getFollowUpLine()
-          setCurrentBubble({ speaker: 'dater', text: followUpLine })
+          setDaterBubble(followUpLine)
+          setAvatarBubble('') // Clear avatar's previous response
           addDateMessage('dater', followUpLine)
         }
         break
@@ -218,7 +221,8 @@ function LiveDateScene() {
       )
       
       if (avatarResponse) {
-        setCurrentBubble({ speaker: 'avatar', text: avatarResponse })
+        // Show avatar's response (keep dater's question visible)
+        setAvatarBubble(avatarResponse)
         addDateMessage('avatar', avatarResponse)
         
         // Check if attribute matches any dater values
@@ -259,7 +263,8 @@ function LiveDateScene() {
         )
         
         if (daterResponseText) {
-          setCurrentBubble({ speaker: 'dater', text: daterResponseText })
+          // Update dater's bubble (avatar stays visible)
+          setDaterBubble(daterResponseText)
           addDateMessage('dater', daterResponseText)
         }
       }
@@ -488,7 +493,7 @@ function LiveDateScene() {
         
         {/* Winning Attribute Announcement */}
         <AnimatePresence>
-          {livePhase === 'phase3' && winningAttribute && !isGenerating && currentBubble.speaker === null && (
+          {livePhase === 'phase3' && winningAttribute && !isGenerating && !avatarBubble && !daterBubble && (
             <motion.div 
               className="winner-announcement"
               initial={{ scale: 0.8, opacity: 0 }}
@@ -501,33 +506,39 @@ function LiveDateScene() {
           )}
         </AnimatePresence>
         
-        {/* Conversation Bubbles Area */}
+        {/* Conversation Bubbles Area - Both bubbles visible */}
         <div className="conversation-bubbles">
-          <AnimatePresence>
-            {currentBubble.speaker === 'avatar' && (
-              <motion.div 
-                className="speech-bubble avatar-bubble"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-              >
-                {currentBubble.text}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div className="bubble-column avatar-column">
+            <AnimatePresence mode="wait">
+              {avatarBubble && (
+                <motion.div 
+                  key={avatarBubble}
+                  className="speech-bubble avatar-bubble"
+                  initial={{ scale: 0.9, opacity: 0, y: 10 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.9, opacity: 0, y: -10 }}
+                >
+                  {avatarBubble}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           
-          <AnimatePresence>
-            {currentBubble.speaker === 'dater' && (
-              <motion.div 
-                className="speech-bubble dater-bubble"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-              >
-                {currentBubble.text}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div className="bubble-column dater-column">
+            <AnimatePresence mode="wait">
+              {daterBubble && (
+                <motion.div 
+                  key={daterBubble}
+                  className="speech-bubble dater-bubble"
+                  initial={{ scale: 0.9, opacity: 0, y: 10 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.9, opacity: 0, y: -10 }}
+                >
+                  {daterBubble}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
         
         {/* Characters */}
