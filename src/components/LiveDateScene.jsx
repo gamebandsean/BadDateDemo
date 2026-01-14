@@ -254,12 +254,27 @@ function LiveDateScene() {
     
     setIsGenerating(true)
     
+    // IMPORTANT: Create avatar with the new attribute included
+    // (React state might not have updated yet due to async nature)
+    const avatarWithNewAttr = {
+      ...avatar,
+      attributes: avatar.attributes.includes(attrToUse) 
+        ? avatar.attributes 
+        : [...avatar.attributes, attrToUse]
+    }
+    
+    console.log('🎯 generateDateConversation called with:', {
+      attrToUse,
+      avatarAttributes: avatarWithNewAttr.attributes,
+      hasNewAttr: avatarWithNewAttr.attributes.includes(attrToUse)
+    })
+    
     try {
       // ============ EXCHANGE 1: Avatar answers with new attribute (1x scoring) ============
       console.log('--- Exchange 1: Avatar answers with new attribute ---')
       
       const avatarResponse1 = await getAvatarDateResponse(
-        avatar,
+        avatarWithNewAttr,  // Use avatar with guaranteed new attribute
         selectedDater,
         dateConversation.slice(-6),
         attrToUse,
@@ -275,7 +290,7 @@ function LiveDateScene() {
         // Dater reacts - FULL SCORING (1x)
         const daterReaction1 = await getDaterDateResponse(
           selectedDater,
-          avatar,
+          avatarWithNewAttr,
           [...dateConversation.slice(-6), { speaker: 'avatar', message: avatarResponse1 }],
           attrToUse
         )
@@ -293,7 +308,7 @@ function LiveDateScene() {
         console.log('--- Exchange 2: Avatar continues conversation ---')
         
         const avatarResponse2 = await getAvatarDateResponse(
-          avatar,
+          avatarWithNewAttr,
           selectedDater,
           [...dateConversation.slice(-4), { speaker: 'avatar', message: avatarResponse1 }, { speaker: 'dater', message: daterReaction1 }],
           null, // No new attribute
@@ -309,7 +324,7 @@ function LiveDateScene() {
           // Dater reacts - REDUCED SCORING (0.25x)
           const daterReaction2 = await getDaterDateResponse(
             selectedDater,
-            avatar,
+            avatarWithNewAttr,
             [...dateConversation.slice(-4), { speaker: 'avatar', message: avatarResponse2 }],
             null
           )
@@ -326,7 +341,7 @@ function LiveDateScene() {
           console.log('--- Exchange 3: Avatar continues again ---')
           
           const avatarResponse3 = await getAvatarDateResponse(
-            avatar,
+            avatarWithNewAttr,
             selectedDater,
             [...dateConversation.slice(-4), { speaker: 'avatar', message: avatarResponse2 }, { speaker: 'dater', message: daterReaction2 }],
             null,
@@ -342,7 +357,7 @@ function LiveDateScene() {
             // Dater reacts - MINIMAL SCORING (0.10x)
             const daterReaction3 = await getDaterDateResponse(
               selectedDater,
-              avatar,
+              avatarWithNewAttr,
               [...dateConversation.slice(-4), { speaker: 'avatar', message: avatarResponse3 }],
               null
             )
