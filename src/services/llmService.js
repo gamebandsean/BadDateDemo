@@ -639,7 +639,7 @@ export async function generateDaterValues(dater) {
     return getFallbackDaterValues(dater)
   }
   
-  const systemPrompt = `You are generating dating preferences for a character in a dating game.
+  const systemPrompt = `You are generating dating preferences for a character in a COMEDY dating game where players give their avatar WILD, ABSURD attributes.
 
 CHARACTER PROFILE:
 Name: ${dater.name}
@@ -654,14 +654,35 @@ Known Dealbreakers: ${dater.dealbreakers?.join(', ')}
 Upbringing: ${dater.upbringing || 'Not specified'}
 Spirituality: ${dater.spirituality || 'Not specified'}
 
-Generate dating preferences that feel authentic to this character. 
+Generate dating preferences that feel authentic to this character AND can react to WILD attributes.
+
+⚠️ IMPORTANT: Players will give their avatar ABSURD traits like:
+- Being a murderer, serial killer, criminal
+- Being a monster, dragon, giant spider, demon
+- Being 100 feet tall, microscopic, made of fire
+- Having tentacles, extra limbs, being undead
+- Eating people, drinking blood, causing destruction
+
+Your preferences MUST include categories that can match these wild attributes!
+
+REQUIRED CATEGORY MIX:
+1. NORMAL preferences (hobbies, personality, lifestyle) - about 50%
+2. EXTREME/WILD preferences (danger, monsters, violence, supernatural, chaos) - about 30%  
+3. PHYSICAL preferences (size, appearance, body types) - about 20%
+
+EXAMPLE EXTREME PREFERENCES TO INCLUDE (pick ones that fit the character):
+POSITIVE (for edgy/unconventional characters):
+- "danger", "bad boys/girls", "monsters", "the supernatural", "chaos", "rule-breakers", "power", "intimidating people", "dark humor", "edge lords", "mysterious types", "rebels"
+
+NEGATIVE (for most normal characters - PUT THESE IN DISLIKES/DEALBREAKERS):
+- "violence", "danger to self", "criminals", "killers", "scary things", "monsters", "being threatened", "chaos", "instability", "harmful behavior", "creepy things", "predators"
 
 RULES:
-- Keep each preference to 1-3 words (like "being outdoorsy", "creative types", "staying home")
-- Make them BROAD categories, not specific (e.g., "relaxing" not "drinking wine")
-- Include a MIX of: hobbies, physical attributes, activities, personality types
-- A FEW can be specific things they love (like a celebrity, hobby, or vice)
-- These should feel natural for this character based on their personality
+- Keep each preference to 1-3 words
+- Make them BROAD so they can match many attributes
+- MUST include at least 2-3 extreme/wild categories in EACH list
+- Dealbreakers SHOULD include things like "violence", "danger", "harm" for normal characters
+- OR include "boring", "safe", "conventional" for edgy characters
 
 Return ONLY valid JSON in this exact format:
 {
@@ -822,9 +843,9 @@ Return ONLY valid JSON:
 
 /**
  * Fallback dater values if API is unavailable
+ * Includes both normal AND extreme categories for wild attributes
  */
 function getFallbackDaterValues(dater) {
-  // Generic fallback based on common dating preferences
   return {
     loves: [
       'being authentic',
@@ -839,30 +860,30 @@ function getFallbackDaterValues(dater) {
       'intelligence',
       'confidence',
       'being kind',
-      'having hobbies',
-      'being curious',
-      'good hygiene',
-      'being ambitious',
+      'uniqueness',
+      'being mysterious',
+      'standing out',
+      'being unconventional',
       'self-awareness'
     ],
     dislikes: [
       'being boring',
       'negativity',
       'being closed-minded',
-      'rudeness',
-      'laziness',
-      'dishonesty',
+      'danger',
+      'scary things',
+      'chaos',
+      'instability',
       'being judgmental',
-      'arrogance',
-      'being clingy',
+      'creepy behavior',
       'poor communication'
     ],
     dealbreakers: [
-      'being cruel',
-      'dishonesty',
-      'disrespect',
       'violence',
-      'bigotry'
+      'killers',
+      'harm to others',
+      'being dangerous',
+      'predatory behavior'
     ]
   }
 }
