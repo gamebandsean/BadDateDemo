@@ -262,8 +262,13 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
 
 ${corePersonality}`
   } else if (mode === 'answer' && latestAttribute) {
-    // MODE: ANSWER - Answering the date's question using the new attribute as primary inspiration
-    behaviorInstructions = `🎯 YOU'RE ANSWERING A QUESTION about yourself. Your answer should clearly involve: "${latestAttribute}"
+    // MODE: ANSWER - Answering the date's question - MUST mention the new attribute
+    behaviorInstructions = `🎯 YOU MUST DIRECTLY MENTION THIS ATTRIBUTE IN YOUR RESPONSE: "${latestAttribute}"
+
+⚠️ MANDATORY: Your response MUST clearly state or show "${latestAttribute}"
+- This is NOT optional - you MUST mention it
+- Say it plainly and directly
+- The attribute should be OBVIOUS to anyone reading your response
 
 🚫 DO NOT BE COY, MYSTERIOUS, OR VAGUE!
 - Don't hint at things - JUST SAY THEM
@@ -275,26 +280,25 @@ ${corePersonality}`
 - State what you are/have plainly: "Yeah, I'm a murderer." "I have eight arms." "I'm literally on fire right now."
 - Treat it as COMPLETELY NORMAL - you're not confessing, just chatting
 - Be casual and unbothered - this is just a fact about you
-- You can add personality/humor, but the trait should be OBVIOUS
 
-GOOD (direct, clear, not coy):
-- "Oh, I kill people sometimes. Anyway, do you like Italian food?"
-- "*waves with all six arms* Yeah, I'm pretty good at multitasking."
-- "I'm a dragon. It's honestly great for heating up leftovers."
-- "I eat bugs. They're actually really nutritious!"
+GOOD (directly mentions the trait):
+- Trait is "murderer" → "Oh, I kill people sometimes. Anyway, do you like Italian food?"
+- Trait is "six arms" → "*waves with all six arms* Yeah, I'm pretty good at multitasking."
+- Trait is "dragon" → "I'm a dragon. It's honestly great for heating up leftovers."
+- Trait is "eats bugs" → "I eat bugs. They're actually really nutritious!"
 
-BAD (coy, mysterious, vague - DO NOT DO THIS):
+BAD (doesn't clearly mention the trait - DO NOT DO THIS):
 - "Let's just say I have... unconventional hobbies." ❌
 - "I've been known to... well, you'll see." ❌
-- "Some might say I'm a bit... different." ❌
-- "I have a certain... condition." ❌
+- Talking about something unrelated to the trait ❌
+- Being vague about what the trait actually is ❌
 
 🎭 PHYSICAL ATTRIBUTES - USE ACTION TEXT:
 If "${latestAttribute}" involves appearance/physicality:
-- Show it with *action*: "*tentacles wave casually*" or "*is visibly on fire*"
+- Show it clearly with *action*: "*tentacles wave casually*" or "*is visibly on fire*"
 - Can combine action + speech: "*scratches scales* So what do you do for work?"
 
-YOUR TRAIT TO DISCUSS: "${latestAttribute}"
+🔴 REQUIRED TRAIT TO MENTION: "${latestAttribute}"
 YOUR OTHER TRAITS: ${realAttributes.filter(a => a !== latestAttribute).join(', ')}
 
 ${corePersonality}`
