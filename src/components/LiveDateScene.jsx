@@ -463,6 +463,35 @@ function LiveDateScene() {
           )}
         </AnimatePresence>
         
+        {/* Conversation Bubbles Area */}
+        <div className="conversation-bubbles">
+          <AnimatePresence>
+            {currentBubble.speaker === 'avatar' && (
+              <motion.div 
+                className="speech-bubble avatar-bubble"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+              >
+                {currentBubble.text}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          <AnimatePresence>
+            {currentBubble.speaker === 'dater' && (
+              <motion.div 
+                className="speech-bubble dater-bubble"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+              >
+                {currentBubble.text}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        
         {/* Characters */}
         <div className="characters-container">
           <div className="character avatar-character">
@@ -471,18 +500,6 @@ function LiveDateScene() {
               alt="You" 
               className="character-image"
             />
-            <AnimatePresence>
-              {currentBubble.speaker === 'avatar' && (
-                <motion.div 
-                  className="speech-bubble avatar-bubble"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                >
-                  {currentBubble.text}
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
           
           <div className="character dater-character">
@@ -491,18 +508,6 @@ function LiveDateScene() {
               alt={selectedDater?.name} 
               className="character-image"
             />
-            <AnimatePresence>
-              {currentBubble.speaker === 'dater' && (
-                <motion.div 
-                  className="speech-bubble dater-bubble"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                >
-                  {currentBubble.text}
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
         
