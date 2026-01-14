@@ -727,6 +727,8 @@ export async function checkAttributeMatch(attribute, daterValues, dater) {
   
   const systemPrompt = `You are checking if a dating attribute matches any preference in a list.
 
+YOUR GOAL: TRY VERY HARD TO FIND A MATCH. Almost every attribute should connect to SOMETHING.
+
 DATER'S PREFERENCES:
 LOVES: ${daterValues.loves.join(', ')}
 LIKES: ${daterValues.likes.join(', ')}
@@ -735,12 +737,22 @@ DEALBREAKERS: ${daterValues.dealbreakers.join(', ')}
 
 ATTRIBUTE TO CHECK: "${attribute}"
 
-Does this attribute relate to ANY of the preferences above? Be generous with matching - if the attribute could reasonably relate to a preference, it's a match.
+BE EXTREMELY GENEROUS with matching! Use creative interpretation. Think about:
+- What personality trait does this imply?
+- What lifestyle does this suggest?
+- What values might this person have?
+- Is there ANY tangential connection to ANY preference?
 
-Examples of matches:
-- "I'm a vampire" could match "being mysterious" or "nightlife"
-- "I collect stamps" could match "having hobbies" or "being detail-oriented"
-- "I have six arms" could match "being unique" or "physical differences"
+EXAMPLES - You should find matches like these:
+- "I'm a vampire" → matches "nightlife", "being mysterious", "being unique", or even "not being conventional"
+- "I collect stamps" → matches "having hobbies", "being patient", "attention to detail", "being passionate"
+- "I have six arms" → matches "being unique", "being different", "physical attributes", "standing out"
+- "I eat pizza for breakfast" → matches "being spontaneous", "not following rules", "food lover", "being laid back"
+- "I cry at commercials" → matches "being emotional", "being sensitive", "authenticity", "emotional depth"
+- "I own 47 cats" → matches "animal lover", "being nurturing", "being unconventional", "commitment"
+
+IF IN DOUBT, FIND A MATCH. The game is more fun when attributes trigger reactions.
+Only return no match if the attribute is truly impossible to connect to ANY preference.
 
 Return ONLY valid JSON:
 {
