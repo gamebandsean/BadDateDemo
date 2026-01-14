@@ -131,11 +131,15 @@ function LiveDateScene() {
         
       case 'phase2':
         // Move to Phase 3 - apply winner and continue date
+        // Get the winning attribute BEFORE applying (so we have it for the conversation)
+        const winningAttr = getWinningAttributeText()
         applyWinningAttribute()
         setLivePhase('phase3')
         setPhaseTimer(30)
-        // Start the conversation
-        setTimeout(() => generateDateConversation(), 500)
+        // Start the conversation with the winning attribute
+        if (winningAttr) {
+          setTimeout(() => generateDateConversation(winningAttr), 500)
+        }
         break
         
       case 'phase3':
@@ -165,8 +169,24 @@ function LiveDateScene() {
     return getOpeningLine()
   }
   
-  const generateDateConversation = async () => {
-    if (isGenerating || !selectedDater || !latestAttribute) return
+  // Get the winning attribute text (before applying it to the store)
+  const getWinningAttributeText = () => {
+    if (numberedAttributes.length === 0) return null
+    const sorted = [...numberedAttributes].sort((a, b) => b.votes.length - a.votes.length)
+    return sorted[0]?.text || null
+  }
+  
+  // Generate conversation during Phase 3
+  const generateDateConversation = async (currentAttribute) => {
+    if (isGenerating || !selectedDater) return
+    
+    // Use passed attribute or fall back to store value
+    const attrToUse = currentAttribute || latestAttribute
+    if (!attrToUse) {
+      console.log('No attribute to respond to')
+      return
+    }
+    
     setIsGenerating(true)
     
     try {
@@ -175,40 +195,45 @@ function LiveDateScene() {
         avatar,
         selectedDater,
         dateConversation.slice(-6),
-        latestAttribute
+        attrToUse
       )
       
-      setCurrentBubble({ speaker: 'avatar', text: avatarResponse })
-      addDateMessage('avatar', avatarResponse)
-      
-      // Wait a moment, then dater reacts
-      await new Promise(resolve => setTimeout(resolve, 2500))
-      
-      // Get dater's reaction
-      const daterResponse = await getDaterDateResponse(
-        selectedDater,
-        avatar,
-        [...dateConversation.slice(-6), { speaker: 'avatar', message: avatarResponse }]
-      )
-      
-      setCurrentBubble({ speaker: 'dater', text: daterResponse.message })
-      addDateMessage('dater', daterResponse.message)
-      
-      // Update compatibility based on sentiment
-      if (daterResponse.sentiment !== 0) {
-        const factor = daterResponse.factor || 'random'
-        updateCompatibilityFactor(factor, daterResponse.sentiment, daterResponse.reason)
+      if (avatarResponse) {
+        setCurrentBubble({ speaker: 'avatar', text: avatarResponse })
+        addDateMessage('avatar', avatarResponse)
         
-        // Add to sentiment categories based on sentiment
-        if (latestAttribute) {
-          if (daterResponse.sentiment >= 8) {
-            addSentimentItem('loves', latestAttribute)
-          } else if (daterResponse.sentiment > 0) {
-            addSentimentItem('likes', latestAttribute)
-          } else if (daterResponse.sentiment > -8) {
-            addSentimentItem('dislikes', latestAttribute)
+        // Wait a moment, then dater reacts
+        await new Promise(resolve => setTimeout(resolve, 2500))
+        
+        // Get dater's reaction (returns a string)
+        const daterResponseText = await getDaterDateResponse(
+          selectedDater,
+          avatar,
+          [...dateConversation.slice(-6), { speaker: 'avatar', message: avatarResponse }],
+          attrToUse
+        )
+        
+        if (daterResponseText) {
+          setCurrentBubble({ speaker: 'dater', text: daterResponseText })
+          addDateMessage('dater', daterResponseText)
+          
+          // Analyze sentiment from the response text
+          const sentiment = analyzeSentiment(daterResponseText, selectedDater)
+          
+          // Update compatibility
+          if (sentiment.score !== 0) {
+            updateCompatibilityFactor(sentiment.factor, sentiment.score, sentiment.reason)
+          }
+          
+          // Add to sentiment categories
+          if (sentiment.score >= 8) {
+            addSentimentItem('loves', attrToUse)
+          } else if (sentiment.score > 0) {
+            addSentimentItem('likes', attrToUse)
+          } else if (sentiment.score > -8) {
+            addSentimentItem('dislikes', attrToUse)
           } else {
-            addSentimentItem('dealbreakers', latestAttribute)
+            addSentimentItem('dealbreakers', attrToUse)
           }
         }
       }
@@ -218,6 +243,52 @@ function LiveDateScene() {
     }
     
     setIsGenerating(false)
+  }
+  
+  // Simple sentiment analysis based on response text
+  const analyzeSentiment = (text, dater) => {
+    const lowerText = text.toLowerCase()
+    
+    // Positive indicators
+    const positiveWords = ['love', 'amazing', 'wonderful', 'great', 'awesome', 'fantastic', 'interesting', 'cool', 'nice', 'like', 'cute', 'sweet', 'fun', 'exciting', 'fascinating']
+    const negativeWords = ['hate', 'awful', 'terrible', 'horrible', 'disgusting', 'gross', 'scary', 'horrifying', 'creepy', 'weird', 'strange', 'uncomfortable', 'concerned', 'worried', 'alarmed', 'disturbing', 'no', 'don\'t', 'can\'t', 'won\'t', 'never', 'ugh', 'yikes']
+    const dealbreakersFound = dater.dealbreakers?.some(db => lowerText.includes(db.toLowerCase()))
+    
+    let score = 0
+    
+    // Count positive words
+    positiveWords.forEach(word => {
+      if (lowerText.includes(word)) score += 3
+    })
+    
+    // Count negative words
+    negativeWords.forEach(word => {
+      if (lowerText.includes(word)) score -= 3
+    })
+    
+    // Check for dealbreakers
+    if (dealbreakersFound) {
+      score -= 10
+    }
+    
+    // Check for questions (curiosity = slightly positive)
+    if (text.includes('?')) score += 1
+    
+    // Clamp score
+    score = Math.max(-10, Math.min(10, score))
+    
+    // Determine factor
+    const factors = ['physical', 'interests', 'values', 'tastes', 'intelligence']
+    const factor = factors[Math.floor(Math.random() * factors.length)]
+    
+    // Generate reason
+    let reason = ''
+    if (score > 5) reason = `${dater.name} seems really into this!`
+    else if (score > 0) reason = `${dater.name} is intrigued.`
+    else if (score < -5) reason = `${dater.name} is NOT happy about this.`
+    else if (score < 0) reason = `${dater.name} seems a bit put off.`
+    
+    return { score, factor, reason }
   }
   
   const handleChatSubmit = (e) => {
