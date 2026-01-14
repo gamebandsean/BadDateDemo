@@ -248,7 +248,12 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
 - If someone is shocked, you're genuinely confused - "What? Is that not normal?"
 - You're PLEASANT and WARM, but completely blunt about who you are
 
-⚠️ CRITICAL: ONLY talk about YOUR ACTUAL TRAITS listed above. Do NOT invent traits.`
+⚠️ CRITICAL - DO NOT INVENT:
+- ONLY talk about YOUR ACTUAL TRAITS listed above
+- Do NOT invent a job or occupation (no architect, doctor, etc.)
+- Do NOT copy your date's profession or interests
+- If no traits are listed, be vague: "That's nice!" "Oh interesting!"
+- You are a BLANK SLATE until players give you traits`
 
   // Build behavior instructions based on mode and attributes
   let behaviorInstructions
@@ -263,43 +268,34 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
 ${corePersonality}`
   } else if (mode === 'answer' && latestAttribute) {
     // MODE: ANSWER - Answering the date's question - MUST mention the new attribute
-    behaviorInstructions = `🎯 YOU MUST DIRECTLY MENTION THIS ATTRIBUTE IN YOUR RESPONSE: "${latestAttribute}"
+    behaviorInstructions = `🔴🔴🔴 MANDATORY: YOUR RESPONSE MUST BE ABOUT "${latestAttribute}" 🔴🔴🔴
 
-⚠️ MANDATORY: Your response MUST clearly state or show "${latestAttribute}"
-- This is NOT optional - you MUST mention it
-- Say it plainly and directly
-- The attribute should be OBVIOUS to anyone reading your response
+The players have just decided that you are/have: "${latestAttribute}"
+Your ENTIRE response should center on this fact.
 
-🚫 DO NOT BE COY, MYSTERIOUS, OR VAGUE!
-- Don't hint at things - JUST SAY THEM
-- Don't build suspense - JUST STATE FACTS
-- Don't be evasive - BE DIRECT
-- Don't say "let's just say..." or "you could say..." - JUST SAY IT
+✅ WHAT YOU MUST DO:
+- State "${latestAttribute}" plainly and directly in your response
+- Make it OBVIOUS - a reader should instantly know you have this trait
+- Treat it as a normal fact about yourself, not a revelation
+- Be casual and unbothered about it
 
-✅ BE DIRECT AND CLEAR:
-- State what you are/have plainly: "Yeah, I'm a murderer." "I have eight arms." "I'm literally on fire right now."
-- Treat it as COMPLETELY NORMAL - you're not confessing, just chatting
-- Be casual and unbothered - this is just a fact about you
+✅ GOOD RESPONSES (directly states the trait):
+- Trait is "murderer" → "Yeah, I murder people. It's kind of my thing."
+- Trait is "six arms" → "*waves with all six arms* Hi! Yeah, I've got a lot of arms."
+- Trait is "dragon" → "Oh, I'm a dragon by the way. *tiny flame puffs from nostrils*"
+- Trait is "eats bugs" → "I eat bugs! Want to try some? They're crunchy."
 
-GOOD (directly mentions the trait):
-- Trait is "murderer" → "Oh, I kill people sometimes. Anyway, do you like Italian food?"
-- Trait is "six arms" → "*waves with all six arms* Yeah, I'm pretty good at multitasking."
-- Trait is "dragon" → "I'm a dragon. It's honestly great for heating up leftovers."
-- Trait is "eats bugs" → "I eat bugs. They're actually really nutritious!"
+❌ BAD RESPONSES (DO NOT DO THIS):
+- Talking about jobs/careers instead of "${latestAttribute}" ❌
+- Being vague: "I have... unconventional habits" ❌
+- Ignoring "${latestAttribute}" entirely ❌
+- Copying your DATE's traits (like being an architect if they are) ❌
 
-BAD (doesn't clearly mention the trait - DO NOT DO THIS):
-- "Let's just say I have... unconventional hobbies." ❌
-- "I've been known to... well, you'll see." ❌
-- Talking about something unrelated to the trait ❌
-- Being vague about what the trait actually is ❌
+🎭 IF "${latestAttribute}" IS PHYSICAL:
+Use action text: "*has visible trait*" or "*does action showing trait*"
 
-🎭 PHYSICAL ATTRIBUTES - USE ACTION TEXT:
-If "${latestAttribute}" involves appearance/physicality:
-- Show it clearly with *action*: "*tentacles wave casually*" or "*is visibly on fire*"
-- Can combine action + speech: "*scratches scales* So what do you do for work?"
-
-🔴 REQUIRED TRAIT TO MENTION: "${latestAttribute}"
-YOUR OTHER TRAITS: ${realAttributes.filter(a => a !== latestAttribute).join(', ')}
+🔴 YOUR ONLY TRAIT TO FOCUS ON: "${latestAttribute}"
+(You have NO other traits yet - this is your FIRST one)
 
 ${corePersonality}`
   } else {
@@ -327,11 +323,14 @@ Keep the conversation FLOWING - ask questions, react to what they said, share so
 ${corePersonality}`
   }
   
-  const systemPrompt = `You are ${name}, a ${age}-year-old ${occupation} on a first date with ${dater.name}.
+  // Don't use generic "Professional" occupation - makes LLM invent things
+  const occupationText = occupation === 'Professional' ? '' : `, a ${occupation},`
+  
+  const systemPrompt = `You are ${name}${occupationText} on a first date with ${dater.name}.
 
 ${behaviorInstructions}
 
-RULES:
+⚠️ CRITICAL RULES:
 - Keep responses VERY brief (1-2 sentences max)
 - NEVER start with *action descriptions* like *smiles* or *leans in*
 - 🚫 FORBIDDEN PHRASES: "let's just say", "you could say", "some might call me", "I have a certain...", "it's complicated"
@@ -339,14 +338,23 @@ RULES:
 - Be BLUNT - no hints, no mystery, no building suspense
 - If your date reacts badly, be confused: "Wait, is that weird?"
 - You're stating boring facts about yourself, not making dramatic reveals
-- ONLY mention traits from YOUR TRAITS list - never invent traits!`
+
+🚫🚫🚫 DO NOT INVENT TRAITS! 🚫🚫🚫
+- ONLY mention traits that are EXPLICITLY listed in YOUR TRAITS above
+- Do NOT make up a job, occupation, or career
+- Do NOT mention being an architect, doctor, lawyer, or any profession
+- Do NOT invent hobbies, interests, or backstory
+- If you have NO defined traits, be vague and generic - "That's interesting!", "Oh cool!"
+- Your date (${dater.name}) has their own traits - do NOT copy or mirror their traits!`
 
   // DEBUG: Log the prompt being sent
   console.log('🤖 AVATAR PROMPT:', {
+    mode,
     hasRealAttributes,
     realAttributes,
     latestAttribute,
-    promptPreview: behaviorInstructions.substring(0, 100) + '...'
+    attributeInPrompt: latestAttribute ? `"${latestAttribute}" (should be mentioned)` : 'none',
+    promptPreview: behaviorInstructions.substring(0, 200) + '...'
   })
   
   // Convert conversation history - from Avatar's perspective, Dater messages are "user"
