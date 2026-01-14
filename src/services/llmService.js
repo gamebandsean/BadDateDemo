@@ -100,6 +100,28 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
   const realAttributes = avatar.attributes.filter(attr => !genericStarters.includes(attr))
   const visibleAttributes = realAttributes.filter(isVisibleAttribute)
   
+  // Baseline human morality - can be overridden by specific dater traits
+  const baselineMorality = `
+🧭 BASELINE HUMAN MORALITY (react authentically as a normal person would):
+
+Unless YOUR CHARACTER TRAITS specifically say otherwise, you have standard human values:
+- VIOLENCE/MURDER → Bad, scary, disturbing. You don't want to be harmed.
+- MONSTERS/CREATURES → Initially scary or unsettling. Giant spiders, zombies, etc. are alarming.
+- DANGEROUS SITUATIONS → Concerning. Fire, weapons, toxins = you want to be safe.
+- ILLEGAL ACTIVITY → Generally disapproved of, unless it's minor/victimless.
+- CRUELTY/HARM TO OTHERS → Morally wrong. You have empathy for victims.
+- DECEPTION/MANIPULATION → Untrustworthy. Honesty matters to you.
+- BODILY FLUIDS/GORE → Gross. Most people don't want to see someone leaking or rotting.
+
+HOWEVER - Check your character traits! You might:
+- Be INTO dark/dangerous things if you're rebellious or edgy
+- Find monsters attractive if you're unconventional
+- Not mind illegal stuff if you're a rule-breaker
+- Be desensitized if you work in medicine, crime, etc.
+
+REACT FIRST with your gut (informed by morality), THEN let your personality nuance it.
+A normal person + scary thing = scared reaction (even if they try to be polite about it).`
+
   // Context about what the Dater can SEE (not told, but observe)
   const avatarContext = visibleAttributes.length > 0
     ? `\n\nWHAT YOU CAN PHYSICALLY SEE ABOUT YOUR DATE: ${visibleAttributes.join(', ')}
@@ -109,7 +131,7 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
 - If they're "on fire" - real flames. If they have "tentacles" - real tentacles.
 - Don't question if it's real or metaphorical - you can SEE it!
 
-🎭 REACT REALISTICALLY TO WHAT YOU SEE:
+🎭 REACT REALISTICALLY TO WHAT YOU SEE (using your baseline morality):
 - If what you see is DISTURBING (rotting, bloody, monstrous) - be disturbed!
 - If what you see is ALARMING (on fire, melting, dangerous) - be alarmed!
 - If what you see is STRANGE (extra limbs, unusual species) - be confused or weirded out!
@@ -182,7 +204,7 @@ React based on what YOU think they mean. You could be right or wrong - that's th
 As your date speaks, pay attention to hints, implications, and subtext. If they say something that seems to reveal something about themselves - react to YOUR INTERPRETATION of what they might mean.`
   }
   
-  const fullPrompt = systemPrompt + avatarContext + latestAttrContext
+  const fullPrompt = systemPrompt + baselineMorality + avatarContext + latestAttrContext
   
   // Convert conversation history to Claude format
   let messages = conversationHistory.map(msg => ({
@@ -691,22 +713,31 @@ Return ONLY valid JSON in this exact format:
 
 /**
  * Check if an attribute matches any dater value
+ * @param attribute - The attribute/what the avatar said
+ * @param daterValues - The dater's hidden preferences
+ * @param dater - The dater character
+ * @param daterReaction - Optional: The dater's reaction text (helps determine if positive/negative match)
  * Returns { category: 'loves'|'likes'|'dislikes'|'dealbreakers'|null, matchedValue: string|null }
  */
-export async function checkAttributeMatch(attribute, daterValues, dater) {
+export async function checkAttributeMatch(attribute, daterValues, dater, daterReaction = null) {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
   
   if (!apiKey) {
     return { category: null, matchedValue: null }
   }
   
-  const allValues = [
-    ...daterValues.loves.map(v => ({ value: v, category: 'loves' })),
-    ...daterValues.likes.map(v => ({ value: v, category: 'likes' })),
-    ...daterValues.dislikes.map(v => ({ value: v, category: 'dislikes' })),
-    ...daterValues.dealbreakers.map(v => ({ value: v, category: 'dealbreakers' })),
-  ]
-  
+  // Analyze the dater's reaction to determine if it was positive or negative
+  const reactionContext = daterReaction ? `
+THE DATER'S REACTION TO THIS WAS: "${daterReaction}"
+
+IMPORTANT: Use the reaction to guide your matching!
+- If the dater seemed POSITIVE (happy, interested, attracted, amused) → Look for LOVES or LIKES that match
+- If the dater seemed NEGATIVE (scared, disgusted, concerned, uncomfortable) → Look for DISLIKES or DEALBREAKERS that match
+- Match the SENTIMENT of the reaction to the CATEGORY
+
+The dater has baseline human morality (murder = bad, monsters = scary, danger = concerning).
+Their reaction tells you how THEY felt about this attribute.` : ''
+
   const systemPrompt = `You are checking if a dating attribute matches any preference in a list.
 
 YOUR GOAL: TRY VERY HARD TO FIND A MATCH. Almost every attribute should connect to SOMETHING.
@@ -717,24 +748,26 @@ LIKES: ${daterValues.likes.join(', ')}
 DISLIKES: ${daterValues.dislikes.join(', ')}
 DEALBREAKERS: ${daterValues.dealbreakers.join(', ')}
 
-ATTRIBUTE TO CHECK: "${attribute}"
+ATTRIBUTE/STATEMENT TO CHECK: "${attribute}"
+${reactionContext}
 
 BE EXTREMELY GENEROUS with matching! Use creative interpretation. Think about:
 - What personality trait does this imply?
 - What lifestyle does this suggest?
 - What values might this person have?
 - Is there ANY tangential connection to ANY preference?
+- Consider BASELINE HUMAN MORALITY: murder, violence, danger, monsters are generally BAD
+  (unless the dater has a specific trait that says otherwise)
 
-EXAMPLES - You should find matches like these:
-- "I'm a vampire" → matches "nightlife", "being mysterious", "being unique", or even "not being conventional"
-- "I collect stamps" → matches "having hobbies", "being patient", "attention to detail", "being passionate"
-- "I have six arms" → matches "being unique", "being different", "physical attributes", "standing out"
-- "I eat pizza for breakfast" → matches "being spontaneous", "not following rules", "food lover", "being laid back"
-- "I cry at commercials" → matches "being emotional", "being sensitive", "authenticity", "emotional depth"
-- "I own 47 cats" → matches "animal lover", "being nurturing", "being unconventional", "commitment"
+MATCHING STRATEGY:
+1. First, consider if this is something most humans would find good or bad
+2. Look for a preference that relates to the ESSENCE of the attribute
+3. If the dater reacted positively → prioritize LOVES/LIKES matches
+4. If the dater reacted negatively → prioritize DISLIKES/DEALBREAKERS matches
+5. Be creative! "I murder people" could match "violence" (dealbreaker) or "danger" (dislike)
 
 IF IN DOUBT, FIND A MATCH. The game is more fun when attributes trigger reactions.
-Only return no match if the attribute is truly impossible to connect to ANY preference.
+Stretch for connections - most things can relate to SOME preference.
 
 Return ONLY valid JSON:
 {

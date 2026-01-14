@@ -173,9 +173,10 @@ function LiveDateScene() {
     return sorted[0]?.text || null
   }
   
-  // Apply scoring with multiplier
-  const applyScoring = async (avatarMessage, multiplier = 1) => {
-    const matchResult = await checkAttributeMatch(avatarMessage, daterValues, selectedDater)
+  // Apply scoring with multiplier - uses dater's reaction to inform matching
+  const applyScoring = async (avatarMessage, daterReaction, multiplier = 1) => {
+    // Pass the dater's reaction so matching can consider if they reacted positively or negatively
+    const matchResult = await checkAttributeMatch(avatarMessage, daterValues, selectedDater, daterReaction)
     
     if (matchResult.category) {
       console.log(`Attribute matched (${multiplier}x):`, matchResult)
@@ -246,7 +247,8 @@ function LiveDateScene() {
         if (daterReaction1) {
           setDaterBubble(daterReaction1)
           addDateMessage('dater', daterReaction1)
-          await applyScoring(avatarResponse1, 1) // Full scoring
+          // Score based on avatar's message AND dater's reaction
+          await applyScoring(avatarResponse1, daterReaction1, 1) // Full scoring
         }
         
         await new Promise(resolve => setTimeout(resolve, 3000))
@@ -279,7 +281,7 @@ function LiveDateScene() {
           if (daterReaction2) {
             setDaterBubble(daterReaction2)
             addDateMessage('dater', daterReaction2)
-            await applyScoring(avatarResponse2, 0.25) // 25% scoring
+            await applyScoring(avatarResponse2, daterReaction2, 0.25) // 25% scoring
           }
           
           await new Promise(resolve => setTimeout(resolve, 3000))
@@ -312,7 +314,7 @@ function LiveDateScene() {
             if (daterReaction3) {
               setDaterBubble(daterReaction3)
               addDateMessage('dater', daterReaction3)
-              await applyScoring(avatarResponse3, 0.10) // 10% scoring
+              await applyScoring(avatarResponse3, daterReaction3, 0.10) // 10% scoring
             }
           }
         }
