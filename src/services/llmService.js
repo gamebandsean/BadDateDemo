@@ -799,12 +799,24 @@ MATCHING STRATEGY:
 IF IN DOUBT, FIND A MATCH. The game is more fun when attributes trigger reactions.
 Stretch for connections - most things can relate to SOME preference.
 
+ABOUT THE SHORT LABEL:
+- This is what gets displayed in the sentiment column (Loves/Likes/Dislikes/Dealbreakers)
+- It should be 1-2 words that capture the ESSENCE of what was revealed
+- You can REPHRASE the attribute to fit better - don't just copy it exactly
+- Make it match what the avatar actually said/showed
+
+Examples:
+- Avatar said "I kill people sometimes" → shortLabel: "murder" or "killing"
+- Avatar said "I'm always on fire" → shortLabel: "fire hazard" or "dangerous"
+- Avatar showed "*waves with six arms*" → shortLabel: "extra limbs" or "mutation"
+- Avatar said "I eat bugs for breakfast" → shortLabel: "bug eater" or "weird diet"
+
 Return ONLY valid JSON:
 {
   "matches": true/false,
   "category": "loves" | "likes" | "dislikes" | "dealbreakers" | null,
   "matchedValue": "the specific preference that matched" | null,
-  "shortLabel": "1-2 word label for display" | null
+  "shortLabel": "1-2 word REPHRASED label that fits the column and matches what was said" | null
 }`
 
   try {
