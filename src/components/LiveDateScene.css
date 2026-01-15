@@ -447,6 +447,12 @@
   max-width: 300px;
   max-height: 250px;
   overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.voting-options::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 .vote-option {
