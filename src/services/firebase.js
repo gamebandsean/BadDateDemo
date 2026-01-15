@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getDatabase, ref, set, get, onValue, push, update, remove, onDisconnect } from 'firebase/database'
+import { getDatabase, ref, set, get, onValue, push, update, remove } from 'firebase/database'
 
 // Firebase configuration - replace with your own from Firebase Console
 const firebaseConfig = {
@@ -96,10 +96,6 @@ export const createRoom = async (roomCode, hostData) => {
       createdAt: Date.now()
     })
     
-    // Set up auto-cleanup when host disconnects
-    const hostRef = ref(database, `rooms/${roomCode}/players/${hostData.odId}`)
-    onDisconnect(hostRef).remove()
-    
     return true
   } catch (error) {
     console.error('Error creating room:', error)
@@ -134,9 +130,6 @@ export const joinRoom = async (roomCode, playerData) => {
       isHost: false,
       joinedAt: Date.now()
     })
-    
-    // Set up auto-cleanup when player disconnects
-    onDisconnect(playerRef).remove()
     
     return { 
       success: true, 
