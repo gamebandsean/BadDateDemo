@@ -59,17 +59,19 @@
 }
 
 .cta-line1 {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 700;
   color: var(--accent-pink);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
-.cta-line2 {
-  font-size: 0.75rem;
+.cta-line2,
+.cta-line3 {
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--accent-gold);
+  line-height: 1.1;
 }
 
 .header-timer {
@@ -720,11 +722,12 @@
   }
   
   .cta-line1 {
-    font-size: 0.5rem;
+    font-size: 0.45rem;
   }
   
-  .cta-line2 {
-    font-size: 0.65rem;
+  .cta-line2,
+  .cta-line3 {
+    font-size: 0.6rem;
   }
   
   .compatibility-display {
@@ -812,11 +815,12 @@
   }
   
   .cta-line1 {
-    font-size: 0.45rem;
+    font-size: 0.4rem;
   }
   
-  .cta-line2 {
-    font-size: 0.55rem;
+  .cta-line2,
+  .cta-line3 {
+    font-size: 0.5rem;
   }
   
   .compatibility-display {

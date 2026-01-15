@@ -440,11 +440,11 @@ function LiveDateScene() {
   
   const getPhaseTitle = () => {
     switch (livePhase) {
-      case 'phase1': return { line1: 'PHASE 1', line2: 'Suggest Attributes' }
-      case 'phase2': return { line1: 'PHASE 2', line2: 'Vote for Favorite' }
-      case 'phase3': return { line1: 'PHASE 3', line2: 'Watch the Date' }
-      case 'ended': return { line1: 'COMPLETE', line2: 'Date Over' }
-      default: return { line1: '', line2: '' }
+      case 'phase1': return { line1: 'PHASE 1', line2: 'Suggest', line3: 'Attributes' }
+      case 'phase2': return { line1: 'PHASE 2', line2: 'Vote for', line3: 'Favorite' }
+      case 'phase3': return { line1: 'PHASE 3', line2: 'Watch', line3: 'the Date' }
+      case 'ended': return { line1: 'COMPLETE', line2: 'Date', line3: 'Over' }
+      default: return { line1: '', line2: '', line3: '' }
     }
   }
   
@@ -477,6 +477,7 @@ function LiveDateScene() {
           <div className="header-cta">
             <span className="cta-line1">{getPhaseTitle().line1}</span>
             <span className="cta-line2">{getPhaseTitle().line2}</span>
+            <span className="cta-line3">{getPhaseTitle().line3}</span>
           </div>
           
           {/* Center: Compatibility Meter */}
