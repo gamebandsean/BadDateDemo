@@ -747,6 +747,9 @@ export const useGameStore = create((set, get) => ({
   // Set suggested attributes (for Firebase sync)
   setSuggestedAttributes: (suggestions) => set({ suggestedAttributes: suggestions }),
   
+  // Set numbered attributes for voting (for Firebase sync)
+  setNumberedAttributes: (numbered) => set({ numberedAttributes: numbered }),
+  
   // Set player chat (for Firebase sync)
   setPlayerChat: (chat) => set({ playerChat: chat }),
   

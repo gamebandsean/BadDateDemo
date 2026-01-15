@@ -56,6 +56,7 @@ function LiveDateScene() {
   const setSuggestedAttributes = useGameStore((state) => state.setSuggestedAttributes)
   const setPlayerChat = useGameStore((state) => state.setPlayerChat)
   const setCompatibility = useGameStore((state) => state.setCompatibility)
+  const setNumberedAttributes = useGameStore((state) => state.setNumberedAttributes)
   
   const [chatInput, setChatInput] = useState('')
   const [avatarBubble, setAvatarBubble] = useState('')
@@ -82,18 +83,32 @@ function LiveDateScene() {
   // Firebase state variable
   const [firebaseReady] = useState(isFirebaseAvailable())
   
-  // Subscribe to Firebase game state (for non-hosts to receive updates)
+  // Subscribe to Firebase game state (for all players to receive updates)
   useEffect(() => {
     if (!firebaseReady || !roomCode) return
+    
+    console.log('🔥 Setting up Firebase subscriptions for room:', roomCode, 'isHost:', isHost)
     
     // Subscribe to game state changes
     const unsubscribeGame = subscribeToGameState(roomCode, (gameState) => {
       if (!gameState) return
       
-      // Sync suggestions from Firebase
+      console.log('🔥 Game state update:', gameState)
+      
+      // Sync suggestions from Firebase (for all players)
       if (gameState.suggestedAttributes) {
         const suggestionsArray = Object.values(gameState.suggestedAttributes)
+        console.log('🔥 Syncing suggestions:', suggestionsArray)
         setSuggestedAttributes(suggestionsArray)
+      } else {
+        // Clear suggestions if none exist
+        setSuggestedAttributes([])
+      }
+      
+      // Sync numbered attributes for voting (for all players)
+      if (gameState.numberedAttributes) {
+        console.log('🔥 Syncing numbered attributes:', gameState.numberedAttributes)
+        setNumberedAttributes(gameState.numberedAttributes)
       }
       
       // Sync compatibility (so all players see the same score)
@@ -101,10 +116,18 @@ function LiveDateScene() {
         setCompatibility(gameState.compatibility)
       }
       
-      // Non-hosts should follow host's phase/timer
-      if (!isHost) {
-        if (gameState.livePhase) setLivePhase(gameState.livePhase)
-        if (typeof gameState.phaseTimer === 'number') setPhaseTimer(gameState.phaseTimer)
+      // Sync winning attribute
+      if (gameState.winningAttribute) {
+        setWinnerText(gameState.winningAttribute)
+      }
+      
+      // All players should follow phase/timer from Firebase
+      if (gameState.livePhase) {
+        console.log('🔥 Syncing phase:', gameState.livePhase)
+        setLivePhase(gameState.livePhase)
+      }
+      if (typeof gameState.phaseTimer === 'number') {
+        setPhaseTimer(gameState.phaseTimer)
       }
     })
     
@@ -117,13 +140,23 @@ function LiveDateScene() {
       unsubscribeGame()
       unsubscribeChat()
     }
-  }, [firebaseReady, roomCode, isHost, setSuggestedAttributes, setCompatibility, setLivePhase, setPhaseTimer, setPlayerChat])
+  }, [firebaseReady, roomCode, isHost, setSuggestedAttributes, setCompatibility, setLivePhase, setPhaseTimer, setPlayerChat, setNumberedAttributes])
   
-  // Phase timer countdown
+  // Phase timer countdown - only host runs the timer, others sync from Firebase
   useEffect(() => {
+    // Only the host should run the timer
+    if (!isHost && firebaseReady) return
+    
     if (livePhase === 'phase1' || livePhase === 'phase2' || livePhase === 'phase3') {
-      phaseTimerRef.current = setInterval(() => {
-        tickPhaseTimer()
+      phaseTimerRef.current = setInterval(async () => {
+        const newTime = phaseTimer - 1
+        if (newTime >= 0) {
+          setPhaseTimer(newTime)
+          // Sync timer to Firebase for other players
+          if (firebaseReady && roomCode && isHost) {
+            await updateGameState(roomCode, { phaseTimer: newTime })
+          }
+        }
       }, 1000)
       
       return () => {
@@ -132,7 +165,7 @@ function LiveDateScene() {
         }
       }
     }
-  }, [livePhase, tickPhaseTimer])
+  }, [livePhase, phaseTimer, isHost, firebaseReady, roomCode, setPhaseTimer])
   
   // Handle phase transitions when timer hits 0
   useEffect(() => {
@@ -143,14 +176,26 @@ function LiveDateScene() {
   
   // Start Phase 1 - Dater asks Avatar about themselves
   useEffect(() => {
-    if (livePhase === 'phase1' && dateConversation.length === 0) {
-      // Dater's opening question
-      const openingLine = getOpeningLine()
-      setDaterBubble(openingLine)
-      setAvatarBubble('') // Clear avatar bubble
-      addDateMessage('dater', openingLine)
+    const initPhase1 = async () => {
+      if (livePhase === 'phase1' && dateConversation.length === 0) {
+        // Dater's opening question
+        const openingLine = getOpeningLine()
+        setDaterBubble(openingLine)
+        setAvatarBubble('') // Clear avatar bubble
+        addDateMessage('dater', openingLine)
+        
+        // Host syncs initial state to Firebase
+        if (isHost && firebaseReady && roomCode) {
+          await updateGameState(roomCode, { 
+            livePhase: 'phase1', 
+            phaseTimer: 15,
+            compatibility: 50 
+          })
+        }
+      }
     }
-  }, [livePhase])
+    initPhase1()
+  }, [livePhase, isHost, firebaseReady, roomCode])
   
   // Auto-scroll chat
   useEffect(() => {
@@ -222,14 +267,25 @@ function LiveDateScene() {
           return // Don't transition, stay in Phase 1
         }
         // Move to Phase 2 - voting
-        processAttributesForVoting()
+        // Create numbered attributes from suggestions
+        const numbered = suggestedAttributes.map((attr, index) => ({
+          number: index + 1,
+          text: attr.text,
+          submittedBy: attr.username,
+          votes: []
+        }))
+        setNumberedAttributes(numbered)
         setLivePhase('phase2')
         setPhaseTimer(10)
         setUserVote(null)
         
-        // Sync to Firebase
+        // Sync to Firebase - include numbered attributes
         if (firebaseReady && roomCode) {
-          await updateGameState(roomCode, { livePhase: 'phase2', phaseTimer: 10 })
+          await updateGameState(roomCode, { 
+            livePhase: 'phase2', 
+            phaseTimer: 10,
+            numberedAttributes: numbered
+          })
         }
         break
         
