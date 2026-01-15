@@ -134,9 +134,9 @@ function LiveGameLobby() {
                   transition={{ delay: index * 0.05 }}
                 >
                   <span className="player-avatar">
-                    {player.username.charAt(0).toUpperCase()}
+                    {player.username?.charAt(0)?.toUpperCase() || '?'}
                   </span>
-                  <span className="player-name">{player.username}</span>
+                  <span className="player-name">{player.username || 'Loading...'}</span>
                   {player.isHost && <span className="host-badge">👑 Host</span>}
                   {player.id === playerId && !player.isHost && (
                     <span className="you-badge">You</span>

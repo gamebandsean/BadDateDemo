@@ -13,6 +13,7 @@ function LiveLobby() {
   const setIsHost = useGameStore((state) => state.setIsHost)
   const setPlayerId = useGameStore((state) => state.setPlayerId)
   const setSelectedDater = useGameStore((state) => state.setSelectedDater)
+  const setPlayers = useGameStore((state) => state.setPlayers)
   const daters = useGameStore((state) => state.daters)
   
   const [showJoinModal, setShowJoinModal] = useState(false)
@@ -69,6 +70,7 @@ function LiveLobby() {
     setIsHost(true)
     setPlayerId(odId)
     setSelectedDater(randomDater)
+    setPlayers([{ id: odId, username: playerName, isHost: true }])
     setPhase('live-game-lobby')
     setIsLoading(false)
   }
