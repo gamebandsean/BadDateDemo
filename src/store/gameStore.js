@@ -571,6 +571,9 @@ export const useGameStore = create((set, get) => ({
   setUsername: (username) => set({ username }),
   setPlayerId: (playerId) => set({ playerId }),
   setPlayers: (players) => set({ players }),
+  setRoomCode: (roomCode) => set({ roomCode }),
+  setIsHost: (isHost) => set({ isHost }),
+  setSelectedDater: (dater) => set({ selectedDater: dater }),
   
   // Create a new live room (host)
   createLiveRoom: (roomCode, username) => {
