@@ -55,7 +55,9 @@
   text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  max-width: 70px;
+  overflow: hidden;
 }
 
 .cta-line1 {
@@ -63,7 +65,8 @@
   font-weight: 700;
   color: var(--accent-pink);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .cta-line2,
@@ -71,7 +74,8 @@
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--accent-gold);
-  line-height: 1.1;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .header-timer {
