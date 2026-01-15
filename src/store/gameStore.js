@@ -658,7 +658,7 @@ export const useGameStore = create((set, get) => ({
     set({
       phase: 'live-date',
       livePhase: 'phase1',
-      phaseTimer: 15,
+      phaseTimer: 30,
       cycleCount: 0,
       dateConversation: [],
       suggestedAttributes: [],

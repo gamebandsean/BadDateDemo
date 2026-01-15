@@ -156,14 +156,29 @@ A normal person + scary thing = scared reaction (even if they try to be polite a
   // Get the last thing the Avatar said (for inference)
   const lastAvatarMessage = [...conversationHistory].reverse().find(msg => msg.speaker === 'avatar')?.message || ''
   
+  // Get the question that was asked (look for earlier dater message)
+  const lastDaterQuestion = [...conversationHistory].reverse().find(msg => msg.speaker === 'dater')?.message || ''
+  
   // Special instruction if a new attribute was just added
   let latestAttrContext = ''
   if (latestAttribute) {
     const isVisible = isVisibleAttribute(latestAttribute)
     
+    // Context about the question-answer dynamic
+    const questionContext = `
+🎯 CONTEXT: YOU ASKED A QUESTION, THEY GAVE AN ANSWER
+
+YOUR QUESTION WAS: "${lastDaterQuestion}"
+THEIR ANSWER REVEALED: "${latestAttribute}"
+THEIR FULL RESPONSE: "${lastAvatarMessage}"
+
+This is their ANSWER to YOUR question. React to what they revealed about themselves!`
+    
     if (isVisible) {
       // Dater can SEE this - react immediately!
-      latestAttrContext = `\n\n🚨 SOMETHING JUST CHANGED ABOUT YOUR DATE'S APPEARANCE: "${latestAttribute}"
+      latestAttrContext = `\n\n${questionContext}
+
+🚨 AND YOU CAN PHYSICALLY SEE "${latestAttribute}" - IT'S REAL!
 
 ⚠️ THIS IS LITERAL, NOT A METAPHOR! Whatever "${latestAttribute}" means, it is PHYSICALLY REAL:
 - If they're "on fire" - they are ACTUALLY ON FIRE. Real flames.
@@ -171,40 +186,36 @@ A normal person + scary thing = scared reaction (even if they try to be polite a
 - If they're "melting" - their body is LITERALLY MELTING.
 - If they're "a giant spider" - they are AN ACTUAL SPIDER.
 
-DO NOT ask "is that a metaphor?" - you can SEE it with your own eyes!
+REACT TO BOTH: Their answer AND what you can see!
 
 REACT HONESTLY - NOT EVERYTHING IS OKAY:
-- If this is HORRIFYING → Be horrified! "Oh my god, what is happening to your face?!"
-- If this is DANGEROUS → Be concerned! "Should we call someone? You're literally on fire!"
-- If this is GROSS → Be grossed out! "Is that... is something dripping off you?"
-- If this is SCARY → Be scared! "I don't... I don't know how to process what I'm seeing."
-- If this is WEIRD → Be weirded out! "Okay, I have SO many questions right now."
-- If this is somehow ATTRACTIVE → You can be into it! "Okay, that's actually kind of hot."
+- If this is HORRIFYING → Be horrified! "Oh my god!"
+- If this is DANGEROUS → Be concerned!
+- If this is GROSS → Be grossed out!
+- If this is SCARY → Be scared!
+- If this is WEIRD → Be weirded out!
+- If this is ATTRACTIVE → You can be into it!
 
-Your reaction should be HONEST and INTENSE (2-3x normal).
+Your reaction should be HONEST and INTENSE.
 You're allowed to be negative! Some things are just bad!
-Still keep it to 1-2 sentences, but make them COUNT.`
+Keep it to 1-2 sentences.`
     } else {
-      // NOT visible - Dater must INFER from what the Avatar said
-      latestAttrContext = `\n\n🔍 ACTIVE LISTENING MODE - INFER FROM WHAT THEY JUST SAID:
+      // NOT visible - Dater must react to what they SAID
+      latestAttrContext = `\n\n${questionContext}
 
-Your date just said: "${lastAvatarMessage}"
+🔍 REACT TO THEIR ANSWER:
 
-CAREFULLY ANALYZE their words:
-- What are they implying or hinting at?
-- Is there a hidden meaning, joke, or revelation?
-- Did they mention something unusual, concerning, or intriguing?
-- Are they being evasive, mysterious, or oddly specific about something?
+They just answered your question. What they said: "${lastAvatarMessage}"
+The key thing they revealed: "${latestAttribute}"
 
-If you infer something surprising, strange, alarming, or delightful from their words:
-- React based on YOUR INFERENCE, not what they explicitly stated
-- Ask follow-up questions if you're suspicious or curious
-- Express confusion if their hint went over your head
-- React dramatically (2-3x intensity) if you pick up on something big
+React to this answer! Consider:
+- Is this a surprising answer to your question?
+- Does this answer concern you, intrigue you, excite you, or disturb you?
+- How does someone like YOU react to this kind of answer?
 
-Examples of inference:
-- If they say "I try to avoid mirrors" → You might infer they're insecure OR a vampire
-- If they say "I haven't eaten in years" → You might infer an eating disorder OR something supernatural
+React HONESTLY based on what they revealed about themselves.
+Keep it to 1-2 sentences.`
+    }
 - If they mention "my eight kids at home" → Could be literal OR could they mean something else?
 - If they make a dark joke about "knowing how to hide a body" → Take it as a joke OR be alarmed?
 
@@ -279,32 +290,38 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
 
 ${corePersonality}`
   } else if (mode === 'answer' && latestAttribute) {
-    // MODE: ANSWER - Answering the date's question - MUST mention the new attribute
-    behaviorInstructions = `🔴🔴🔴 MANDATORY: YOUR RESPONSE MUST BE ABOUT "${latestAttribute}" 🔴🔴🔴
+    // MODE: ANSWER - Answering the date's question using the new attribute
+    // Get the last question from conversation history
+    const lastDaterMessage = [...conversationHistory].reverse().find(msg => msg.speaker === 'dater')?.message || ''
+    
+    behaviorInstructions = `🔴🔴🔴 MANDATORY: ANSWER THE QUESTION USING "${latestAttribute}" 🔴🔴🔴
 
-The players have just decided that you are/have: "${latestAttribute}"
-Your ENTIRE response should center on this fact.
+YOUR DATE JUST ASKED: "${lastDaterMessage}"
+
+The players have decided YOUR ANSWER involves: "${latestAttribute}"
+Your response should ANSWER THE QUESTION while revealing this trait about yourself.
 
 ✅ WHAT YOU MUST DO:
-- State "${latestAttribute}" plainly and directly in your response
-- Make it OBVIOUS - a reader should instantly know you have this trait
-- Treat it as a normal fact about yourself, not a revelation
-- Be casual and unbothered about it
+- READ THE QUESTION AGAIN: "${lastDaterMessage}"
+- ANSWER IT using "${latestAttribute}" as your response
+- Connect the trait to the question naturally
+- State "${latestAttribute}" plainly and directly
+- Treat it as a normal fact about yourself
 
-✅ GOOD RESPONSES (directly states the trait):
-- Trait is "murderer" → "Yeah, I murder people. It's kind of my thing."
-- Trait is "six arms" → "*waves with all six arms* Hi! Yeah, I've got a lot of arms."
-- Trait is "dragon" → "Oh, I'm a dragon by the way. *tiny flame puffs from nostrils*"
-- Trait is "eats bugs" → "I eat bugs! Want to try some? They're crunchy."
+✅ GOOD EXAMPLES (answering questions with traits):
+- Question: "What do you do for fun?" + Trait: "murder" → "Oh, I murder people mostly. It's relaxing."
+- Question: "Tell me about yourself" + Trait: "dragon" → "Well, I'm a dragon. *small flame puff* It's pretty great."
+- Question: "Any hobbies?" + Trait: "eating bugs" → "I'm really into eating bugs! Want to try one?"
+- Question: "What's your deal?" + Trait: "six arms" → "*gestures with all six arms* I've got a lot going on, as you can see."
 
 ❌ BAD RESPONSES (DO NOT DO THIS):
+- Ignoring the question and just stating the trait ❌
 - Talking about jobs/careers instead of "${latestAttribute}" ❌
 - Being vague: "I have... unconventional habits" ❌
-- Ignoring "${latestAttribute}" entirely ❌
-- Copying your DATE's traits (like being an architect if they are) ❌
+- Copying your DATE's traits ❌
 
-🔴 YOUR ONLY TRAIT TO FOCUS ON: "${latestAttribute}"
-(You have NO other traits yet - this is your FIRST one)
+🔴 THE QUESTION: "${lastDaterMessage}"
+🔴 YOUR ANSWER INVOLVES: "${latestAttribute}"
 
 ${corePersonality}`
   } else {

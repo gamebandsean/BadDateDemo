@@ -188,7 +188,7 @@ function LiveDateScene() {
         if (isHost && firebaseReady && roomCode) {
           await updateGameState(roomCode, { 
             livePhase: 'phase1', 
-            phaseTimer: 15,
+            phaseTimer: 30,
             compatibility: 50 
           })
         }
@@ -276,14 +276,14 @@ function LiveDateScene() {
         }))
         setNumberedAttributes(numbered)
         setLivePhase('phase2')
-        setPhaseTimer(10)
+        setPhaseTimer(30)
         setUserVote(null)
         
         // Sync to Firebase - include numbered attributes
         if (firebaseReady && roomCode) {
           await updateGameState(roomCode, { 
             livePhase: 'phase2', 
-            phaseTimer: 10,
+            phaseTimer: 30,
             numberedAttributes: numbered
           })
         }
@@ -537,7 +537,7 @@ function LiveDateScene() {
     } else {
       // Start new round - Dater asks another question
       setLivePhase('phase1')
-      setPhaseTimer(15)
+      setPhaseTimer(30)
       const nextQuestion = getOpeningLine()
       setDaterBubble(nextQuestion)
       setAvatarBubble('')
@@ -545,7 +545,7 @@ function LiveDateScene() {
       
       // Sync to Firebase
       if (firebaseReady && roomCode) {
-        await updateGameState(roomCode, { livePhase: 'phase1', phaseTimer: 15, compatibility })
+        await updateGameState(roomCode, { livePhase: 'phase1', phaseTimer: 30, compatibility })
       }
     }
   }
