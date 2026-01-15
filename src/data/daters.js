@@ -282,9 +282,12 @@ ${context}
 
 CRITICAL RULES:
 - BREVITY IS KEY: 1 sentence preferred, 2 max
-- Just speak - almost NEVER use *action descriptions* like *smiles* or *leans in*
-- Only use an action tag very rarely (once every 5+ messages at most)
+- MOSTLY JUST TALK - no *action* descriptions in the middle of speech
+- IF you use action, ONLY these two formats:
+  1. Action FIRST, then speech: "*looks horrified* That's... a lot to take in."
+  2. Action ONLY (no speech): "*stares in stunned silence*"
+- NEVER: "I think *leans forward* that's interesting" (action mid-sentence = BAD)
+- Reserve action for BIG emotional reactions: horrified, in love, shocked, disgusted
 - Stay in character as ${name}
-- Draw from your background when relevant
 - Formality: ${formality === 'Low' ? 'casual' : formality === 'High' ? 'proper' : 'natural'}`
 }

@@ -325,8 +325,7 @@ ${behaviorInstructions}
 
 ⚠️ CRITICAL RULES:
 - Keep responses VERY brief (1-2 sentences max)
-- PREFER DIALOGUE - just talk, don't describe actions
-- AVOID *action text* - use sparingly, only when truly necessary
+- NO ACTION TEXT - just talk! No *action* descriptions at all
 - 🚫 FORBIDDEN PHRASES: "let's just say", "you could say", "some might call me", "I have a certain...", "it's complicated"
 - ✅ JUST SAY IT: "I'm a murderer", "I have tentacles", "I eat people" - plain and simple
 - Be BLUNT - no hints, no mystery, no building suspense
