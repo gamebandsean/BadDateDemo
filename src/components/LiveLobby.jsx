@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import './LiveLobby.css'
 
+// Live Mode entry screen - v2
+
 function LiveLobby() {
   const setPhase = useGameStore((state) => state.setPhase)
   const setUsername = useGameStore((state) => state.setUsername)
