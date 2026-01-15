@@ -24,18 +24,13 @@
 }
 
 .live-lobby-card {
-  background: var(--bg-card);
-  border-radius: 24px;
-  padding: 32px;
-  width: 100%;
-  max-width: 420px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .live-lobby-header {
   text-align: center;
-  margin-bottom: 28px;
   position: relative;
 }
 
@@ -82,87 +77,114 @@
   font-size: 1rem;
 }
 
-.username-section {
-  margin-bottom: 24px;
-}
-
-.input-label {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.username-input {
-  width: 100%;
-  padding: 14px 16px;
-  background: var(--bg-primary);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: var(--text-primary);
-  font-size: 1rem;
-  transition: all 0.2s ease;
-}
-
-.username-input:focus {
-  outline: none;
-  border-color: #6e8efb;
-  box-shadow: 0 0 0 3px rgba(110, 142, 251, 0.2);
-}
-
-.username-input::placeholder {
-  color: var(--text-muted);
-}
-
-.tab-selector {
+/* Main Action Buttons */
+.main-buttons {
   display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 12px;
 }
 
-.tab-btn {
+.mode-btn {
   flex: 1;
-  padding: 14px;
-  background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 20px 16px;
+  border-radius: 16px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.tab-btn:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  color: var(--text-primary);
-}
-
-.tab-btn.active {
+.create-btn {
   background: linear-gradient(135deg, rgba(110, 142, 251, 0.2), rgba(167, 119, 227, 0.2));
-  border-color: #6e8efb;
+  border: 2px solid #6e8efb;
   color: var(--text-primary);
 }
 
-.tab-icon {
+.create-btn:hover {
+  background: linear-gradient(135deg, rgba(110, 142, 251, 0.3), rgba(167, 119, 227, 0.3));
+  box-shadow: 0 0 20px rgba(110, 142, 251, 0.3);
+}
+
+.join-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+}
+
+.join-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--text-primary);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
+
+.btn-text {
+  font-weight: 600;
+}
+
+/* Info Section */
+.live-info {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.info-icon {
   font-size: 1.1rem;
 }
 
-.tab-content {
-  min-height: 140px;
+/* Join Modal */
+.join-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+  padding: 20px;
 }
 
-.section-description {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+.join-modal {
+  background: var(--bg-card);
+  border-radius: 24px;
+  padding: 32px;
+  width: 100%;
+  max-width: 360px;
   text-align: center;
-  margin-bottom: 20px;
-  line-height: 1.5;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.join-modal h3 {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #6e8efb, #a777e3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.join-modal p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-bottom: 24px;
 }
 
 .code-input {
@@ -193,112 +215,85 @@
   font-size: 1.2rem;
 }
 
-.action-btn {
-  width: 100%;
-  padding: 16px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  background: linear-gradient(135deg, #6e8efb, #a777e3);
-}
-
-.action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.action-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(110, 142, 251, 0.3);
-}
-
 .error-message {
   text-align: center;
   color: #ff6b9d;
   font-size: 0.9rem;
-  margin-top: 16px;
+  margin-bottom: 16px;
   padding: 12px;
   background: rgba(255, 107, 157, 0.1);
   border-radius: 10px;
 }
 
-.live-info {
+.modal-buttons {
   display: flex;
-  justify-content: center;
-  gap: 24px;
-  margin-top: 28px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 12px;
 }
 
-.info-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
-  font-size: 0.85rem;
+.cancel-btn {
+  flex: 1;
+  padding: 14px;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.info-icon {
-  font-size: 1.1rem;
+.cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.confirm-btn {
+  flex: 1;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Mobile responsive */
 @media (max-width: 768px) {
   .live-lobby {
     padding: 16px;
-    align-items: flex-start;
-    padding-top: 24px;
-  }
-  
-  .live-lobby-card {
-    padding: 24px 20px;
-    border-radius: 20px;
   }
   
   .live-lobby-title {
     font-size: 1.5rem;
   }
   
-  .username-input,
-  .code-input {
-    padding: 12px 14px;
-  }
-  
-  .code-input {
-    font-size: 1.4rem;
-    padding: 14px;
-    letter-spacing: 4px;
-  }
-  
-  .tab-btn {
-    padding: 12px;
-    font-size: 0.85rem;
-  }
-  
-  .action-btn {
-    padding: 14px;
+  .mode-btn {
+    padding: 16px 12px;
     font-size: 1rem;
+  }
+  
+  .main-buttons {
+    gap: 10px;
   }
 }
 
 @media (max-width: 380px) {
-  .live-lobby-card {
-    padding: 20px 16px;
-  }
-  
   .live-lobby-title {
     font-size: 1.3rem;
   }
   
-  .tab-btn {
-    padding: 10px;
-    font-size: 0.8rem;
+  .mode-btn {
+    padding: 14px 10px;
+    font-size: 0.9rem;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
   }
   
   .code-input {
-    font-size: 1.2rem;
-    letter-spacing: 3px;
+    font-size: 1.4rem;
+    letter-spacing: 4px;
   }
 }
