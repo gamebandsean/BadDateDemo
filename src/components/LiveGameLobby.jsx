@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import './LiveGameLobby.css'
@@ -11,25 +11,6 @@ function LiveGameLobby() {
   const isHost = useGameStore((state) => state.isHost)
   const players = useGameStore((state) => state.players)
   const username = useGameStore((state) => state.username)
-  const addPlayer = useGameStore((state) => state.addPlayer)
-  
-  const [copied, setCopied] = useState(false)
-  
-  // Simulate players joining (for demo purposes)
-  useEffect(() => {
-    if (isHost) {
-      const fakeNames = ['ChaosMaster', 'DateNinja', 'LoveGuru', 'HeartBreaker', 'CupidFail']
-      const interval = setInterval(() => {
-        if (players.length < 6 && Math.random() > 0.7) {
-          const fakeName = fakeNames[Math.floor(Math.random() * fakeNames.length)]
-          if (!players.find(p => p.username === fakeName)) {
-            addPlayer({ id: Date.now(), username: fakeName, isHost: false })
-          }
-        }
-      }, 2000)
-      return () => clearInterval(interval)
-    }
-  }, [isHost, players, addPlayer])
   
   const copyCode = () => {
     navigator.clipboard.writeText(roomCode)
