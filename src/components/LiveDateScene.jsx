@@ -67,9 +67,12 @@ function LiveDateScene() {
   const [usingFallback, setUsingFallback] = useState(false)
   const [showWinnerPopup, setShowWinnerPopup] = useState(false)
   const [winnerText, setWinnerText] = useState('')
+  const [showPhaseAnnouncement, setShowPhaseAnnouncement] = useState(false)
+  const [announcementPhase, setAnnouncementPhase] = useState('')
   
   const chatEndRef = useRef(null)
   const phaseTimerRef = useRef(null)
+  const lastPhaseRef = useRef('')
   
   // Check if API key is available
   useEffect(() => {
@@ -201,6 +204,36 @@ function LiveDateScene() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [playerChat])
+  
+  // Show phase announcement when phase changes
+  useEffect(() => {
+    if (livePhase && livePhase !== lastPhaseRef.current && livePhase !== 'ended') {
+      lastPhaseRef.current = livePhase
+      setAnnouncementPhase(livePhase)
+      setShowPhaseAnnouncement(true)
+      
+      // Hide after 2 seconds
+      const timer = setTimeout(() => {
+        setShowPhaseAnnouncement(false)
+      }, 2000)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [livePhase])
+  
+  // Get phase announcement content
+  const getPhaseAnnouncement = () => {
+    switch (announcementPhase) {
+      case 'phase1':
+        return { title: 'PHASE 1', subtitle: 'Suggest Traits', icon: '✨', description: 'Type attributes for your Avatar!' }
+      case 'phase2':
+        return { title: 'PHASE 2', subtitle: 'Vote Now', icon: '🗳️', description: 'Pick the best trait!' }
+      case 'phase3':
+        return { title: 'PHASE 3', subtitle: 'Watch the Date', icon: '👀', description: 'See how they react!' }
+      default:
+        return { title: '', subtitle: '', icon: '', description: '' }
+    }
+  }
   
   // Generate dater values when the game starts
   useEffect(() => {
@@ -638,6 +671,32 @@ function LiveDateScene() {
   
   return (
     <div className="live-date-scene">
+      {/* Phase Announcement Overlay */}
+      <AnimatePresence>
+        {showPhaseAnnouncement && (
+          <motion.div 
+            className="phase-announcement-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.div 
+              className="phase-announcement-card"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <span className="phase-icon">{getPhaseAnnouncement().icon}</span>
+              <h2 className="phase-title">{getPhaseAnnouncement().title}</h2>
+              <h3 className="phase-subtitle">{getPhaseAnnouncement().subtitle}</h3>
+              <p className="phase-description">{getPhaseAnnouncement().description}</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
       {/* Fallback Mode Warning */}
       {usingFallback && (
         <div className="fallback-warning">
