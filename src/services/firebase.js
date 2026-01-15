@@ -12,6 +12,14 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 }
 
+// Debug: log config
+console.log('🔧 Firebase config check:', {
+  hasApiKey: !!firebaseConfig.apiKey,
+  hasDatabaseURL: !!firebaseConfig.databaseURL,
+  apiKey: firebaseConfig.apiKey?.substring(0, 10) + '...',
+  databaseURL: firebaseConfig.databaseURL
+})
+
 // Initialize Firebase
 let app = null
 let database = null
@@ -22,7 +30,7 @@ try {
     database = getDatabase(app)
     console.log('🔥 Firebase initialized successfully')
   } else {
-    console.warn('⚠️ Firebase config missing - multiplayer disabled')
+    console.warn('⚠️ Firebase config missing - multiplayer disabled', firebaseConfig)
   }
 } catch (error) {
   console.error('Firebase initialization error:', error)

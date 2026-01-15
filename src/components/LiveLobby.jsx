@@ -20,10 +20,14 @@ function LiveLobby() {
   const [username, setUsernameLocal] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [firebaseReady, setFirebaseReady] = useState(false)
+  const [firebaseReady, setFirebaseReady] = useState(isFirebaseAvailable())
   
   useEffect(() => {
-    setFirebaseReady(isFirebaseAvailable())
+    // Check again after a short delay in case Firebase is still initializing
+    const timer = setTimeout(() => {
+      setFirebaseReady(isFirebaseAvailable())
+    }, 100)
+    return () => clearTimeout(timer)
   }, [])
   
   const generateRoomCode = () => {
