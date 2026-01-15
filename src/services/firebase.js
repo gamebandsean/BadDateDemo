@@ -46,11 +46,25 @@ export const createRoom = async (roomCode, hostData) => {
   const roomRef = ref(database, `rooms/${roomCode}`)
   
   try {
+    // Only store serializable dater data (no functions)
+    const daterData = hostData.dater ? {
+      id: hostData.dater.id,
+      name: hostData.dater.name,
+      age: hostData.dater.age,
+      photo: hostData.dater.photo,
+      tagline: hostData.dater.tagline,
+      archetype: hostData.dater.archetype,
+      traits: hostData.dater.traits || [],
+      interests: hostData.dater.interests || [],
+      dealbreakers: hostData.dater.dealbreakers || [],
+      bio: hostData.dater.bio || ''
+    } : null
+    
     await set(roomRef, {
       code: roomCode,
       host: hostData.username,
       hostId: hostData.odId,
-      dater: hostData.dater,
+      dater: daterData,
       players: {
         [hostData.odId]: {
           id: hostData.odId,
