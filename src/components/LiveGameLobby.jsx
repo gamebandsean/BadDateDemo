@@ -12,6 +12,8 @@ function LiveGameLobby() {
   const players = useGameStore((state) => state.players)
   const username = useGameStore((state) => state.username)
   
+  const [copied, setCopied] = useState(false)
+  
   const copyCode = () => {
     navigator.clipboard.writeText(roomCode)
     setCopied(true)
