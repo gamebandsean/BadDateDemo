@@ -145,6 +145,12 @@ function LiveDateScene() {
     }
   }, [firebaseReady, roomCode, isHost, setSuggestedAttributes, setCompatibility, setLivePhase, setPhaseTimer, setPlayerChat, setNumberedAttributes])
   
+  // Track timer value in a ref for the interval to access
+  const phaseTimerValueRef = useRef(phaseTimer)
+  useEffect(() => {
+    phaseTimerValueRef.current = phaseTimer
+  }, [phaseTimer])
+  
   // Phase timer countdown - only host runs the timer, others sync from Firebase
   useEffect(() => {
     // Only the host should run the timer
@@ -152,11 +158,12 @@ function LiveDateScene() {
     
     if (livePhase === 'phase1' || livePhase === 'phase2' || livePhase === 'phase3') {
       phaseTimerRef.current = setInterval(async () => {
-        const newTime = phaseTimer - 1
+        const currentTime = phaseTimerValueRef.current
+        const newTime = currentTime - 1
         if (newTime >= 0) {
           setPhaseTimer(newTime)
-          // Sync timer to Firebase for other players
-          if (firebaseReady && roomCode && isHost) {
+          // Sync timer to Firebase for other players (every 5 seconds to reduce writes)
+          if (firebaseReady && roomCode && isHost && newTime % 5 === 0) {
             await updateGameState(roomCode, { phaseTimer: newTime })
           }
         }
@@ -168,14 +175,16 @@ function LiveDateScene() {
         }
       }
     }
-  }, [livePhase, phaseTimer, isHost, firebaseReady, roomCode, setPhaseTimer])
+  }, [livePhase, isHost, firebaseReady, roomCode, setPhaseTimer])
   
   // Handle phase transitions when timer hits 0
   useEffect(() => {
-    if (phaseTimer <= 0) {
+    // Only trigger once when timer reaches 0
+    if (phaseTimer === 0 && (livePhase === 'phase1' || livePhase === 'phase2')) {
+      console.log('⏰ Timer hit 0, triggering phase end for:', livePhase)
       handlePhaseEnd()
     }
-  }, [phaseTimer])
+  }, [phaseTimer, livePhase])
   
   // Start Phase 1 - Dater asks Avatar about themselves
   useEffect(() => {
@@ -294,19 +303,22 @@ function LiveDateScene() {
     switch (livePhase) {
       case 'phase1':
         // Check if anyone submitted an attribute
-        if (suggestedAttributes.length === 0) {
+        if (!suggestedAttributes || suggestedAttributes.length === 0) {
           // No suggestions - keep timer at 0 and wait
           console.log('Waiting for at least one attribute suggestion...')
           return // Don't transition, stay in Phase 1
         }
         // Move to Phase 2 - voting
-        // Create numbered attributes from suggestions
-        const numbered = suggestedAttributes.map((attr, index) => ({
-          number: index + 1,
-          text: attr.text,
-          submittedBy: attr.username,
-          votes: []
-        }))
+        // Create numbered attributes from suggestions (with safeguards)
+        console.log('📋 Processing suggestions for voting:', suggestedAttributes)
+        const numbered = suggestedAttributes
+          .filter(attr => attr && (attr.text || typeof attr === 'string'))
+          .map((attr, index) => ({
+            number: index + 1,
+            text: typeof attr === 'string' ? attr : (attr.text || 'Unknown'),
+            submittedBy: attr.username || 'Anonymous',
+            votes: []
+          }))
         setNumberedAttributes(numbered)
         setLivePhase('phase2')
         setPhaseTimer(30)
