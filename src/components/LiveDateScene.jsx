@@ -218,36 +218,6 @@ function LiveDateScene() {
     return sorted[0]?.text || null
   }
   
-  // Apply scoring with multiplier - uses dater's reaction to inform matching
-  const applyScoring = async (avatarMessage, daterReaction, multiplier = 1) => {
-    // Pass the dater's reaction so matching can consider if they reacted positively or negatively
-    const matchResult = await checkAttributeMatch(avatarMessage, daterValues, selectedDater, daterReaction)
-    
-    if (matchResult.category) {
-      console.log(`Attribute matched (${multiplier}x):`, matchResult)
-      
-      // Check if already exposed
-      const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
-      
-      if (wasAlreadyExposed) {
-        triggerGlow(matchResult.shortLabel)
-      }
-      
-      // Apply compatibility change with multiplier
-      const baseChanges = {
-        loves: 25,
-        likes: 10,
-        dislikes: -10,
-        dealbreakers: -25,
-      }
-      const change = Math.round(baseChanges[matchResult.category] * multiplier)
-      if (change !== 0) {
-        adjustCompatibility(change)
-        console.log(`Compatibility ${change > 0 ? '+' : ''}${change}% (${matchResult.category}: ${matchResult.shortLabel}, ${multiplier}x)`)
-      }
-    }
-  }
-  
   // Generate the full Phase 3 conversation flow
   // Exchange 1: Avatar answers question (1x scoring)
   // Exchange 2: Avatar continues conversation (0.25x scoring)
@@ -279,6 +249,25 @@ function LiveDateScene() {
     })
     
     try {
+      // Helper to check match and apply scoring
+      const checkAndScore = async (avatarMessage, multiplier) => {
+        const matchResult = await checkAttributeMatch(avatarMessage, daterValues, selectedDater, null)
+        if (matchResult.category) {
+          console.log(`Attribute matched (${multiplier}x):`, matchResult)
+          const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
+          if (wasAlreadyExposed) {
+            triggerGlow(matchResult.shortLabel)
+          }
+          const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
+          const change = Math.round(baseChanges[matchResult.category] * multiplier)
+          if (change !== 0) {
+            adjustCompatibility(change)
+            console.log(`Compatibility ${change > 0 ? '+' : ''}${change}% (${matchResult.category}: ${matchResult.shortLabel}, ${multiplier}x)`)
+          }
+        }
+        return matchResult.category // Return the category so Dater can react appropriately
+      }
+      
       // ============ EXCHANGE 1: Avatar answers with new attribute (1x scoring) ============
       console.log('--- Exchange 1: Avatar answers with new attribute ---')
       
@@ -296,19 +285,21 @@ function LiveDateScene() {
         
         await new Promise(resolve => setTimeout(resolve, 2500))
         
-        // Dater reacts - FULL SCORING (1x)
+        // Check match FIRST to know how Dater should react
+        const sentimentHit1 = await checkAndScore(avatarResponse1, 1) // Full scoring
+        
+        // Dater reacts - informed by what sentiment was hit
         const daterReaction1 = await getDaterDateResponse(
           selectedDater,
           avatarWithNewAttr,
           [...dateConversation.slice(-6), { speaker: 'avatar', message: avatarResponse1 }],
-          attrToUse
+          attrToUse,
+          sentimentHit1 // Pass the category so Dater reacts appropriately
         )
         
         if (daterReaction1) {
           setDaterBubble(daterReaction1)
           addDateMessage('dater', daterReaction1)
-          // Score based on avatar's message AND dater's reaction
-          await applyScoring(avatarResponse1, daterReaction1, 1) // Full scoring
         }
         
         await new Promise(resolve => setTimeout(resolve, 3000))
@@ -330,18 +321,21 @@ function LiveDateScene() {
           
           await new Promise(resolve => setTimeout(resolve, 2500))
           
-          // Dater reacts - REDUCED SCORING (0.25x)
+          // Check match FIRST
+          const sentimentHit2 = await checkAndScore(avatarResponse2, 0.25) // 25% scoring
+          
+          // Dater reacts - informed by sentiment
           const daterReaction2 = await getDaterDateResponse(
             selectedDater,
             avatarWithNewAttr,
             [...dateConversation.slice(-4), { speaker: 'avatar', message: avatarResponse2 }],
-            null
+            null,
+            sentimentHit2
           )
           
           if (daterReaction2) {
             setDaterBubble(daterReaction2)
             addDateMessage('dater', daterReaction2)
-            await applyScoring(avatarResponse2, daterReaction2, 0.25) // 25% scoring
           }
           
           await new Promise(resolve => setTimeout(resolve, 3000))
@@ -363,18 +357,21 @@ function LiveDateScene() {
             
             await new Promise(resolve => setTimeout(resolve, 2500))
             
-            // Dater reacts - MINIMAL SCORING (0.10x)
+            // Check match FIRST
+            const sentimentHit3 = await checkAndScore(avatarResponse3, 0.10) // 10% scoring
+            
+            // Dater reacts - informed by sentiment
             const daterReaction3 = await getDaterDateResponse(
               selectedDater,
               avatarWithNewAttr,
               [...dateConversation.slice(-4), { speaker: 'avatar', message: avatarResponse3 }],
-              null
+              null,
+              sentimentHit3
             )
             
             if (daterReaction3) {
               setDaterBubble(daterReaction3)
               addDateMessage('dater', daterReaction3)
-              await applyScoring(avatarResponse3, daterReaction3, 0.10) // 10% scoring
             }
           }
         }

@@ -92,13 +92,25 @@ function isVisibleAttribute(attr) {
   return visibleKeywords.some(keyword => lowerAttr.includes(keyword))
 }
 
-export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null) {
+export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null, sentimentHit = null) {
   const systemPrompt = buildDaterAgentPrompt(dater, 'date')
   
   // Filter attributes to only include VISIBLE ones the Dater can actually see
   const genericStarters = ['seems friendly', 'has a nice smile', 'appears well-dressed']
   const realAttributes = avatar.attributes.filter(attr => !genericStarters.includes(attr))
   const visibleAttributes = realAttributes.filter(isVisibleAttribute)
+  
+  // SENTIMENT-DRIVEN REACTION: Tell the Dater how to feel based on what category was hit
+  let sentimentInstruction = ''
+  if (sentimentHit) {
+    const sentimentGuide = {
+      loves: `🥰 YOU LOVE THIS! React with genuine excitement, attraction, or delight. This hit one of your LOVES - you're really into what they just said/showed. Be enthusiastic, flirty, impressed, or smitten. Show STRONG POSITIVE emotion.`,
+      likes: `😊 YOU LIKE THIS! React positively - interested, pleased, intrigued. This hit one of your LIKES - it's a good sign. Be warm, engaged, and show you appreciate what they said. Moderate positive reaction.`,
+      dislikes: `😬 YOU DON'T LIKE THIS. React with discomfort, concern, or disappointment. This hit one of your DISLIKES - it bothers you. Be visibly put off, skeptical, or uneasy. Show clear negative reaction but stay polite.`,
+      dealbreakers: `😱 THIS IS A DEALBREAKER! React with horror, disgust, fear, or shock. This hit one of your DEALBREAKERS - this is REALLY BAD. Be genuinely alarmed, disturbed, or repulsed. STRONG NEGATIVE reaction. You can't hide your distress.`
+    }
+    sentimentInstruction = `\n\n🎯 HOW YOU FEEL ABOUT THIS:\n${sentimentGuide[sentimentHit]}\n\nYour reaction MUST match this sentiment! Don't be neutral - show clear ${sentimentHit === 'loves' || sentimentHit === 'likes' ? 'POSITIVE' : 'NEGATIVE'} emotion.`
+  }
   
   // Baseline human morality - can be overridden by specific dater traits
   const baselineMorality = `
@@ -204,7 +216,7 @@ React based on what YOU think they mean. You could be right or wrong - that's th
 As your date speaks, pay attention to hints, implications, and subtext. If they say something that seems to reveal something about themselves - react to YOUR INTERPRETATION of what they might mean.`
   }
   
-  const fullPrompt = systemPrompt + baselineMorality + avatarContext + latestAttrContext
+  const fullPrompt = systemPrompt + baselineMorality + avatarContext + latestAttrContext + sentimentInstruction
   
   // Convert conversation history to Claude format
   let messages = conversationHistory.map(msg => ({
