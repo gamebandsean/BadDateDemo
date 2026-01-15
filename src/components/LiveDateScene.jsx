@@ -420,9 +420,12 @@ function LiveDateScene() {
     const message = chatInput.trim()
     
     // In Phase 1, treat messages as attribute suggestions
+    // Helper to truncate long messages
+    const truncate = (text, max = 40) => text.length > max ? text.slice(0, max) + '...' : text
+    
     if (livePhase === 'phase1') {
       submitAttributeSuggestion(message, username)
-      addPlayerChatMessage(username, `[ATTRIBUTE] ${message}`)
+      addPlayerChatMessage(username, `💡 ${truncate(message, 35)}`)
     } 
     // In Phase 2, check if it's a vote
     else if (livePhase === 'phase2') {
@@ -430,14 +433,14 @@ function LiveDateScene() {
       if (!isNaN(num) && num >= 1 && num <= numberedAttributes.length) {
         voteForNumberedAttribute(num, username)
         setUserVote(num)
-        addPlayerChatMessage(username, `Voted for #${num}`)
+        addPlayerChatMessage(username, `Vote: #${num}`)
       } else {
-        addPlayerChatMessage(username, message)
+        addPlayerChatMessage(username, truncate(message))
       }
     }
     // Phase 3 - just regular chat
     else {
-      addPlayerChatMessage(username, message)
+      addPlayerChatMessage(username, truncate(message))
     }
     
     setChatInput('')
@@ -626,7 +629,7 @@ function LiveDateScene() {
                     onClick={() => {
                       voteForNumberedAttribute(attr.number, username)
                       setUserVote(attr.number)
-                      addPlayerChatMessage(username, `Voted for #${attr.number}`)
+                      addPlayerChatMessage(username, `Vote: #${attr.number}`)
                     }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
