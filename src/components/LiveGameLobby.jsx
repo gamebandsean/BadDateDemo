@@ -1,18 +1,56 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
+import { 
+  isFirebaseAvailable, 
+  subscribeToPlayers, 
+  subscribeToRoom,
+  updateGameState,
+  leaveRoom 
+} from '../services/firebase'
 import './LiveGameLobby.css'
 
 function LiveGameLobby() {
   const setPhase = useGameStore((state) => state.setPhase)
   const startLiveDate = useGameStore((state) => state.startLiveDate)
   const selectedDater = useGameStore((state) => state.selectedDater)
+  const setSelectedDater = useGameStore((state) => state.setSelectedDater)
   const roomCode = useGameStore((state) => state.roomCode)
   const isHost = useGameStore((state) => state.isHost)
   const players = useGameStore((state) => state.players)
+  const setPlayers = useGameStore((state) => state.setPlayers)
   const username = useGameStore((state) => state.username)
+  const playerId = useGameStore((state) => state.playerId)
   
   const [copied, setCopied] = useState(false)
+  const [firebaseReady] = useState(isFirebaseAvailable())
+  
+  // Subscribe to real-time player updates
+  useEffect(() => {
+    if (!firebaseReady || !roomCode) return
+    
+    // Subscribe to players
+    const unsubscribePlayers = subscribeToPlayers(roomCode, (playersList) => {
+      setPlayers(playersList)
+    })
+    
+    // Subscribe to room for dater info and game state
+    const unsubscribeRoom = subscribeToRoom(roomCode, (roomData) => {
+      if (roomData?.dater && !selectedDater) {
+        setSelectedDater(roomData.dater)
+      }
+      
+      // Check if game has started (for non-hosts)
+      if (roomData?.gameState?.phase === 'live-date') {
+        setPhase('live-date')
+      }
+    })
+    
+    return () => {
+      unsubscribePlayers()
+      unsubscribeRoom()
+    }
+  }, [firebaseReady, roomCode, setPlayers, setSelectedDater, selectedDater, setPhase])
   
   const copyCode = () => {
     navigator.clipboard.writeText(roomCode)
@@ -20,11 +58,18 @@ function LiveGameLobby() {
     setTimeout(() => setCopied(false), 2000)
   }
   
-  const handleStart = () => {
+  const handleStart = async () => {
+    if (firebaseReady) {
+      // Update Firebase to signal game start to all players
+      await updateGameState(roomCode, { phase: 'live-date' })
+    }
     startLiveDate()
   }
   
-  const handleBack = () => {
+  const handleBack = async () => {
+    if (firebaseReady && playerId) {
+      await leaveRoom(roomCode, playerId)
+    }
     setPhase('live-lobby')
   }
   
@@ -82,7 +127,7 @@ function LiveGameLobby() {
               {players.map((player, index) => (
                 <motion.div
                   key={player.id}
-                  className={`player-item ${player.isHost ? 'is-host' : ''} ${player.username === username ? 'is-you' : ''}`}
+                  className={`player-item ${player.isHost ? 'is-host' : ''} ${player.id === playerId ? 'is-you' : ''}`}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
@@ -93,7 +138,7 @@ function LiveGameLobby() {
                   </span>
                   <span className="player-name">{player.username}</span>
                   {player.isHost && <span className="host-badge">👑 Host</span>}
-                  {player.username === username && !player.isHost && (
+                  {player.id === playerId && !player.isHost && (
                     <span className="you-badge">You</span>
                   )}
                 </motion.div>
@@ -119,7 +164,7 @@ function LiveGameLobby() {
             <motion.button
               className="btn btn-primary start-btn"
               onClick={handleStart}
-              disabled={players.length < 1} // Allow single player for testing
+              disabled={players.length < 1}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >

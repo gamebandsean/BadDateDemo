@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
+import { isFirebaseAvailable, createRoom, joinRoom, generatePlayerId } from '../services/firebase'
 import './LiveLobby.css'
 
 // Live Mode entry screen - v2
@@ -8,13 +9,22 @@ import './LiveLobby.css'
 function LiveLobby() {
   const setPhase = useGameStore((state) => state.setPhase)
   const setUsername = useGameStore((state) => state.setUsername)
-  const createLiveRoom = useGameStore((state) => state.createLiveRoom)
-  const joinLiveRoom = useGameStore((state) => state.joinLiveRoom)
+  const setRoomCode = useGameStore((state) => state.setRoomCode)
+  const setIsHost = useGameStore((state) => state.setIsHost)
+  const setPlayerId = useGameStore((state) => state.setPlayerId)
+  const setSelectedDater = useGameStore((state) => state.setSelectedDater)
+  const daters = useGameStore((state) => state.daters)
   
   const [showJoinModal, setShowJoinModal] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [username, setUsernameLocal] = useState('')
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [firebaseReady, setFirebaseReady] = useState(false)
+  
+  useEffect(() => {
+    setFirebaseReady(isFirebaseAvailable())
+  }, [])
   
   const generateRoomCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -25,28 +35,79 @@ function LiveLobby() {
     return code
   }
   
-  const handleCreate = () => {
+  const handleCreate = async () => {
+    setIsLoading(true)
+    setError('')
+    
     const roomCode = generateRoomCode()
     const playerName = username.trim() || `Player${Math.floor(Math.random() * 1000)}`
+    const odId = generatePlayerId()
+    const randomDater = daters[Math.floor(Math.random() * daters.length)]
+    
+    if (firebaseReady) {
+      const success = await createRoom(roomCode, {
+        username: playerName,
+        odId: odId,
+        dater: randomDater,
+        avatar: { attributes: [] }
+      })
+      
+      if (!success) {
+        setError('Failed to create room. Try again.')
+        setIsLoading(false)
+        return
+      }
+    }
+    
+    // Update local state
     setUsername(playerName)
-    createLiveRoom(roomCode, playerName)
+    setRoomCode(roomCode)
+    setIsHost(true)
+    setPlayerId(odId)
+    setSelectedDater(randomDater)
     setPhase('live-game-lobby')
+    setIsLoading(false)
   }
   
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!joinCode.trim()) {
       setError('Please enter a room code')
       return
     }
     
-    const guestName = username.trim() || `Player${Math.floor(Math.random() * 1000)}`
-    setUsername(guestName)
-    const success = joinLiveRoom(joinCode.trim().toUpperCase(), guestName)
-    if (success) {
-      setPhase('live-game-lobby')
-    } else {
-      setError('Room not found. Check your code.')
+    setIsLoading(true)
+    setError('')
+    
+    const playerName = username.trim() || `Player${Math.floor(Math.random() * 1000)}`
+    const odId = generatePlayerId()
+    const code = joinCode.trim().toUpperCase()
+    
+    if (firebaseReady) {
+      const result = await joinRoom(code, {
+        username: playerName,
+        odId: odId
+      })
+      
+      if (!result.success) {
+        setError(result.error || 'Failed to join room')
+        setIsLoading(false)
+        return
+      }
+      
+      // Set dater from room data
+      if (result.roomData?.dater) {
+        setSelectedDater(result.roomData.dater)
+      }
     }
+    
+    // Update local state
+    setUsername(playerName)
+    setRoomCode(code)
+    setIsHost(false)
+    setPlayerId(odId)
+    setShowJoinModal(false)
+    setPhase('live-game-lobby')
+    setIsLoading(false)
   }
   
   return (
@@ -71,6 +132,12 @@ function LiveLobby() {
           <p className="live-lobby-subtitle">Play with friends in real-time!</p>
         </div>
         
+        {!firebaseReady && (
+          <div className="firebase-warning">
+            ⚠️ Multiplayer unavailable - Firebase not configured
+          </div>
+        )}
+        
         {/* Username Input */}
         <div className="username-section">
           <label className="input-label">Your Name</label>
@@ -89,16 +156,18 @@ function LiveLobby() {
           <motion.button
             className="mode-btn create-btn"
             onClick={handleCreate}
+            disabled={isLoading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
             <span className="btn-icon">✨</span>
-            <span className="btn-text">Create Date</span>
+            <span className="btn-text">{isLoading ? 'Creating...' : 'Create Date'}</span>
           </motion.button>
           
           <motion.button
             className="mode-btn join-btn"
             onClick={() => setShowJoinModal(true)}
+            disabled={isLoading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -172,11 +241,11 @@ function LiveLobby() {
                 <motion.button
                   className="btn btn-primary confirm-btn"
                   onClick={handleJoin}
-                  disabled={!joinCode.trim()}
+                  disabled={!joinCode.trim() || isLoading}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  Join 🚀
+                  {isLoading ? 'Joining...' : 'Join 🚀'}
                 </motion.button>
               </div>
             </motion.div>

@@ -77,6 +77,16 @@
   font-size: 1rem;
 }
 
+.firebase-warning {
+  background: rgba(255, 165, 0, 0.15);
+  border: 1px solid rgba(255, 165, 0, 0.4);
+  color: #ffa500;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 /* Username Input */
 .username-section {
   text-align: left;

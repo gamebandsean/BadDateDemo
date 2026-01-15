@@ -20,6 +20,7 @@ const initialLiveState = {
   roomCode: null,
   isHost: false,
   username: '',
+  playerId: null, // Unique ID for this player in Firebase
   players: [], // { id, username, isHost }
   livePhase: 'waiting', // 'waiting' | 'phase1' | 'phase2' | 'phase3' | 'ended'
   phaseTimer: 0,
@@ -568,6 +569,8 @@ export const useGameStore = create((set, get) => ({
   setLiveMode: (isLive) => set({ isLiveMode: isLive }),
   
   setUsername: (username) => set({ username }),
+  setPlayerId: (playerId) => set({ playerId }),
+  setPlayers: (players) => set({ players }),
   
   // Create a new live room (host)
   createLiveRoom: (roomCode, username) => {
