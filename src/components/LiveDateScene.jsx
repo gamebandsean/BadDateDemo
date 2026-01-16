@@ -289,9 +289,9 @@ function LiveDateScene() {
   const getPhaseAnnouncement = () => {
     switch (announcementPhase) {
       case 'phase1':
-        return { title: 'PHASE 1', subtitle: 'Suggest Traits', icon: '✨', description: 'Type attributes for your Avatar!' }
+        return { title: 'PHASE 1', subtitle: 'Submit Answers', icon: '✨', description: 'Type an answer for your Avatar!' }
       case 'phase2':
-        return { title: 'PHASE 2', subtitle: 'Vote Now', icon: '🗳️', description: 'Pick the best trait!' }
+        return { title: 'PHASE 2', subtitle: 'Vote', icon: '🗳️', description: 'Pick the best answer!' }
       case 'phase3':
         return { title: 'PHASE 3', subtitle: 'Watch the Date', icon: '👀', description: 'See how they react!' }
       default:
@@ -777,10 +777,10 @@ function LiveDateScene() {
     switch (livePhase) {
       case 'phase1': 
         if (phaseTimer <= 0 && suggestedAttributes.length === 0) {
-          return '⏳ Waiting for someone to suggest an attribute...'
+          return '⏳ Waiting for an answer...'
         }
-        return 'Type an attribute for the Avatar!'
-      case 'phase2': return 'Enter a number to vote!'
+        return 'Submit an answer!'
+      case 'phase2': return 'Vote for the best answer!'
       case 'phase3': return 'Chat with other players'
       default: return ''
     }
@@ -1149,7 +1149,7 @@ function LiveDateScene() {
           <input
             type="text"
             className="chat-input"
-            placeholder={livePhase === 'phase1' ? 'Suggest an attribute...' : livePhase === 'phase2' ? 'Enter a number to vote...' : 'Chat...'}
+            placeholder={livePhase === 'phase1' ? 'Type your answer...' : livePhase === 'phase2' ? 'Enter # to vote...' : 'Chat...'}
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             maxLength={100}
