@@ -216,11 +216,6 @@ React to this answer! Consider:
 React HONESTLY based on what they revealed about themselves.
 Keep it to 1-2 sentences.`
     }
-- If they mention "my eight kids at home" → Could be literal OR could they mean something else?
-- If they make a dark joke about "knowing how to hide a body" → Take it as a joke OR be alarmed?
-
-React based on what YOU think they mean. You could be right or wrong - that's the fun!`
-    }
   } else {
     // No new attribute, but still pay attention to conversation
     latestAttrContext = `\n\n🔍 ACTIVE LISTENING:
