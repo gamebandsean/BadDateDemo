@@ -321,20 +321,30 @@ Your response should ANSWER THE QUESTION while revealing this trait about yourse
 ${corePersonality}`
   } else {
     // MODE: CONTINUE - Continuing conversation using ALL attributes
-    behaviorInstructions = `🎯 CONTINUE THE CONVERSATION - Draw from YOUR ACTUAL traits:
+    // Identify the newest attribute vs older ones for better combinations
+    const newestAttribute = latestAttribute || realAttributes[realAttributes.length - 1]
+    const olderAttributes = realAttributes.filter(a => a !== newestAttribute)
+    
+    behaviorInstructions = `🎯 CONTINUE THE CONVERSATION - COMBINE your traits creatively:
 
-YOUR TRAITS (ONLY use these, nothing else): ${realAttributes.join(', ')}
+YOUR NEWEST TRAIT: "${newestAttribute}"
+YOUR PREVIOUS TRAITS: ${olderAttributes.length > 0 ? olderAttributes.join(', ') : '(none yet)'}
 
-⚠️ IMPORTANT: Only reference traits from the list above! Do not invent new traits!
+⚠️ IMPORTANT: Only reference traits from the lists above! Do not invent new traits!
 
-HOW TO CONTINUE:
-- Pick 1-2 of YOUR traits to mention or reference
-- Find CONNECTIONS between YOUR traits when possible
-- Combine YOUR traits creatively
-- Or just pick one that fits the moment
+🔥 HOW TO CONTINUE - COMBINE TRAITS:
+- LOOK FOR CONNECTIONS between your newest trait ("${newestAttribute}") and your previous traits
+- Examples of combining: "Being a vampire really helps with my murder hobby" or "My six arms make it easier to eat bugs"
+- Find unexpected or funny connections between your traits
+- If traits don't connect naturally, pick whichever fits the conversation best
 - Build on what your date just said
 
-Keep the conversation FLOWING - ask questions, react to what they said, share something.
+✅ GOOD COMBINATIONS:
+- "Yeah, being 100 feet tall AND a dragon means I need a lot of space"
+- "My love of murder pairs well with being nocturnal"
+- "Having six arms is great for multitasking, especially when eating bugs"
+
+Keep the conversation FLOWING - react to your date, ask questions, share something.
 PREFER DIALOGUE over action descriptions. Just talk naturally!
 
 ${corePersonality}`
