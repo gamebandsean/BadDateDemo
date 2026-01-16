@@ -83,27 +83,29 @@ function LiveGameLobby() {
             <button className="back-btn" onClick={handleBack}>
               ← Leave
             </button>
-            <div className="room-code-section">
-              <span className="room-label">Room Code</span>
-              <div className="room-code" onClick={copyCode}>
-                <span className="code-text">{roomCode}</span>
-                <span className="copy-icon">{copied ? '✓' : '📋'}</span>
+            <div className="room-join-row">
+              <div className="room-code-section">
+                <span className="room-label">Room Code</span>
+                <div className="room-code" onClick={copyCode}>
+                  <span className="code-text">{roomCode}</span>
+                  <span className="copy-icon">{copied ? '✓' : '📋'}</span>
+                </div>
+                {copied && <span className="copied-toast">Copied!</span>}
               </div>
-              {copied && <span className="copied-toast">Copied!</span>}
-            </div>
-          </div>
-          
-          {/* QR Code to join this room */}
-          <div className="qr-section">
-            <p className="qr-label">Scan to join</p>
-            <div className="qr-code-container">
-              <QRCodeSVG 
-                value={`https://bad-date-demo.vercel.app?room=${roomCode}`}
-                size={100}
-                bgColor="#ffffff"
-                fgColor="#000000"
-                level="M"
-              />
+              
+              {/* QR Code to join this room */}
+              <div className="qr-section">
+                <div className="qr-code-container">
+                  <QRCodeSVG 
+                    value={`https://bad-date-demo.vercel.app?room=${roomCode}`}
+                    size={80}
+                    bgColor="#ffffff"
+                    fgColor="#000000"
+                    level="M"
+                  />
+                </div>
+                <p className="qr-label">Scan to join</p>
+              </div>
             </div>
           </div>
           
