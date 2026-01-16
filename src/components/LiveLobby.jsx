@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { QRCodeSVG } from 'qrcode.react'
 import { useGameStore } from '../store/gameStore'
 import { isFirebaseAvailable, createRoom, joinRoom, generatePlayerId } from '../services/firebase'
 import './LiveLobby.css'
@@ -190,6 +191,20 @@ function LiveLobby() {
           <div className="info-item">
             <span className="info-icon">⏱️</span>
             <span>~10 min per game</span>
+          </div>
+        </div>
+        
+        {/* QR Code Section */}
+        <div className="qr-section">
+          <p className="qr-label">Scan to play on your phone</p>
+          <div className="qr-code-container">
+            <QRCodeSVG 
+              value="https://bad-date-demo.vercel.app"
+              size={120}
+              bgColor="transparent"
+              fgColor="#ff4d6d"
+              level="M"
+            />
           </div>
         </div>
       </motion.div>
