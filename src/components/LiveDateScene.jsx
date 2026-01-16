@@ -268,6 +268,19 @@ function LiveDateScene() {
         if (dateConversation.length === 0 || dateConversation[dateConversation.length - 1]?.text !== gameState.currentQuestion) {
           addDateMessage('dater', gameState.currentQuestion)
         }
+        // Clear avatar bubble when new question arrives (new round started)
+        if (gameState.livePhase === 'phase1') {
+          setAvatarBubble('')
+          setSuggestedAttributes([])
+          setNumberedAttributes([])
+          setUserVote(null)
+        }
+      }
+      
+      // Sync cycle count
+      if (typeof gameState.cycleCount === 'number' && !isHost) {
+        // Update local cycle count to match host
+        // (We can't directly set cycleCount, but we track it via Firebase)
       }
       
       // Sync conversation bubbles (so non-hosts see the date conversation)
@@ -587,7 +600,12 @@ function LiveDateScene() {
   // Exchange 1: Avatar answers question (1x scoring)
   // Exchange 2: Avatar continues conversation (0.25x scoring)
   // Exchange 3: Avatar continues again (0.10x scoring)
+  // ONLY HOST should run this - non-hosts receive updates via Firebase
   const generateDateConversation = async (currentAttribute) => {
+    if (!isHost) {
+      console.log('Non-host skipping generateDateConversation')
+      return
+    }
     if (isGenerating || !selectedDater) return
     
     const attrToUse = currentAttribute || latestAttribute
@@ -768,7 +786,12 @@ function LiveDateScene() {
   }
   
   // Handle round completion - check if we continue or end
+  // ONLY HOST should run this - non-hosts receive state via Firebase
   const handleRoundComplete = async () => {
+    if (!isHost) {
+      console.log('Non-host skipping handleRoundComplete')
+      return
+    }
     const newRoundCount = cycleCount + 1
     incrementCycle()
     
@@ -794,15 +817,24 @@ function LiveDateScene() {
         setAvatarBubble('')
         addDateMessage('dater', nextQuestion)
         
-        // Sync to Firebase including the question
+        // Clear previous round's suggestions
+        setSuggestedAttributes([])
+        setNumberedAttributes([])
+        
+        // Sync to Firebase including the question and cleared state
         if (firebaseReady && roomCode) {
           await updateGameState(roomCode, { 
             livePhase: 'phase1', 
             phaseTimer: 30, 
             compatibility,
             timerStarted: false,
-            currentQuestion: nextQuestion
+            currentQuestion: nextQuestion,
+            cycleCount: newRoundCount,
+            suggestedAttributes: null, // Clear in Firebase
+            numberedAttributes: null
           })
+          await clearSuggestions(roomCode)
+          await clearVotes(roomCode)
         }
       }
       // Non-hosts will receive the question via Firebase subscription
