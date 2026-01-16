@@ -37,6 +37,7 @@ function LiveDateScene() {
   const roomCode = useGameStore((state) => state.roomCode)
   const playerId = useGameStore((state) => state.playerId)
   const isHost = useGameStore((state) => state.isHost)
+  const players = useGameStore((state) => state.players)
   
   const setLivePhase = useGameStore((state) => state.setLivePhase)
   const setPhaseTimer = useGameStore((state) => state.setPhaseTimer)
@@ -79,6 +80,7 @@ function LiveDateScene() {
   const chatEndRef = useRef(null)
   const phaseTimerRef = useRef(null)
   const lastPhaseRef = useRef('')
+  const allVotedTriggeredRef = useRef(false) // Prevent multiple auto-advance triggers
   
   // Handle tutorial advancement (host only, syncs to Firebase)
   const handleAdvanceTutorial = async () => {
@@ -150,6 +152,7 @@ function LiveDateScene() {
         // Convert attributeVotes map to votes arrays on each numbered attribute
         // attributeVotes format: { odId1: voteNumber, odId2: voteNumber, ... }
         const votesMap = gameState.attributeVotes || {}
+        const totalVotes = Object.keys(votesMap).length
         
         const numberedWithVotes = gameState.numberedAttributes.map(attr => {
           // Find all players who voted for this attribute number
@@ -164,6 +167,16 @@ function LiveDateScene() {
         })
         
         setNumberedAttributes(numberedWithVotes)
+        
+        // Auto-advance to Phase 3 if all players have voted (host only triggers this)
+        if (isHost && gameState.livePhase === 'phase2' && players.length > 0 && totalVotes >= players.length && !allVotedTriggeredRef.current) {
+          console.log('🎯 All players have voted! Auto-advancing to Phase 3')
+          allVotedTriggeredRef.current = true // Prevent multiple triggers
+          // Use setTimeout to avoid state update during render
+          setTimeout(() => {
+            handlePhaseEnd()
+          }, 500) // Small delay to show the final vote counts
+        }
       }
       
       // Sync compatibility (so all players see the same score)
@@ -443,6 +456,7 @@ function LiveDateScene() {
         setPhaseTimer(30)
         setUserVote(null)
         setTimerStarted(false) // Reset timer - wait for first vote
+        allVotedTriggeredRef.current = false // Reset for new voting round
         
         // Sync to Firebase - include numbered attributes
         if (firebaseReady && roomCode) {
