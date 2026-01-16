@@ -153,6 +153,14 @@ A normal person + scary thing = scared reaction (even if they try to be polite a
 - Keep referencing these visible traits throughout - you can't unsee them!`
     : ''
   
+  // Remind the Dater to only know what was said
+  const knowledgeBoundary = `\n\n⚠️ CRITICAL: ONLY KNOW WHAT THEY TOLD YOU
+- You can ONLY know things about your date that they SAID IN THE CONVERSATION or that you can PHYSICALLY SEE
+- Do NOT assume anything about their job, interests, or personality beyond what they've told you
+- If they haven't told you something, you don't know it!
+- This is a first date - you're still learning about each other
+- React to what they ACTUALLY SAY, not what you imagine about them`
+  
   // Get the last thing the Avatar said (for inference)
   const lastAvatarMessage = [...conversationHistory].reverse().find(msg => msg.speaker === 'avatar')?.message || ''
   
@@ -222,7 +230,7 @@ Keep it to 1-2 sentences.`
 As your date speaks, pay attention to hints, implications, and subtext. If they say something that seems to reveal something about themselves - react to YOUR INTERPRETATION of what they might mean.`
   }
   
-  const fullPrompt = systemPrompt + baselineMorality + avatarContext + latestAttrContext + sentimentInstruction
+  const fullPrompt = systemPrompt + baselineMorality + avatarContext + knowledgeBoundary + latestAttrContext + sentimentInstruction
   
   // Convert conversation history to Claude format
   let messages = conversationHistory.map(msg => ({
@@ -360,7 +368,7 @@ ${corePersonality}`
   // Don't use generic "Professional" occupation - makes LLM invent things
   const occupationText = occupation === 'Professional' ? '' : `, a ${occupation},`
   
-  const systemPrompt = `You are ${name}${occupationText} on a first date with ${dater.name}.
+  const systemPrompt = `You are ${name}${occupationText} on a first date.
 
 ${behaviorInstructions}
 
@@ -379,7 +387,12 @@ ${behaviorInstructions}
 - Do NOT mention being an architect, doctor, lawyer, or any profession
 - Do NOT invent hobbies, interests, or backstory
 - If you have NO defined traits, be vague and generic - "That's interesting!", "Oh cool!"
-- Your date (${dater.name}) has their own traits - do NOT copy or mirror their traits!`
+
+⚠️ CRITICAL: ONLY KNOW WHAT YOUR DATE TELLS YOU
+- You can ONLY know things about your date that they SAID IN THE CONVERSATION
+- Do NOT assume anything about your date's job, interests, or personality
+- If they haven't told you something, you don't know it!
+- React to what they ACTUALLY SAY, not what you imagine about them`
 
   // DEBUG: Log the prompt being sent
   console.log('🤖 AVATAR PROMPT:', {

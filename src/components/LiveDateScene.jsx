@@ -299,6 +299,10 @@ function LiveDateScene() {
           // Replace local conversation with synced one
           useGameStore.getState().setDateConversation(gameState.dateConversation)
         }
+        // Sync dater values (so non-hosts can see the scoring categories)
+        if (gameState.daterValues) {
+          setDaterValues(gameState.daterValues)
+        }
       }
     })
     
@@ -450,18 +454,26 @@ function LiveDateScene() {
     }
   }
   
-  // Generate dater values when the game starts
+  // Generate dater values when the game starts (HOST ONLY)
   useEffect(() => {
     const initDaterValues = async () => {
+      // Only host generates dater values - non-hosts receive via Firebase
+      if (!isHost) return
+      
       if (selectedDater && (!daterValues.loves.length || daterValues.loves.length === 0)) {
         console.log('Generating dater values for', selectedDater.name)
         const values = await generateDaterValues(selectedDater)
         setDaterValues(values)
         console.log('Dater values set:', values)
+        
+        // Sync to Firebase for non-hosts
+        if (firebaseReady && roomCode) {
+          await updateGameState(roomCode, { daterValues: values })
+        }
       }
     }
     initDaterValues()
-  }, [selectedDater])
+  }, [selectedDater, isHost, firebaseReady, roomCode])
   
   // Questions the Dater asks to prompt attribute suggestions
   const promptQuestions = [
@@ -659,13 +671,16 @@ function LiveDateScene() {
         return matchResult.category // Return the category so Dater can react appropriately
       }
       
+      // Helper to get fresh conversation history (React state may be stale in async function)
+      const getConversation = () => useGameStore.getState().dateConversation
+      
       // ============ EXCHANGE 1: Avatar answers with new attribute (1x scoring) ============
       console.log('--- Exchange 1: Avatar answers with new attribute ---')
       
       const avatarResponse1 = await getAvatarDateResponse(
         avatarWithNewAttr,  // Use avatar with guaranteed new attribute
         selectedDater,
-        dateConversation.slice(-6),
+        getConversation().slice(-10), // Use fresh state, more history
         attrToUse,
         'answer' // Mode: answering a question with the new attribute
       )
@@ -686,7 +701,7 @@ function LiveDateScene() {
         const daterReaction1 = await getDaterDateResponse(
           selectedDater,
           avatarWithNewAttr,
-          [...dateConversation.slice(-6), { speaker: 'avatar', message: avatarResponse1 }],
+          [...getConversation().slice(-10), { speaker: 'avatar', message: avatarResponse1 }],
           attrToUse,
           sentimentHit1 // Pass the category so Dater reacts appropriately
         )
@@ -705,7 +720,7 @@ function LiveDateScene() {
         const avatarResponse2 = await getAvatarDateResponse(
           avatarWithNewAttr,
           selectedDater,
-          [...dateConversation.slice(-4), { speaker: 'avatar', message: avatarResponse1 }, { speaker: 'dater', message: daterReaction1 }],
+          getConversation().slice(-10), // Fresh state already includes recent messages
           null, // No new attribute
           'continue' // Mode: continuing conversation using all attributes
         )
@@ -725,7 +740,7 @@ function LiveDateScene() {
           const daterReaction2 = await getDaterDateResponse(
             selectedDater,
             avatarWithNewAttr,
-            [...dateConversation.slice(-4), { speaker: 'avatar', message: avatarResponse2 }],
+            getConversation().slice(-10), // Fresh state already includes recent messages
             null,
             sentimentHit2
           )
@@ -744,7 +759,7 @@ function LiveDateScene() {
           const avatarResponse3 = await getAvatarDateResponse(
             avatarWithNewAttr,
             selectedDater,
-            [...dateConversation.slice(-4), { speaker: 'avatar', message: avatarResponse2 }, { speaker: 'dater', message: daterReaction2 }],
+            getConversation().slice(-10), // Fresh state already includes recent messages
             null,
             'continue'
           )
@@ -764,7 +779,7 @@ function LiveDateScene() {
             const daterReaction3 = await getDaterDateResponse(
               selectedDater,
               avatarWithNewAttr,
-              [...dateConversation.slice(-4), { speaker: 'avatar', message: avatarResponse3 }],
+              getConversation().slice(-10), // Fresh state already includes recent messages
               null,
               sentimentHit3
             )
@@ -778,8 +793,10 @@ function LiveDateScene() {
         }
       }
       
-      // After all 3 exchanges, check round count and transition
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // After all 3 exchanges, give players 15 seconds to read the conversation before transitioning
+      // This delay is NOT shown on the timer - it's a "reading time" pause
+      console.log('💬 Conversation complete - 15 second reading pause before next phase')
+      await new Promise(resolve => setTimeout(resolve, 15000))
       handleRoundComplete()
       
     } catch (error) {
