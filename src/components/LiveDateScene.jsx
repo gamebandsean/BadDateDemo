@@ -724,15 +724,15 @@ function LiveDateScene() {
         
         await new Promise(resolve => setTimeout(resolve, 3000))
         
-        // ============ EXCHANGE 2: Avatar continues (0.25x scoring) ============
-        console.log('--- Exchange 2: Avatar continues conversation ---')
+        // ============ EXCHANGE 2: Avatar responds to Dater's reaction (0.25x scoring) ============
+        console.log('--- Exchange 2: Avatar responds to Dater reaction ---')
         
         const avatarResponse2 = await getAvatarDateResponse(
           avatarWithNewAttr,
           selectedDater,
           getConversation().slice(-10), // Fresh state already includes recent messages
-          null, // No new attribute
-          'continue' // Mode: continuing conversation using all attributes
+          attrToUse, // Pass the latest attribute for context
+          'react' // Mode: responding to what the Dater just said
         )
         
         if (avatarResponse2) {
@@ -763,15 +763,15 @@ function LiveDateScene() {
           
           await new Promise(resolve => setTimeout(resolve, 3000))
           
-          // ============ EXCHANGE 3: Avatar continues again (0.10x scoring) ============
-          console.log('--- Exchange 3: Avatar continues again ---')
+          // ============ EXCHANGE 3: Avatar connects all traits (0.10x scoring) ============
+          console.log('--- Exchange 3: Avatar connects all previous traits ---')
           
           const avatarResponse3 = await getAvatarDateResponse(
             avatarWithNewAttr,
             selectedDater,
             getConversation().slice(-10), // Fresh state already includes recent messages
-            null,
-            'continue'
+            attrToUse, // Pass latest attribute for context
+            'connect' // Mode: draw connections between ALL traits
           )
           
           if (avatarResponse3) {

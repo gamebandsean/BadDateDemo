@@ -334,33 +334,79 @@ ${hasPreviousTraits ? '- If you previously said you\'re a vampire: "Well, being 
 🔴 YOUR NEW TRAIT TO REVEAL: "${latestAttribute}"
 
 ${corePersonality}`
-  } else {
-    // MODE: CONTINUE - Continuing conversation using ALL attributes
-    // Identify the newest attribute vs older ones for better combinations
+  } else if (mode === 'react') {
+    // MODE: REACT - Respond to what the Dater just said
+    const lastDaterMessage = [...conversationHistory].reverse().find(msg => msg.speaker === 'dater')?.message || ''
     const newestAttribute = latestAttribute || realAttributes[realAttributes.length - 1]
-    const olderAttributes = realAttributes.filter(a => a !== newestAttribute)
     
-    behaviorInstructions = `🎯 CONTINUE THE CONVERSATION - COMBINE your traits creatively:
+    behaviorInstructions = `🎯 RESPOND TO YOUR DATE'S REACTION:
 
+Your date just said: "${lastDaterMessage}"
+
+YOUR TRAITS: ${realAttributes.join(', ')}
 YOUR NEWEST TRAIT: "${newestAttribute}"
-YOUR PREVIOUS TRAITS: ${olderAttributes.length > 0 ? olderAttributes.join(', ') : '(none yet)'}
 
-⚠️ IMPORTANT: Only reference traits from the lists above! Do not invent new traits!
+⚠️ IMPORTANT: Only reference traits from YOUR TRAITS list above! Do not invent new traits!
 
-🔥 HOW TO CONTINUE - COMBINE TRAITS:
-- LOOK FOR CONNECTIONS between your newest trait ("${newestAttribute}") and your previous traits
-- Examples of combining: "Being a vampire really helps with my murder hobby" or "My six arms make it easier to eat bugs"
-- Find unexpected or funny connections between your traits
-- If traits don't connect naturally, pick whichever fits the conversation best
-- Build on what your date just said
+🔥 HOW TO RESPOND:
+- DIRECTLY respond to what your date just said
+- If they seem positive, continue the topic enthusiastically
+- If they seem negative or confused, you're genuinely confused why - "Is that... weird?"
+- You can elaborate on your newest trait ("${newestAttribute}") based on their reaction
+- Stay casual and matter-of-fact about your traits
 
-✅ GOOD COMBINATIONS:
-- "Yeah, being 100 feet tall AND a dragon means I need a lot of space"
-- "My love of murder pairs well with being nocturnal"
-- "Having six arms is great for multitasking, especially when eating bugs"
+✅ GOOD RESPONSES:
+- If date says "That's terrifying!" → "Terrifying? I mean, I guess? It's just what I do."
+- If date says "That's so cool!" → "Thanks! Yeah, I really enjoy it."
+- If date seems curious → Share a bit more detail about your trait
 
-Keep the conversation FLOWING - react to your date, ask questions, share something.
-PREFER DIALOGUE over action descriptions. Just talk naturally!
+❌ BAD RESPONSES:
+- Ignoring what they said
+- Changing the subject completely
+- Being mysterious about your traits
+
+Keep it to 1-2 sentences. Respond naturally to their reaction!
+
+${corePersonality}`
+  } else if (mode === 'connect') {
+    // MODE: CONNECT - Draw connections between ALL previous attributes
+    behaviorInstructions = `🎯 CONNECT ALL YOUR TRAITS - Find the bigger picture:
+
+ALL YOUR TRAITS SO FAR: ${realAttributes.join(', ')}
+
+⚠️ IMPORTANT: Only reference traits from the list above! Do not invent new traits!
+
+🔥 YOUR GOAL - FIND CONNECTIONS:
+- Look at ALL your traits and find interesting CONNECTIONS between them
+- How do these traits work together? How do they relate?
+- Share an insight, story, or observation that COMBINES multiple traits
+- Make your date see the "whole picture" of who you are
+
+✅ EXCELLENT CONNECTION EXAMPLES:
+- If you're "a vampire" + "love gardening": "Being nocturnal actually helps with the gardening - I do most of my planting at night."
+- If you're "100 feet tall" + "shy": "Being this tall makes it hard to be shy, everyone notices me anyway."
+- If you're "a murderer" + "love cooking": "Murder and cooking have a lot in common, actually. Both require patience."
+
+💡 IF TRAITS DON'T OBVIOUSLY CONNECT:
+- Find creative or humorous ways to link them
+- Or share how one trait affects living with another
+- Even "these things seem random but they're all me" works!
+
+Make the conversation feel like it's building toward understanding WHO YOU ARE.
+Keep it to 1-2 sentences. Be matter-of-fact and casual!
+
+${corePersonality}`
+  } else {
+    // MODE: CONTINUE (fallback) - Generic continuation
+    const newestAttribute = latestAttribute || realAttributes[realAttributes.length - 1]
+    
+    behaviorInstructions = `🎯 CONTINUE THE CONVERSATION:
+
+YOUR TRAITS: ${realAttributes.join(', ')}
+YOUR NEWEST TRAIT: "${newestAttribute}"
+
+Just keep the conversation going naturally. React to what your date said.
+Stay casual and matter-of-fact about your traits.
 
 ${corePersonality}`
   }
