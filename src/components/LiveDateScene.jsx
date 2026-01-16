@@ -146,11 +146,23 @@ function LiveDateScene() {
       // Sync numbered attributes for voting (for all players)
       if (gameState.numberedAttributes) {
         console.log('🔥 Syncing numbered attributes:', gameState.numberedAttributes)
-        // Ensure each attribute has a votes array (Firebase might strip empty arrays)
-        const numberedWithVotes = gameState.numberedAttributes.map(attr => ({
-          ...attr,
-          votes: attr.votes || []
-        }))
+        
+        // Convert attributeVotes map to votes arrays on each numbered attribute
+        // attributeVotes format: { odId1: voteNumber, odId2: voteNumber, ... }
+        const votesMap = gameState.attributeVotes || {}
+        
+        const numberedWithVotes = gameState.numberedAttributes.map(attr => {
+          // Find all players who voted for this attribute number
+          const votersForThis = Object.entries(votesMap)
+            .filter(([_, voteNum]) => voteNum === attr.number)
+            .map(([odId, _]) => odId)
+          
+          return {
+            ...attr,
+            votes: votersForThis
+          }
+        })
+        
         setNumberedAttributes(numberedWithVotes)
       }
       
