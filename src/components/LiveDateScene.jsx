@@ -189,10 +189,36 @@ function LiveDateScene() {
         if (isHost && gameState.livePhase === 'phase2' && players.length > 0 && totalVotes >= players.length && !allVotedTriggeredRef.current) {
           console.log('🎯 All players have voted! Auto-advancing to Phase 3')
           allVotedTriggeredRef.current = true // Prevent multiple triggers
-          // Use setTimeout to avoid state update during render
-          setTimeout(() => {
-            handlePhaseEnd()
-          }, 500) // Small delay to show the final vote counts
+          
+          // Get winning attribute directly from the numberedWithVotes we just computed
+          const sortedByVotes = [...numberedWithVotes].sort((a, b) => b.votes.length - a.votes.length)
+          const winningAttr = sortedByVotes[0]?.text || null
+          
+          if (winningAttr) {
+            console.log('🏆 Winner:', winningAttr)
+            // Use setTimeout to avoid state update during render
+            setTimeout(async () => {
+              // Set winner popup
+              setWinnerText(winningAttr)
+              setShowWinnerPopup(true)
+              applyWinningAttribute()
+              setLivePhase('phase3')
+              setPhaseTimer(0)
+              
+              // Sync to Firebase
+              if (firebaseReady && roomCode) {
+                await updateGameState(roomCode, { livePhase: 'phase3', phaseTimer: 0, winningAttribute: winningAttr })
+                await clearSuggestions(roomCode)
+                await clearVotes(roomCode)
+              }
+              
+              // After 2.5 seconds, hide popup and start conversation
+              setTimeout(() => {
+                setShowWinnerPopup(false)
+                setTimeout(() => generateDateConversation(winningAttr), 300)
+              }, 2500)
+            }, 500)
+          }
         }
       }
       
