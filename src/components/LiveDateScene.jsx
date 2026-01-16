@@ -151,9 +151,10 @@ function LiveDateScene() {
     
     // Subscribe to game state changes
     const unsubscribeGame = subscribeToGameState(roomCode, (gameState) => {
-      if (!gameState) return
-      
-      console.log('🔥 Game state update:', gameState)
+      try {
+        if (!gameState) return
+        
+        console.log('🔥 Game state update:', gameState)
       
       // Sync suggestions from Firebase (for all players)
       if (gameState.suggestedAttributes) {
@@ -166,7 +167,7 @@ function LiveDateScene() {
       }
       
       // Sync numbered attributes for voting (for all players)
-      if (gameState.numberedAttributes) {
+      if (gameState.numberedAttributes && Array.isArray(gameState.numberedAttributes)) {
         console.log('🔥 Syncing numbered attributes:', gameState.numberedAttributes)
         
         // Convert attributeVotes map to votes arrays on each numbered attribute
@@ -174,7 +175,7 @@ function LiveDateScene() {
         const votesMap = gameState.attributeVotes || {}
         const totalVotes = Object.keys(votesMap).length
         
-        const numberedWithVotes = gameState.numberedAttributes.map(attr => {
+        const numberedWithVotes = gameState.numberedAttributes.filter(attr => attr).map(attr => {
           // Find all players who voted for this attribute number
           const votersForThis = Object.entries(votesMap)
             .filter(([_, voteNum]) => voteNum === attr.number)
@@ -264,7 +265,8 @@ function LiveDateScene() {
       if (gameState.currentQuestion && !isHost) {
         setDaterBubble(gameState.currentQuestion)
         // Only add to conversation if it's not already there
-        if (dateConversation.length === 0 || dateConversation[dateConversation.length - 1]?.text !== gameState.currentQuestion) {
+        const lastMessage = dateConversation[dateConversation.length - 1]
+        if (dateConversation.length === 0 || lastMessage?.message !== gameState.currentQuestion) {
           addDateMessage('dater', gameState.currentQuestion)
         }
         // Clear avatar bubble when new question arrives (new round started)
@@ -296,13 +298,21 @@ function LiveDateScene() {
         }
         // Sync full conversation history
         if (gameState.dateConversation && Array.isArray(gameState.dateConversation)) {
-          // Replace local conversation with synced one
-          useGameStore.getState().setDateConversation(gameState.dateConversation)
+          // Filter out any undefined/null entries and ensure valid format
+          const validConversation = gameState.dateConversation.filter(msg => 
+            msg && typeof msg === 'object' && msg.message !== undefined
+          )
+          if (validConversation.length > 0) {
+            useGameStore.getState().setDateConversation(validConversation)
+          }
         }
         // Sync dater values (so non-hosts can see the scoring categories)
         if (gameState.daterValues) {
           setDaterValues(gameState.daterValues)
         }
+      }
+      } catch (error) {
+        console.error('🔥 Error processing game state update:', error)
       }
     })
     
@@ -1092,19 +1102,19 @@ function LiveDateScene() {
               <div className="values-grid">
                 <div className="value-column loves">
                   <span className="value-header">❤️ Loves</span>
-                  {daterValues.loves.map((v, i) => <span key={i}>{v}</span>)}
+                  {(daterValues?.loves || []).map((v, i) => <span key={i}>{v}</span>)}
                 </div>
                 <div className="value-column likes">
                   <span className="value-header">👍 Likes</span>
-                  {daterValues.likes.map((v, i) => <span key={i}>{v}</span>)}
+                  {(daterValues?.likes || []).map((v, i) => <span key={i}>{v}</span>)}
                 </div>
                 <div className="value-column dislikes">
                   <span className="value-header">👎 Dislikes</span>
-                  {daterValues.dislikes.map((v, i) => <span key={i}>{v}</span>)}
+                  {(daterValues?.dislikes || []).map((v, i) => <span key={i}>{v}</span>)}
                 </div>
                 <div className="value-column dealbreakers">
                   <span className="value-header">💀 Dealbreakers</span>
-                  {daterValues.dealbreakers.map((v, i) => <span key={i}>{v}</span>)}
+                  {(daterValues?.dealbreakers || []).map((v, i) => <span key={i}>{v}</span>)}
                 </div>
               </div>
             </motion.div>
@@ -1117,10 +1127,10 @@ function LiveDateScene() {
         <div className="sentiment-category loves">
           <span className="category-label">✨ Loves</span>
           <div className="category-items">
-            {sentimentCategories.loves.map((item, i) => (
+            {(sentimentCategories?.loves || []).map((item, i) => (
               <span 
                 key={i} 
-                className={`sentiment-item ${glowingValues.includes(item) ? 'glowing glowing-love' : ''}`}
+                className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-love' : ''}`}
               >
                 {item}
               </span>
@@ -1130,10 +1140,10 @@ function LiveDateScene() {
         <div className="sentiment-category likes">
           <span className="category-label">💛 Likes</span>
           <div className="category-items">
-            {sentimentCategories.likes.map((item, i) => (
+            {(sentimentCategories?.likes || []).map((item, i) => (
               <span 
                 key={i} 
-                className={`sentiment-item ${glowingValues.includes(item) ? 'glowing glowing-like' : ''}`}
+                className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-like' : ''}`}
               >
                 {item}
               </span>
@@ -1143,10 +1153,10 @@ function LiveDateScene() {
         <div className="sentiment-category dislikes">
           <span className="category-label">😬 Dislikes</span>
           <div className="category-items">
-            {sentimentCategories.dislikes.map((item, i) => (
+            {(sentimentCategories?.dislikes || []).map((item, i) => (
               <span 
                 key={i} 
-                className={`sentiment-item ${glowingValues.includes(item) ? 'glowing glowing-dislike' : ''}`}
+                className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-dislike' : ''}`}
               >
                 {item}
               </span>
@@ -1156,10 +1166,10 @@ function LiveDateScene() {
         <div className="sentiment-category dealbreakers">
           <span className="category-label">💔 Nope</span>
           <div className="category-items">
-            {sentimentCategories.dealbreakers.map((item, i) => (
+            {(sentimentCategories?.dealbreakers || []).map((item, i) => (
               <span 
                 key={i} 
-                className={`sentiment-item ${glowingValues.includes(item) ? 'glowing glowing-dealbreaker' : ''}`}
+                className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-dealbreaker' : ''}`}
               >
                 {item}
               </span>
@@ -1181,7 +1191,7 @@ function LiveDateScene() {
             >
               <h3>Vote for an Answer!</h3>
               <div className="voting-options">
-                {numberedAttributes.map((attr) => (
+                {(numberedAttributes || []).map((attr) => (
                   <motion.div 
                     key={attr.number}
                     className={`vote-option ${userVote === attr.number ? 'voted' : ''}`}
@@ -1295,9 +1305,9 @@ function LiveDateScene() {
         </div>
         
         {/* Phase 1 suggestions display */}
-        {livePhase === 'phase1' && suggestedAttributes.length > 0 && (
+        {livePhase === 'phase1' && (suggestedAttributes?.length || 0) > 0 && (
           <div className="suggestions-display">
-            {suggestedAttributes.slice(-5).map((attr, i) => (
+            {(suggestedAttributes || []).slice(-5).map((attr, i) => (
               <motion.span 
                 key={attr.id} 
                 className="suggestion-chip"
@@ -1319,7 +1329,7 @@ function LiveDateScene() {
         </div>
         
         <div className="chat-messages">
-          {playerChat.slice(-20).map((msg) => (
+          {(playerChat || []).slice(-20).map((msg) => (
             <div 
               key={msg.id} 
               className={`chat-message ${msg.username === username ? 'own-message' : ''}`}
