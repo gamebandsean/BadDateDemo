@@ -92,13 +92,26 @@ function isVisibleAttribute(attr) {
   return visibleKeywords.some(keyword => lowerAttr.includes(keyword))
 }
 
-export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null, sentimentHit = null, reactionStreak = { positive: 0, negative: 0 }) {
+export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null, sentimentHit = null, reactionStreak = { positive: 0, negative: 0 }, isFinalRound = false) {
   const systemPrompt = buildDaterAgentPrompt(dater, 'date')
   
   // Filter attributes to only include VISIBLE ones the Dater can actually see
   const genericStarters = ['seems friendly', 'has a nice smile', 'appears well-dressed']
   const realAttributes = avatar.attributes.filter(attr => !genericStarters.includes(attr))
   const visibleAttributes = realAttributes.filter(isVisibleAttribute)
+  
+  // FINAL ROUND: Speak with finality - wrapping up, making judgments
+  let finalRoundInstruction = ''
+  if (isFinalRound) {
+    finalRoundInstruction = `\n\n🏁 THIS IS THE FINAL ROUND - SPEAK WITH FINALITY:
+- This is the END of the date - your last chance to express how you feel
+- Make a FINAL JUDGMENT about this person and this date
+- Use phrases like: "Well...", "I think I've learned enough...", "After all that...", "So, to sum it up..."
+- If it went WELL: Express interest in seeing them again, give your number, suggest a second date
+- If it went BADLY: Make a polite excuse to leave, express relief it's over, or be blunt about incompatibility
+- If it was MIXED: Be honest about your confusion, express uncertainty
+- Your response should feel like a CONCLUSION, not a continuation`
+  }
   
   // SENTIMENT-DRIVEN REACTION: Tell the Dater how to feel based on what category was hit
   // Reactions ESCALATE based on streak of good/bad things
@@ -129,7 +142,10 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
       dislikes: `😬 YOU DON'T LIKE THIS. React with discomfort, concern, or disappointment. This hit one of your DISLIKES - it bothers you. Be visibly put off, skeptical, or uneasy. Show clear negative reaction but stay polite.`,
       dealbreakers: `😱 THIS IS A DEALBREAKER! React with horror, disgust, fear, or shock. This hit one of your DEALBREAKERS - this is REALLY BAD. Be genuinely alarmed, disturbed, or repulsed. STRONG NEGATIVE reaction. You can't hide your distress.`
     }
-    sentimentInstruction = `\n\n🎯 HOW YOU FEEL ABOUT THIS:\n${sentimentGuide[sentimentHit]}${escalationNote}\n\nYour reaction MUST match this sentiment AND escalation level! Don't be neutral - show clear ${isPositive ? 'POSITIVE' : 'NEGATIVE'} emotion that BUILDS on previous reactions.`
+    sentimentInstruction = `\n\n🎯 HOW YOU FEEL ABOUT THIS:\n${sentimentGuide[sentimentHit]}${escalationNote}${finalRoundInstruction}\n\nYour reaction MUST match this sentiment AND escalation level! Don't be neutral - show clear ${isPositive ? 'POSITIVE' : 'NEGATIVE'} emotion that BUILDS on previous reactions.`
+  } else if (isFinalRound) {
+    // Even if no sentiment hit, still add finality instruction
+    sentimentInstruction = finalRoundInstruction
   }
   
   // Baseline human morality - can be overridden by specific dater traits

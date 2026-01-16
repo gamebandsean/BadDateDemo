@@ -656,6 +656,10 @@ function LiveDateScene() {
     
     setIsGenerating(true)
     
+    // Check if this is the final round (cycleCount is 0-indexed, so last round is maxCycles - 1)
+    const isFinalRound = cycleCount >= maxCycles - 1
+    console.log(`🏁 Round ${cycleCount + 1}/${maxCycles} - Final round: ${isFinalRound}`)
+    
     // IMPORTANT: Create avatar with the new attribute included
     // (React state might not have updated yet due to async nature)
     const avatarWithNewAttr = {
@@ -740,7 +744,8 @@ function LiveDateScene() {
           [...getConversation().slice(-10), { speaker: 'avatar', message: avatarResponse1 }],
           attrToUse,
           sentimentHit1, // Pass the category so Dater reacts appropriately
-          currentStreak // Pass streak for escalating reactions
+          currentStreak, // Pass streak for escalating reactions
+          isFinalRound // Pass if this is the last round for finality
         )
         
         if (daterReaction1) {
@@ -780,7 +785,8 @@ function LiveDateScene() {
             getConversation().slice(-10), // Fresh state already includes recent messages
             null,
             sentimentHit2,
-            currentStreak // Pass streak for escalating reactions
+            currentStreak, // Pass streak for escalating reactions
+            isFinalRound // Pass if this is the last round for finality
           )
           
           if (daterReaction2) {
@@ -820,7 +826,8 @@ function LiveDateScene() {
               getConversation().slice(-10), // Fresh state already includes recent messages
               null,
               sentimentHit3,
-              currentStreak // Pass streak for escalating reactions
+              currentStreak, // Pass streak for escalating reactions
+              isFinalRound // Pass if this is the last round for finality
             )
             
             if (daterReaction3) {
