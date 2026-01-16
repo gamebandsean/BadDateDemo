@@ -645,14 +645,29 @@
   gap: 10px;
   width: 100%;
   max-width: 300px;
-  max-height: 250px;
+  max-height: 60vh; /* Use viewport height for better mobile support */
   overflow-y: auto;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  padding-right: 8px; /* Space for scrollbar */
+  scrollbar-width: thin; /* Firefox - show thin scrollbar */
+  scrollbar-color: rgba(255, 77, 109, 0.5) transparent; /* Firefox - pink scrollbar */
 }
 
 .voting-options::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  width: 6px;
+}
+
+.voting-options::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.voting-options::-webkit-scrollbar-thumb {
+  background: rgba(255, 77, 109, 0.5);
+  border-radius: 3px;
+}
+
+.voting-options::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 77, 109, 0.7);
 }
 
 .vote-option {
