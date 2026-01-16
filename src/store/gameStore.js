@@ -264,6 +264,11 @@ export const useGameStore = create((set, get) => ({
     })
   },
   
+  // Set full conversation (for Firebase sync)
+  setDateConversation: (conversation) => {
+    set({ dateConversation: conversation })
+  },
+  
   // Attribute submission - SINGLE PLAYER: immediately apply with cooldown
   // NOTE: Compatibility does NOT change here - only when Dater reacts in conversation
   submitAttribute: (attribute) => {

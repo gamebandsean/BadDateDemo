@@ -94,6 +94,9 @@ function LiveDateScene() {
       const currentSentiments = useGameStore.getState().sentimentCategories
       update.sentimentCategories = currentSentiments
     }
+    // Also sync the full conversation history
+    const currentConversation = useGameStore.getState().dateConversation
+    update.dateConversation = currentConversation.slice(-20) // Keep last 20 messages
     if (Object.keys(update).length > 0) {
       await updateGameState(roomCode, update)
     }
@@ -239,13 +242,9 @@ function LiveDateScene() {
       }
       // Timer sync logic:
       // - Host NEVER accepts timer from Firebase (host is source of truth)
-      // - Non-hosts only accept timer on phase changes (when timer resets to 30)
+      // - Non-hosts ALWAYS accept timer from Firebase to stay in sync
       if (typeof gameState.phaseTimer === 'number' && !isHost) {
-        // Only accept timer of 30 (fresh phase) when timer hasn't started
-        // This prevents mid-countdown resets while still allowing phase transitions
-        if (!timerStarted && gameState.phaseTimer === 30) {
-          setPhaseTimer(30)
-        }
+        setPhaseTimer(gameState.phaseTimer)
       }
       
       // Sync tutorial state (so all players see the same tutorial step)
@@ -295,6 +294,11 @@ function LiveDateScene() {
         if (gameState.sentimentCategories) {
           setSentimentCategories(gameState.sentimentCategories)
         }
+        // Sync full conversation history
+        if (gameState.dateConversation && Array.isArray(gameState.dateConversation)) {
+          // Replace local conversation with synced one
+          useGameStore.getState().setDateConversation(gameState.dateConversation)
+        }
       }
     })
     
@@ -333,8 +337,8 @@ function LiveDateScene() {
         const newTime = currentTime - 1
         if (newTime >= 0) {
           setPhaseTimer(newTime)
-          // Sync timer to Firebase for other players (every 5 seconds to reduce writes)
-          if (firebaseReady && roomCode && isHost && newTime % 5 === 0) {
+          // Sync timer to Firebase for other players every second
+          if (firebaseReady && roomCode && isHost) {
             await updateGameState(roomCode, { phaseTimer: newTime })
           }
         }
