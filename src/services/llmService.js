@@ -92,7 +92,7 @@ function isVisibleAttribute(attr) {
   return visibleKeywords.some(keyword => lowerAttr.includes(keyword))
 }
 
-export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null, sentimentHit = null) {
+export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null, sentimentHit = null, reactionStreak = { positive: 0, negative: 0 }) {
   const systemPrompt = buildDaterAgentPrompt(dater, 'date')
   
   // Filter attributes to only include VISIBLE ones the Dater can actually see
@@ -101,15 +101,35 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
   const visibleAttributes = realAttributes.filter(isVisibleAttribute)
   
   // SENTIMENT-DRIVEN REACTION: Tell the Dater how to feel based on what category was hit
+  // Reactions ESCALATE based on streak of good/bad things
   let sentimentInstruction = ''
   if (sentimentHit) {
+    const isPositive = sentimentHit === 'loves' || sentimentHit === 'likes'
+    const streak = isPositive ? reactionStreak.positive : reactionStreak.negative
+    
+    // Escalation levels based on streak
+    let escalationNote = ''
+    if (streak >= 3) {
+      escalationNote = isPositive 
+        ? `\n\n🔥🔥🔥 ESCALATION LEVEL: MAXIMUM! This is the ${streak}th amazing thing in a row! You're completely SMITTEN, OVERWHELMED with joy, possibly falling in love on the spot. This is TOO GOOD to be true!`
+        : `\n\n💀💀💀 ESCALATION LEVEL: MAXIMUM! This is the ${streak}th terrible thing in a row! You're in FULL PANIC MODE, considering running away, questioning your life choices. This date is a DISASTER!`
+    } else if (streak >= 2) {
+      escalationNote = isPositive
+        ? `\n\n🔥🔥 ESCALATION LEVEL: HIGH! This is the ${streak}nd/rd great thing in a row! You're getting VERY excited, this person keeps impressing you. Show building enthusiasm!`
+        : `\n\n💀💀 ESCALATION LEVEL: HIGH! This is the ${streak}nd/rd bad thing in a row! Your concern is GROWING, you're getting more alarmed. This is getting worse and worse!`
+    } else if (streak >= 1) {
+      escalationNote = isPositive
+        ? `\n\n🔥 ESCALATION: Building! Another good sign - your interest is increasing!`
+        : `\n\n💀 ESCALATION: Building! Another red flag - your worry is increasing!`
+    }
+    
     const sentimentGuide = {
       loves: `🥰 YOU LOVE THIS! React with genuine excitement, attraction, or delight. This hit one of your LOVES - you're really into what they just said/showed. Be enthusiastic, flirty, impressed, or smitten. Show STRONG POSITIVE emotion.`,
       likes: `😊 YOU LIKE THIS! React positively - interested, pleased, intrigued. This hit one of your LIKES - it's a good sign. Be warm, engaged, and show you appreciate what they said. Moderate positive reaction.`,
       dislikes: `😬 YOU DON'T LIKE THIS. React with discomfort, concern, or disappointment. This hit one of your DISLIKES - it bothers you. Be visibly put off, skeptical, or uneasy. Show clear negative reaction but stay polite.`,
       dealbreakers: `😱 THIS IS A DEALBREAKER! React with horror, disgust, fear, or shock. This hit one of your DEALBREAKERS - this is REALLY BAD. Be genuinely alarmed, disturbed, or repulsed. STRONG NEGATIVE reaction. You can't hide your distress.`
     }
-    sentimentInstruction = `\n\n🎯 HOW YOU FEEL ABOUT THIS:\n${sentimentGuide[sentimentHit]}\n\nYour reaction MUST match this sentiment! Don't be neutral - show clear ${sentimentHit === 'loves' || sentimentHit === 'likes' ? 'POSITIVE' : 'NEGATIVE'} emotion.`
+    sentimentInstruction = `\n\n🎯 HOW YOU FEEL ABOUT THIS:\n${sentimentGuide[sentimentHit]}${escalationNote}\n\nYour reaction MUST match this sentiment AND escalation level! Don't be neutral - show clear ${isPositive ? 'POSITIVE' : 'NEGATIVE'} emotion that BUILDS on previous reactions.`
   }
   
   // Baseline human morality - can be overridden by specific dater traits

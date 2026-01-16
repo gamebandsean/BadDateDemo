@@ -77,6 +77,7 @@ function LiveDateScene() {
   const [timerStarted, setTimerStarted] = useState(false) // Timer only runs after first submission
   const [showPhaseAnnouncement, setShowPhaseAnnouncement] = useState(false)
   const [announcementPhase, setAnnouncementPhase] = useState('')
+  const [reactionStreak, setReactionStreak] = useState({ positive: 0, negative: 0 }) // Track escalation
   
   const chatEndRef = useRef(null)
   const phaseTimerRef = useRef(null)
@@ -671,7 +672,10 @@ function LiveDateScene() {
     })
     
     try {
-      // Helper to check match and apply scoring
+      // Track current streak for escalation
+      let currentStreak = { ...reactionStreak }
+      
+      // Helper to check match, apply scoring, and update streak
       const checkAndScore = async (avatarMessage, multiplier) => {
         const matchResult = await checkAttributeMatch(avatarMessage, daterValues, selectedDater, null)
         if (matchResult.category) {
@@ -690,6 +694,15 @@ function LiveDateScene() {
               await updateGameState(roomCode, { compatibility: newCompat })
             }
           }
+          
+          // Update streak for escalating reactions
+          const isPositive = matchResult.category === 'loves' || matchResult.category === 'likes'
+          if (isPositive) {
+            currentStreak = { positive: currentStreak.positive + 1, negative: 0 }
+          } else {
+            currentStreak = { positive: 0, negative: currentStreak.negative + 1 }
+          }
+          console.log(`🔥 Reaction streak updated:`, currentStreak)
         }
         return matchResult.category // Return the category so Dater can react appropriately
       }
@@ -720,13 +733,14 @@ function LiveDateScene() {
         // Sync sentiment categories after scoring
         await syncConversationToFirebase(undefined, undefined, true)
         
-        // Dater reacts - informed by what sentiment was hit
+        // Dater reacts - informed by what sentiment was hit and current streak
         const daterReaction1 = await getDaterDateResponse(
           selectedDater,
           avatarWithNewAttr,
           [...getConversation().slice(-10), { speaker: 'avatar', message: avatarResponse1 }],
           attrToUse,
-          sentimentHit1 // Pass the category so Dater reacts appropriately
+          sentimentHit1, // Pass the category so Dater reacts appropriately
+          currentStreak // Pass streak for escalating reactions
         )
         
         if (daterReaction1) {
@@ -759,13 +773,14 @@ function LiveDateScene() {
           const sentimentHit2 = await checkAndScore(avatarResponse2, 0.25) // 25% scoring
           await syncConversationToFirebase(undefined, undefined, true)
           
-          // Dater reacts - informed by sentiment
+          // Dater reacts - informed by sentiment and escalating streak
           const daterReaction2 = await getDaterDateResponse(
             selectedDater,
             avatarWithNewAttr,
             getConversation().slice(-10), // Fresh state already includes recent messages
             null,
-            sentimentHit2
+            sentimentHit2,
+            currentStreak // Pass streak for escalating reactions
           )
           
           if (daterReaction2) {
@@ -798,13 +813,14 @@ function LiveDateScene() {
             const sentimentHit3 = await checkAndScore(avatarResponse3, 0.10) // 10% scoring
             await syncConversationToFirebase(undefined, undefined, true)
             
-            // Dater reacts - informed by sentiment
+            // Dater reacts - informed by sentiment and escalating streak
             const daterReaction3 = await getDaterDateResponse(
               selectedDater,
               avatarWithNewAttr,
               getConversation().slice(-10), // Fresh state already includes recent messages
               null,
-              sentimentHit3
+              sentimentHit3,
+              currentStreak // Pass streak for escalating reactions
             )
             
             if (daterReaction3) {
@@ -815,6 +831,10 @@ function LiveDateScene() {
           }
         }
       }
+      
+      // Save the updated streak for next round
+      setReactionStreak(currentStreak)
+      console.log('🔥 Final streak for this round:', currentStreak)
       
       // After all 3 exchanges, give players 15 seconds to read the conversation before transitioning
       // This delay is NOT shown on the timer - it's a "reading time" pause
