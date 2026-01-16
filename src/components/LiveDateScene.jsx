@@ -15,6 +15,7 @@ import {
 } from '../services/firebase'
 import './LiveDateScene.css'
 
+// Phase timers: 30 seconds for Phase 1 and Phase 2
 function LiveDateScene() {
   const selectedDater = useGameStore((state) => state.selectedDater)
   const avatar = useGameStore((state) => state.avatar)
