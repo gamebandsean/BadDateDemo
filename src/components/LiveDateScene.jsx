@@ -289,7 +289,11 @@ function LiveDateScene() {
         if (gameState.avatarBubble !== undefined) {
           setAvatarBubble(gameState.avatarBubble)
         }
-        if (gameState.daterBubble !== undefined) {
+        // For daterBubble: In phase1, prioritize currentQuestion over daterBubble
+        // This prevents old reactions from overwriting the new question
+        if (gameState.livePhase === 'phase1' && gameState.currentQuestion) {
+          setDaterBubble(gameState.currentQuestion)
+        } else if (gameState.daterBubble !== undefined) {
           setDaterBubble(gameState.daterBubble)
         }
         // Sync sentiment categories
@@ -393,7 +397,9 @@ function LiveDateScene() {
               livePhase: 'phase1', 
               phaseTimer: 30,
               compatibility: 50,
-              currentQuestion: openingLine
+              currentQuestion: openingLine,
+              daterBubble: openingLine, // Sync dater bubble to match question
+              avatarBubble: '' // Clear avatar bubble
             })
           }
         }
@@ -860,6 +866,8 @@ function LiveDateScene() {
             compatibility,
             timerStarted: false,
             currentQuestion: nextQuestion,
+            daterBubble: nextQuestion, // Sync dater bubble to match question
+            avatarBubble: '', // Clear avatar bubble for new round
             cycleCount: newRoundCount,
             suggestedAttributes: null, // Clear in Firebase
             numberedAttributes: null
