@@ -377,3 +377,26 @@
     padding: 8px;
   }
 }
+
+/* QR Join Flow Styles */
+.qr-join-btn {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.error-message-inline {
+  background: rgba(255, 77, 109, 0.15);
+  border: 1px solid rgba(255, 77, 109, 0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #ff6b8a;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.live-lobby-subtitle strong {
+  color: var(--accent-pink);
+  font-weight: 700;
+  letter-spacing: 1px;
+}

@@ -22,6 +22,7 @@ function LiveLobby() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [firebaseReady, setFirebaseReady] = useState(isFirebaseAvailable())
+  const [joinViaQR, setJoinViaQR] = useState(false) // True when user came from QR code
   
   useEffect(() => {
     // Check again after a short delay in case Firebase is still initializing
@@ -37,7 +38,7 @@ function LiveLobby() {
     const roomFromUrl = params.get('room')
     if (roomFromUrl) {
       setJoinCode(roomFromUrl.toUpperCase())
-      setShowJoinModal(true)
+      setJoinViaQR(true) // Show inline join UI instead of modal
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname)
     }
@@ -128,6 +129,76 @@ function LiveLobby() {
     setIsLoading(false)
   }
   
+  // QR Code Join Flow - simplified UI
+  if (joinViaQR) {
+    return (
+      <div className="live-lobby">
+        <motion.div 
+          className="live-lobby-card"
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="live-lobby-header">
+            <button 
+              className="back-btn"
+              onClick={() => setJoinViaQR(false)}
+            >
+              ← Back
+            </button>
+            <h2 className="live-lobby-title">
+              <span className="title-icon">🎮</span>
+              Join Game
+            </h2>
+            <p className="live-lobby-subtitle">You're joining room <strong>{joinCode}</strong></p>
+          </div>
+          
+          {!firebaseReady && (
+            <div className="firebase-warning">
+              ⚠️ Multiplayer unavailable - Firebase not configured
+            </div>
+          )}
+          
+          {/* Username Input */}
+          <div className="username-section">
+            <label className="input-label">Enter Your Name</label>
+            <input
+              type="text"
+              className="username-input"
+              placeholder="Your name..."
+              value={username}
+              onChange={(e) => setUsernameLocal(e.target.value)}
+              maxLength={15}
+              autoFocus
+            />
+          </div>
+          
+          {error && (
+            <motion.div 
+              className="error-message-inline"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              {error}
+            </motion.div>
+          )}
+          
+          {/* Join Button */}
+          <motion.button
+            className="mode-btn join-btn qr-join-btn"
+            onClick={handleJoin}
+            disabled={isLoading}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <span className="btn-icon">🚀</span>
+            <span className="btn-text">{isLoading ? 'Joining...' : 'Join Game'}</span>
+          </motion.button>
+        </motion.div>
+      </div>
+    )
+  }
+
   return (
     <div className="live-lobby">
       <motion.div 
