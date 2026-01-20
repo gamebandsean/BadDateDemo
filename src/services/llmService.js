@@ -4,6 +4,51 @@ import { buildDaterAgentPrompt } from '../data/daters'
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 
 /**
+ * Master checklist that gets included with EVERY character response prompt
+ * This ensures consistent, high-quality responses from both Dater and Avatar
+ */
+const LLM_RESPONSE_CHECKLIST = `
+═══════════════════════════════════════════════════════════════
+📋 RESPONSE CHECKLIST - VERIFY BEFORE RESPONDING:
+═══════════════════════════════════════════════════════════════
+
+✅ FORMAT:
+- Response is 1-2 sentences MAX
+- Response is DIALOGUE (just speaking), not narration
+- NO action descriptions like *smiles* or *leans in*
+- Exception: Physical traits that MUST be shown (e.g., *spreads wings*)
+
+✅ CONTENT:
+- Responding to what was ACTUALLY said
+- Not inventing new information
+- Staying consistent with what's been established
+- Only knowing what's been shared in conversation
+
+✅ CHARACTER:
+- Sounds like THIS specific character
+- Using their speech patterns
+- Reaction matches their personality
+
+✅ EMOTION:
+- Reaction intensity matches the situation
+- If something is BAD → allowed to react negatively!
+- If something is GOOD → showing genuine interest!
+- Not being artificially neutral or polite
+
+🚫 FORBIDDEN PHRASES (NEVER USE):
+- "Let's just say..."
+- "You could say..."
+- "Some might call me..."
+- "I have a certain..."
+- "It's complicated..."
+- "I'm not like other people..."
+
+Instead: Just STATE things directly and plainly!
+
+═══════════════════════════════════════════════════════════════
+`
+
+/**
  * Call Claude API for a response
  */
 export async function getChatResponse(messages, systemPrompt) {
@@ -266,7 +311,7 @@ Keep it to 1-2 sentences.`
 As your date speaks, pay attention to hints, implications, and subtext. If they say something that seems to reveal something about themselves - react to YOUR INTERPRETATION of what they might mean.`
   }
   
-  const fullPrompt = systemPrompt + baselineMorality + avatarContext + knowledgeBoundary + latestAttrContext + sentimentInstruction
+  const fullPrompt = systemPrompt + baselineMorality + avatarContext + knowledgeBoundary + latestAttrContext + sentimentInstruction + LLM_RESPONSE_CHECKLIST
   
   // Convert conversation history to Claude format
   let messages = conversationHistory.map(msg => ({
@@ -484,6 +529,9 @@ ${behaviorInstructions}
 - If they haven't told you something, you don't know it!
 - React to what they ACTUALLY SAY, not what you imagine about them`
 
+  // Add the response checklist to ensure quality
+  const fullSystemPrompt = systemPrompt + LLM_RESPONSE_CHECKLIST
+  
   // DEBUG: Log the prompt being sent
   console.log('🤖 AVATAR PROMPT:', {
     mode,
@@ -510,7 +558,7 @@ ${behaviorInstructions}
     messages.push({ role: 'user', content: '...' })
   }
   
-  const response = await getChatResponse(messages, systemPrompt)
+  const response = await getChatResponse(messages, fullSystemPrompt)
   return response
 }
 
