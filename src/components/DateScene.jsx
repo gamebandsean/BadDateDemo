@@ -885,17 +885,30 @@ function DateScene() {
           {/* Debug Panel - Hidden, accessible by clicking compatibility */}
           <AnimatePresence>
             {showDebugPanel && (
-              <motion.div 
-                className="compatibility-debug"
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="debug-header">
-                  <span>🔧 Compatibility Debug</span>
-                  <span className="debug-turn">Turn {conversationTurns}</span>
-                </div>
+              <>
+                <motion.div 
+                  className="debug-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowDebugPanel(false)}
+                />
+                <motion.div 
+                  className="compatibility-debug"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="debug-header">
+                    <span>🔧 Debug Menu</span>
+                    <button 
+                      className="debug-close-btn"
+                      onClick={() => setShowDebugPanel(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 
                 <div className="debug-factors">
                   <div className={`debug-factor ${factorsActivated.physicalAttraction ? 'activated' : 'inactive'}`}>
@@ -978,6 +991,7 @@ function DateScene() {
                   </div>
                 </div>
               </motion.div>
+              </>
             )}
           </AnimatePresence>
           
