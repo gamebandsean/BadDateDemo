@@ -393,6 +393,56 @@
   text-align: center;
 }
 
+/* Debug Toggles Section */
+.debug-toggles {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.debug-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.toggle-label {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.toggle-btn {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.toggle-btn.on {
+  background: linear-gradient(135deg, #06d6a0, #00b894);
+  color: #000;
+  box-shadow: 0 2px 8px rgba(6, 214, 160, 0.4);
+}
+
+.toggle-btn.off {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+}
+
+.toggle-btn:hover {
+  transform: scale(1.05);
+}
+
 /* Make compatibility meter container relative for debug positioning */
 .date-characters {
   position: relative;

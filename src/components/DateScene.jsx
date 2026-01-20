@@ -432,6 +432,7 @@ function DateScene() {
   
   const timedBehaviorIntervalsRef = useRef({})
   const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [startingStatsMode, setStartingStatsMode] = useState(true) // Debug toggle - defaults to ON
   const [highlightedTrait, setHighlightedTrait] = useState(null) // { trait, type: 'positive'|'negative' }
   
   const [inputValue, setInputValue] = useState('')
@@ -988,6 +989,18 @@ function DateScene() {
                   </div>
                   <div className="calc-result">
                     <span>= {compatibility}% overall</span>
+                  </div>
+                </div>
+                
+                <div className="debug-toggles">
+                  <div className="debug-toggle-row">
+                    <span className="toggle-label">🎲 Starting Stats Mode</span>
+                    <button 
+                      className={`toggle-btn ${startingStatsMode ? 'on' : 'off'}`}
+                      onClick={() => setStartingStatsMode(!startingStatsMode)}
+                    >
+                      {startingStatsMode ? 'ON' : 'OFF'}
+                    </button>
                   </div>
                 </div>
               </motion.div>
