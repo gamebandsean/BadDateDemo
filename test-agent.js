@@ -347,18 +347,49 @@ async function runHostAgent() {
         }
       }
 
-      // PHASE 3: Watch conversation
+      // PHASE 3: Watch conversation and wait for next round
       log.action(agentName, 'Phase 3: Watching conversation...')
-      await setTimeout(5000) // Wait for conversation to play out
 
-      // Check if we progressed
-      const hasProgressed = await page.evaluate(() => {
-        const text = document.body.innerText
-        return text.includes('Phase') || text.includes('Round') || text.length > 1000
-      })
+      // Wait for the conversation to complete and next round to start
+      // (detect when the suggestion input appears again, or results screen for final round)
+      if (round < 5) {
+        // Not the last round - wait for next round's input to appear
+        log.action(agentName, 'Waiting for next round to start...')
 
-      if (!hasProgressed) {
-        log.bug(agentName, 'STUCK', `Round ${round}: Game appears stuck, no progression detected`)
+        let nextRoundStarted = false
+        let waitAttempts = 0
+        const maxWaitAttempts = 40 // 20 seconds max
+
+        while (!nextRoundStarted && waitAttempts < maxWaitAttempts) {
+          nextRoundStarted = await page.evaluate(() => {
+            // Look for the suggestion input field (indicates Phase 1 of next round)
+            const inputs = Array.from(document.querySelectorAll('input'))
+            const suggestionInput = inputs.find(input =>
+              input.type === 'text' &&
+              input.offsetParent !== null && // visible
+              !input.disabled &&
+              (input.placeholder?.toLowerCase().includes('answer') ||
+               input.placeholder?.toLowerCase().includes('suggest') ||
+               input.placeholder?.toLowerCase().includes('type'))
+            )
+            return !!suggestionInput
+          })
+
+          if (!nextRoundStarted) {
+            await setTimeout(500)
+            waitAttempts++
+          }
+        }
+
+        if (!nextRoundStarted) {
+          log.bug(agentName, 'STUCK', `Round ${round}: Next round never started after conversation`)
+        } else {
+          log.success(agentName, `Round ${round} completed, Round ${round + 1} ready!`)
+        }
+      } else {
+        // Last round - just wait for conversation to finish
+        await setTimeout(8000)
+        log.success(agentName, `Round ${round} completed!`)
       }
     }
 
@@ -596,17 +627,49 @@ async function runClientAgent(clientNumber) {
         }
       }
 
-      // PHASE 3: Watch conversation
+      // PHASE 3: Watch conversation and wait for next round
       log.action(agentName, 'Phase 3: Watching conversation...')
-      await setTimeout(5000)
 
-      const hasProgressed = await page.evaluate(() => {
-        const text = document.body.innerText
-        return text.includes('Phase') || text.includes('Round') || text.length > 1000
-      })
+      // Wait for the conversation to complete and next round to start
+      // (detect when the suggestion input appears again, or results screen for final round)
+      if (round < 5) {
+        // Not the last round - wait for next round's input to appear
+        log.action(agentName, 'Waiting for next round to start...')
 
-      if (!hasProgressed) {
-        log.bug(agentName, 'STUCK', `Round ${round}: Game appears stuck, no progression detected`)
+        let nextRoundStarted = false
+        let waitAttempts = 0
+        const maxWaitAttempts = 40 // 20 seconds max
+
+        while (!nextRoundStarted && waitAttempts < maxWaitAttempts) {
+          nextRoundStarted = await page.evaluate(() => {
+            // Look for the suggestion input field (indicates Phase 1 of next round)
+            const inputs = Array.from(document.querySelectorAll('input'))
+            const suggestionInput = inputs.find(input =>
+              input.type === 'text' &&
+              input.offsetParent !== null && // visible
+              !input.disabled &&
+              (input.placeholder?.toLowerCase().includes('answer') ||
+               input.placeholder?.toLowerCase().includes('suggest') ||
+               input.placeholder?.toLowerCase().includes('type'))
+            )
+            return !!suggestionInput
+          })
+
+          if (!nextRoundStarted) {
+            await setTimeout(500)
+            waitAttempts++
+          }
+        }
+
+        if (!nextRoundStarted) {
+          log.bug(agentName, 'STUCK', `Round ${round}: Next round never started after conversation`)
+        } else {
+          log.success(agentName, `Round ${round} completed, Round ${round + 1} ready!`)
+        }
+      } else {
+        // Last round - just wait for conversation to finish
+        await setTimeout(8000)
+        log.success(agentName, `Round ${round} completed!`)
       }
     }
 

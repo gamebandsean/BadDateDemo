@@ -1130,16 +1130,22 @@ function LiveDateScene() {
             <span className="compat-value">❤️ {compatibility}%</span>
           </div>
           
-          {/* Right: Timer */}
-          <div 
-            className="header-timer"
-            onClick={() => setShowDaterValuesPopup(!showDaterValuesPopup)}
-            style={{ cursor: 'pointer' }}
-            title="Tap to see hidden info"
-          >
-            {phaseTimer > 0 && <span className="timer-value">{formatTime(phaseTimer)}</span>}
-            {livePhase === 'phase3' && <span className="timer-value">💬</span>}
-            {phaseTimer <= 0 && livePhase !== 'phase3' && <span className="timer-value">⏳</span>}
+          {/* Right: Round + Timer */}
+          <div className="header-right">
+            <div className="round-indicator">
+              <span className="round-label">Round</span>
+              <span className="round-value">{cycleCount + 1}/{maxCycles}</span>
+            </div>
+            <div 
+              className="header-timer"
+              onClick={() => setShowDaterValuesPopup(!showDaterValuesPopup)}
+              style={{ cursor: 'pointer' }}
+              title="Tap to see hidden info"
+            >
+              {phaseTimer > 0 && <span className="timer-value">{formatTime(phaseTimer)}</span>}
+              {livePhase === 'phase3' && <span className="timer-value">💬</span>}
+              {phaseTimer <= 0 && livePhase !== 'phase3' && <span className="timer-value">⏳</span>}
+            </div>
           </div>
         </div>
         
