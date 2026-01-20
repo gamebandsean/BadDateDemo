@@ -74,7 +74,7 @@ function LiveDateScene() {
   const [usingFallback, setUsingFallback] = useState(false)
   const [showWinnerPopup, setShowWinnerPopup] = useState(false)
   const [winnerText, setWinnerText] = useState('')
-  const [timerStarted, setTimerStarted] = useState(false) // Timer only runs after first submission
+  // Timer starts immediately when phase begins (no waiting for submissions)
   const [showPhaseAnnouncement, setShowPhaseAnnouncement] = useState(false)
   const [announcementPhase, setAnnouncementPhase] = useState('')
   const [reactionStreak, setReactionStreak] = useState({ positive: 0, negative: 0 }) // Track escalation
@@ -119,14 +119,12 @@ function LiveDateScene() {
       setShowTutorial(false)
       setTutorialStep(0)
       setLivePhase('phase1')
-      setTimerStarted(false) // Timer waits for first submission
       // Sync to Firebase
       if (firebaseReady && roomCode) {
         await updateGameState(roomCode, { 
           showTutorial: false, 
           tutorialStep: 0, 
-          livePhase: 'phase1',
-          timerStarted: false
+          livePhase: 'phase1'
         })
       }
     }
@@ -270,10 +268,7 @@ function LiveDateScene() {
         setTutorialStep(gameState.tutorialStep)
       }
       
-      // Sync timer started state (so timer begins for all when first submission happens)
-      if (typeof gameState.timerStarted === 'boolean') {
-        setTimerStarted(gameState.timerStarted)
-      }
+      // Timer starts immediately - no need to sync timerStarted state
       
       // Sync current question (so all players see the same question)
       if (gameState.currentQuestion && !isHost) {
@@ -352,16 +347,13 @@ function LiveDateScene() {
   }, [phaseTimer])
   
   // Phase timer countdown - only host runs the timer, others sync from Firebase
-  // Timer only starts after first submission in Phase 1/2
+  // Timer starts immediately when phase begins
   useEffect(() => {
     // Only the host should run the timer
     if (!isHost && firebaseReady) return
     
-    // For Phase 1 and Phase 2, wait until timer is started (first submission)
-    // For Phase 3, always run
-    const shouldRunTimer = 
-      (livePhase === 'phase3') || 
-      ((livePhase === 'phase1' || livePhase === 'phase2') && timerStarted)
+    // Run timer during Phase 1, Phase 2, and Phase 3
+    const shouldRunTimer = livePhase === 'phase1' || livePhase === 'phase2' || livePhase === 'phase3'
     
     if (shouldRunTimer) {
       phaseTimerRef.current = setInterval(async () => {
@@ -382,7 +374,7 @@ function LiveDateScene() {
         }
       }
     }
-  }, [livePhase, isHost, firebaseReady, roomCode, setPhaseTimer, timerStarted])
+  }, [livePhase, isHost, firebaseReady, roomCode, setPhaseTimer])
   
   // Handle phase transitions when timer hits 0
   useEffect(() => {
@@ -581,7 +573,6 @@ function LiveDateScene() {
         setLivePhase('phase2')
         setPhaseTimer(30)
         setUserVote(null)
-        setTimerStarted(false) // Reset timer - wait for first vote
         allVotedTriggeredRef.current = false // Reset for new voting round
         
         // Sync to Firebase - include numbered attributes
@@ -589,8 +580,7 @@ function LiveDateScene() {
           await updateGameState(roomCode, { 
             livePhase: 'phase2', 
             phaseTimer: 30,
-            numberedAttributes: numbered,
-            timerStarted: false
+            numberedAttributes: numbered
           })
         }
         break
@@ -895,7 +885,6 @@ function LiveDateScene() {
       // Start new round - Dater asks another question (host only generates)
       setLivePhase('phase1')
       setPhaseTimer(30)
-      setTimerStarted(false) // Reset timer - wait for first suggestion
       
       // Only host generates the next question
       if (isHost) {
@@ -914,7 +903,6 @@ function LiveDateScene() {
             livePhase: 'phase1', 
             phaseTimer: 30, 
             compatibility,
-            timerStarted: false,
             currentQuestion: nextQuestion,
             daterBubble: nextQuestion, // Sync dater bubble to match question
             avatarBubble: '', // Clear avatar bubble for new round
@@ -947,14 +935,6 @@ function LiveDateScene() {
         username: username
       }
       
-      // Start the timer on first submission
-      if (!timerStarted) {
-        setTimerStarted(true)
-        if (firebaseReady && roomCode) {
-          await updateGameState(roomCode, { timerStarted: true })
-        }
-      }
-      
       // Submit to Firebase if available, otherwise local only
       if (firebaseReady && roomCode) {
         await firebaseSubmitAttribute(roomCode, suggestion)
@@ -968,14 +948,6 @@ function LiveDateScene() {
     else if (livePhase === 'phase2') {
       const num = parseInt(message)
       if (!isNaN(num) && num >= 1 && num <= numberedAttributes.length) {
-        // Start the timer on first vote
-        if (!timerStarted) {
-          setTimerStarted(true)
-          if (firebaseReady && roomCode) {
-            await updateGameState(roomCode, { timerStarted: true })
-          }
-        }
-        
         // Submit vote to Firebase if available
         if (firebaseReady && roomCode && playerId) {
           await firebaseSubmitVote(roomCode, playerId, num)
@@ -1260,14 +1232,6 @@ function LiveDateScene() {
                     key={attr.number}
                     className={`vote-option ${userVote === attr.number ? 'voted' : ''}`}
                     onClick={async () => {
-                      // Start the timer on first vote
-                      if (!timerStarted) {
-                        setTimerStarted(true)
-                        if (firebaseReady && roomCode) {
-                          await updateGameState(roomCode, { timerStarted: true })
-                        }
-                      }
-                      
                       if (firebaseReady && roomCode && playerId) {
                         await firebaseSubmitVote(roomCode, playerId, attr.number)
                         await sendChatMessage(roomCode, { username, message: `Vote: #${attr.number}` })

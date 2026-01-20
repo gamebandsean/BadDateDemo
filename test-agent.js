@@ -269,6 +269,9 @@ async function runHostAgent() {
       await page.keyboard.press('Enter')
       log.success(agentName, 'Submitted suggestion')
 
+      // Give the game time to sync all players' suggestions
+      await setTimeout(2000)
+
       // PHASE 2: Wait for voting phase to start (detect when voting UI appears)
       log.action(agentName, 'Phase 2: Waiting for voting to start...')
 
@@ -548,6 +551,9 @@ async function runClientAgent(clientNumber) {
 
       await page.keyboard.press('Enter')
       log.success(agentName, 'Submitted suggestion')
+
+      // Give the game time to sync all players' suggestions
+      await setTimeout(2000)
 
       // PHASE 2: Wait for voting phase to start (detect when voting UI appears)
       log.action(agentName, 'Phase 2: Waiting for voting to start...')
