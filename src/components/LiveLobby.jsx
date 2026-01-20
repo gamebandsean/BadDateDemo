@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
-import { isFirebaseAvailable, createRoom, joinRoom, generatePlayerId } from '../services/firebase'
+import { isFirebaseAvailable, createRoom, joinRoom, generatePlayerId, subscribeToAvailableRooms } from '../services/firebase'
 import './LiveLobby.css'
 
-// Live Mode entry screen - v2
+// Live Mode entry screen - Room Browser Version
 
 function LiveLobby() {
   const setPhase = useGameStore((state) => state.setPhase)
@@ -16,13 +16,12 @@ function LiveLobby() {
   const setPlayers = useGameStore((state) => state.setPlayers)
   const daters = useGameStore((state) => state.daters)
   
-  const [showJoinModal, setShowJoinModal] = useState(false)
-  const [joinCode, setJoinCode] = useState('')
+  const [view, setView] = useState('main') // 'main', 'host', 'join'
+  const [availableRooms, setAvailableRooms] = useState([])
   const [username, setUsernameLocal] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [firebaseReady, setFirebaseReady] = useState(isFirebaseAvailable())
-  const [joinViaQR, setJoinViaQR] = useState(false) // True when user came from QR code
   
   useEffect(() => {
     // Check again after a short delay in case Firebase is still initializing
@@ -32,17 +31,15 @@ function LiveLobby() {
     return () => clearTimeout(timer)
   }, [])
   
-  // Check for room code in URL (from QR code scan)
+  // Subscribe to available rooms when in join view
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const roomFromUrl = params.get('room')
-    if (roomFromUrl) {
-      setJoinCode(roomFromUrl.toUpperCase())
-      setJoinViaQR(true) // Show inline join UI instead of modal
-      // Clean up URL
-      window.history.replaceState({}, '', window.location.pathname)
+    if (view === 'join' && firebaseReady) {
+      const unsubscribe = subscribeToAvailableRooms((rooms) => {
+        setAvailableRooms(rooms)
+      })
+      return () => unsubscribe()
     }
-  }, [])
+  }, [view, firebaseReady])
   
   const generateRoomCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -88,21 +85,20 @@ function LiveLobby() {
     setIsLoading(false)
   }
   
-  const handleJoin = async () => {
-    if (!joinCode.trim()) {
-      setError('Please enter a room code')
+  const handleJoinRoom = async (roomCode) => {
+    if (!username.trim()) {
+      setError('Please enter your name first')
       return
     }
     
     setIsLoading(true)
     setError('')
     
-    const playerName = username.trim() || `Player${Math.floor(Math.random() * 1000)}`
+    const playerName = username.trim()
     const odId = generatePlayerId()
-    const code = joinCode.trim().toUpperCase()
     
     if (firebaseReady) {
-      const result = await joinRoom(code, {
+      const result = await joinRoom(roomCode, {
         username: playerName,
         odId: odId
       })
@@ -121,16 +117,15 @@ function LiveLobby() {
     
     // Update local state
     setUsername(playerName)
-    setRoomCode(code)
+    setRoomCode(roomCode)
     setIsHost(false)
     setPlayerId(odId)
-    setShowJoinModal(false)
     setPhase('live-game-lobby')
     setIsLoading(false)
   }
-  
-  // QR Code Join Flow - simplified UI
-  if (joinViaQR) {
+
+  // Main view - Choose Host or Join
+  if (view === 'main') {
     return (
       <div className="live-lobby">
         <motion.div 
@@ -142,15 +137,15 @@ function LiveLobby() {
           <div className="live-lobby-header">
             <button 
               className="back-btn"
-              onClick={() => setJoinViaQR(false)}
+              onClick={() => setPhase('lobby')}
             >
               ← Back
             </button>
             <h2 className="live-lobby-title">
-              <span className="title-icon">🎮</span>
-              Join Game
+              <span className="title-icon">📺</span>
+              Live Mode
             </h2>
-            <p className="live-lobby-subtitle">You're joining room <strong>{joinCode}</strong></p>
+            <p className="live-lobby-subtitle">Play with friends in real-time!</p>
           </div>
           
           {!firebaseReady && (
@@ -161,15 +156,91 @@ function LiveLobby() {
           
           {/* Username Input */}
           <div className="username-section">
-            <label className="input-label">Enter Your Name</label>
+            <label className="input-label">Your Name</label>
             <input
               type="text"
               className="username-input"
-              placeholder="Your name..."
+              placeholder="Enter your name..."
               value={username}
               onChange={(e) => setUsernameLocal(e.target.value)}
               maxLength={15}
-              autoFocus
+            />
+          </div>
+          
+          {/* Main Action Buttons */}
+          <div className="main-buttons">
+            <motion.button
+              className="mode-btn create-btn"
+              onClick={() => setView('host')}
+              disabled={!firebaseReady}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span className="btn-icon">✨</span>
+              <span className="btn-text">Host a Date</span>
+            </motion.button>
+            
+            <motion.button
+              className="mode-btn join-btn"
+              onClick={() => setView('join')}
+              disabled={!firebaseReady}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span className="btn-icon">🔗</span>
+              <span className="btn-text">Join a Date</span>
+            </motion.button>
+          </div>
+          
+          <div className="live-info">
+            <div className="info-item">
+              <span className="info-icon">👥</span>
+              <span>2-20 players</span>
+            </div>
+            <div className="info-item">
+              <span className="info-icon">⏱️</span>
+              <span>~10 min per game</span>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    )
+  }
+
+  // Host view - Create room
+  if (view === 'host') {
+    return (
+      <div className="live-lobby">
+        <motion.div 
+          className="live-lobby-card"
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="live-lobby-header">
+            <button 
+              className="back-btn"
+              onClick={() => setView('main')}
+            >
+              ← Back
+            </button>
+            <h2 className="live-lobby-title">
+              <span className="title-icon">✨</span>
+              Host a Date
+            </h2>
+            <p className="live-lobby-subtitle">Create a room for others to join</p>
+          </div>
+          
+          {/* Username Input */}
+          <div className="username-section">
+            <label className="input-label">Your Name</label>
+            <input
+              type="text"
+              className="username-input"
+              placeholder="Enter your name..."
+              value={username}
+              onChange={(e) => setUsernameLocal(e.target.value)}
+              maxLength={15}
             />
           </div>
           
@@ -183,166 +254,131 @@ function LiveLobby() {
             </motion.div>
           )}
           
-          {/* Join Button */}
           <motion.button
-            className="mode-btn join-btn qr-join-btn"
-            onClick={handleJoin}
-            disabled={isLoading}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <span className="btn-icon">🚀</span>
-            <span className="btn-text">{isLoading ? 'Joining...' : 'Join Game'}</span>
-          </motion.button>
-        </motion.div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="live-lobby">
-      <motion.div 
-        className="live-lobby-card"
-        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="live-lobby-header">
-          <button 
-            className="back-btn"
-            onClick={() => setPhase('lobby')}
-          >
-            ← Back
-          </button>
-          <h2 className="live-lobby-title">
-            <span className="title-icon">📺</span>
-            Live Mode
-          </h2>
-          <p className="live-lobby-subtitle">Play with friends in real-time!</p>
-        </div>
-        
-        {!firebaseReady && (
-          <div className="firebase-warning">
-            ⚠️ Multiplayer unavailable - Firebase not configured
-          </div>
-        )}
-        
-        {/* Username Input */}
-        <div className="username-section">
-          <label className="input-label">Your Name</label>
-          <input
-            type="text"
-            className="username-input"
-            placeholder="Enter your name..."
-            value={username}
-            onChange={(e) => setUsernameLocal(e.target.value)}
-            maxLength={15}
-          />
-        </div>
-        
-        {/* Main Action Buttons */}
-        <div className="main-buttons">
-          <motion.button
-            className="mode-btn create-btn"
+            className="mode-btn create-btn full-width"
             onClick={handleCreate}
             disabled={isLoading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <span className="btn-icon">✨</span>
-            <span className="btn-text">{isLoading ? 'Creating...' : 'Create Date'}</span>
+            <span className="btn-icon">🎬</span>
+            <span className="btn-text">{isLoading ? 'Creating...' : 'Create Room'}</span>
           </motion.button>
           
-          <motion.button
-            className="mode-btn join-btn"
-            onClick={() => setShowJoinModal(true)}
-            disabled={isLoading}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <span className="btn-icon">🔗</span>
-            <span className="btn-text">Join Date</span>
-          </motion.button>
-        </div>
-        
-        <div className="live-info">
-          <div className="info-item">
-            <span className="info-icon">👥</span>
-            <span>2-20 players</span>
-          </div>
-          <div className="info-item">
-            <span className="info-icon">⏱️</span>
-            <span>~10 min per game</span>
-          </div>
-        </div>
-      </motion.div>
-      
-      {/* Join Modal */}
-      <AnimatePresence>
-        {showJoinModal && (
-          <motion.div 
-            className="join-modal-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowJoinModal(false)}
-          >
-            <motion.div 
-              className="join-modal"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
+          <p className="host-hint">
+            Once created, other players can see and join your room from the "Join a Date" screen.
+          </p>
+        </motion.div>
+      </div>
+    )
+  }
+
+  // Join view - Room browser
+  if (view === 'join') {
+    return (
+      <div className="live-lobby">
+        <motion.div 
+          className="live-lobby-card room-browser-card"
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="live-lobby-header">
+            <button 
+              className="back-btn"
+              onClick={() => setView('main')}
             >
-              <h3>Join a Date</h3>
-              <p>Enter the room code shared by the host</p>
-              
-              <input
-                type="text"
-                className="code-input"
-                placeholder="ENTER CODE"
-                value={joinCode}
-                onChange={(e) => {
-                  setJoinCode(e.target.value.toUpperCase())
-                  setError('')
-                }}
-                maxLength={6}
-                autoFocus
-              />
-              
-              {error && (
-                <motion.div 
-                  className="error-message"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  {error}
-                </motion.div>
-              )}
-              
-              <div className="modal-buttons">
-                <button 
-                  className="cancel-btn"
-                  onClick={() => setShowJoinModal(false)}
-                >
-                  Cancel
-                </button>
-                <motion.button
-                  className="btn btn-primary confirm-btn"
-                  onClick={handleJoin}
-                  disabled={!joinCode.trim() || isLoading}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  {isLoading ? 'Joining...' : 'Join 🚀'}
-                </motion.button>
-              </div>
+              ← Back
+            </button>
+            <h2 className="live-lobby-title">
+              <span className="title-icon">🔗</span>
+              Join a Date
+            </h2>
+            <p className="live-lobby-subtitle">Select a room to join</p>
+          </div>
+          
+          {/* Username Input */}
+          <div className="username-section">
+            <label className="input-label">Your Name</label>
+            <input
+              type="text"
+              className="username-input"
+              placeholder="Enter your name first..."
+              value={username}
+              onChange={(e) => {
+                setUsernameLocal(e.target.value)
+                setError('')
+              }}
+              maxLength={15}
+            />
+          </div>
+          
+          {error && (
+            <motion.div 
+              className="error-message-inline"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              {error}
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
+          )}
+          
+          {/* Room List */}
+          <div className="room-browser">
+            <div className="room-browser-header">
+              <span>Available Rooms</span>
+              <span className="room-count">{availableRooms.length} room{availableRooms.length !== 1 ? 's' : ''}</span>
+            </div>
+            
+            <div className="room-list">
+              {availableRooms.length === 0 ? (
+                <div className="no-rooms">
+                  <span className="no-rooms-icon">🔍</span>
+                  <p>No rooms available</p>
+                  <p className="no-rooms-hint">Ask a friend to host, or create your own!</p>
+                </div>
+              ) : (
+                <AnimatePresence>
+                  {availableRooms.map((room, index) => (
+                    <motion.button
+                      key={room.code}
+                      className="room-item"
+                      onClick={() => handleJoinRoom(room.code)}
+                      disabled={isLoading || !username.trim()}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.1)' }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div className="room-info">
+                        <div className="room-host">
+                          <span className="host-icon">👑</span>
+                          <span className="host-name">{room.host}'s Room</span>
+                        </div>
+                        <div className="room-details">
+                          <span className="room-dater">💕 Dating: {room.daterName}</span>
+                          <span className="room-players">👥 {room.playerCount}/20</span>
+                        </div>
+                      </div>
+                      <div className="join-arrow">→</div>
+                    </motion.button>
+                  ))}
+                </AnimatePresence>
+              )}
+            </div>
+          </div>
+          
+          {!username.trim() && availableRooms.length > 0 && (
+            <p className="join-hint">Enter your name above to join a room</p>
+          )}
+        </motion.div>
+      </div>
+    )
+  }
+
+  return null
 }
 
 export default LiveLobby

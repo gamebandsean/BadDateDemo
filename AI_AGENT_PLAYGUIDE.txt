@@ -27,30 +27,38 @@ STEP 2: LIVE MODE LOBBY
 
 You'll see:
 - A text input for "Your Name"
-- "✨ Create Date" button (HOST only)
-- "🔗 Join Date" button (JOINERS only)
+- "✨ Host a Date" button (for creating rooms)
+- "🔗 Join a Date" button (for browsing rooms)
 
 --------------------------------------------------------------------------------
 IF YOU ARE THE HOST:
 --------------------------------------------------------------------------------
 1. Enter your name in the text field
-2. Click "✨ Create Date"
-3. You'll enter a waiting room with:
+2. Click "✨ Host a Date"
+3. Click "🎬 Create Room"
+4. You'll enter a waiting room with:
    - A QR code (for phone players)
-   - A room code (4-6 characters, displayed somewhere on screen)
    - Player count showing "1/20"
-4. SHARE THE ROOM CODE with other agents
-5. Wait for other players to join
-6. When ready, click "Start Date 🎬"
+5. Your room is now visible to all players in the "Join a Date" browser
+6. Wait for other players to join
+7. When ready, click "Start Date 🎬"
 
 --------------------------------------------------------------------------------
 IF YOU ARE JOINING:
 --------------------------------------------------------------------------------
 1. Enter your name in the text field
-2. Click "🔗 Join Date"
-3. Enter the room code shared by the HOST
-4. Click join/confirm
-5. Wait in the lobby for the host to start
+2. Click "🔗 Join a Date"
+3. You'll see a ROOM BROWSER showing all available rooms
+4. Each room shows:
+   - Host's name (e.g., "Player123's Room")
+   - Which dater they're dating (e.g., "Dating: Kickflip")
+   - Player count (e.g., "2/20")
+5. Click on any room to join it
+6. Wait in the lobby for the host to start
+
+NOTE: Rooms automatically disappear from the browser when:
+- The game starts (no longer in lobby phase)
+- The game ends
 
 ================================================================================
 STEP 3: THE DATE (GAMEPLAY)
@@ -110,9 +118,9 @@ AGENT 1 (HOST):
 1. Go to URL
 2. Click Live Mode
 3. Enter name
-4. Click "Create Date"
-5. Note the room code
-6. Wait for others
+4. Click "Host a Date"
+5. Click "Create Room"
+6. Wait for others to join from the room browser
 7. Click "Start Date"
 8. Play through 5 rounds (suggest + vote each round)
 
@@ -120,10 +128,11 @@ AGENT 2, 3, etc. (JOINERS):
 1. Go to URL
 2. Click Live Mode
 3. Enter name
-4. Click "Join Date"
-5. Enter room code from HOST
-6. Wait for host to start
-7. Play through 5 rounds (suggest + vote each round)
+4. Click "Join a Date"
+5. See the room browser with available rooms
+6. Click on the HOST's room to join
+7. Wait for host to start
+8. Play through 5 rounds (suggest + vote each round)
 
 ================================================================================
 UI ELEMENTS TO LOOK FOR

@@ -330,6 +330,73 @@ export const deleteRoom = async (roomCode) => {
   }
 }
 
+// Get all available rooms (rooms in lobby phase that haven't started)
+export const getAvailableRooms = async () => {
+  if (!database) return []
+  
+  const roomsRef = ref(database, 'rooms')
+  try {
+    const snapshot = await get(roomsRef)
+    if (!snapshot.exists()) return []
+    
+    const rooms = snapshot.val()
+    const availableRooms = []
+    
+    for (const [code, room] of Object.entries(rooms)) {
+      // Only show rooms that are still in lobby phase
+      if (room.gameState?.phase === 'lobby') {
+        const playerCount = room.players ? Object.keys(room.players).length : 0
+        availableRooms.push({
+          code: code,
+          host: room.host,
+          playerCount: playerCount,
+          daterName: room.dater?.name || 'Mystery Date',
+          createdAt: room.createdAt
+        })
+      }
+    }
+    
+    // Sort by most recent first
+    return availableRooms.sort((a, b) => b.createdAt - a.createdAt)
+  } catch (error) {
+    console.error('Error getting available rooms:', error)
+    return []
+  }
+}
+
+// Subscribe to all rooms (for real-time room list updates)
+export const subscribeToAvailableRooms = (callback) => {
+  if (!database) return () => {}
+  
+  const roomsRef = ref(database, 'rooms')
+  return onValue(roomsRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      callback([])
+      return
+    }
+    
+    const rooms = snapshot.val()
+    const availableRooms = []
+    
+    for (const [code, room] of Object.entries(rooms)) {
+      // Only show rooms that are still in lobby phase
+      if (room.gameState?.phase === 'lobby') {
+        const playerCount = room.players ? Object.keys(room.players).length : 0
+        availableRooms.push({
+          code: code,
+          host: room.host,
+          playerCount: playerCount,
+          daterName: room.dater?.name || 'Mystery Date',
+          createdAt: room.createdAt
+        })
+      }
+    }
+    
+    // Sort by most recent first
+    callback(availableRooms.sort((a, b) => b.createdAt - a.createdAt))
+  })
+}
+
 // Generate a unique player ID
 export const generatePlayerId = () => {
   return 'player_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now()
