@@ -26,6 +26,7 @@ function LiveGameLobby() {
   const [copied, setCopied] = useState(false)
   const [firebaseReady] = useState(isFirebaseAvailable())
   const [showTutorial, setShowTutorial] = useState(false)
+  const [startingStatsMode, setStartingStatsMode] = useState(true) // Default ON
   
   // Subscribe to real-time player updates
   useEffect(() => {
@@ -63,9 +64,21 @@ function LiveGameLobby() {
   const handleStart = async () => {
     if (firebaseReady) {
       // Update Firebase to signal game start to all players
-      await updateGameState(roomCode, { phase: 'live-date', showTutorial })
+      await updateGameState(roomCode, { 
+        phase: 'live-date', 
+        showTutorial,
+        startingStatsMode,
+        // Initialize starting stats state
+        startingStats: startingStatsMode ? {
+          currentQuestionIndex: 0,
+          activePlayerId: null,
+          questions: [],
+          answers: [],
+          timer: 15
+        } : null
+      })
     }
-    startLiveDate(null, showTutorial)
+    startLiveDate(null, showTutorial, startingStatsMode)
   }
   
   const handleBack = async () => {
@@ -180,15 +193,26 @@ function LiveGameLobby() {
           
           {isHost ? (
             <>
-              <label className="tutorial-checkbox">
-                <input 
-                  type="checkbox" 
-                  checked={showTutorial}
-                  onChange={(e) => setShowTutorial(e.target.checked)}
-                />
-                <span className="checkbox-label">Show Tutorial</span>
-                <span className="checkbox-hint">Recommended for new players</span>
-              </label>
+              <div className="game-options">
+                <label className="tutorial-checkbox">
+                  <input 
+                    type="checkbox" 
+                    checked={showTutorial}
+                    onChange={(e) => setShowTutorial(e.target.checked)}
+                  />
+                  <span className="checkbox-label">Show Tutorial</span>
+                  <span className="checkbox-hint">Recommended for new players</span>
+                </label>
+                <label className="tutorial-checkbox">
+                  <input 
+                    type="checkbox" 
+                    checked={startingStatsMode}
+                    onChange={(e) => setStartingStatsMode(e.target.checked)}
+                  />
+                  <span className="checkbox-label">🎲 Starting Stats</span>
+                  <span className="checkbox-hint">Players create the avatar together</span>
+                </label>
+              </div>
               <motion.button
                 className="btn btn-primary start-btn"
                 onClick={handleStart}

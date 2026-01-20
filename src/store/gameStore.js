@@ -22,13 +22,26 @@ const initialLiveState = {
   username: '',
   playerId: null, // Unique ID for this player in Firebase
   players: [], // { id, username, isHost }
-  livePhase: 'waiting', // 'waiting' | 'phase1' | 'phase2' | 'phase3' | 'ended'
+  livePhase: 'waiting', // 'waiting' | 'starting-stats' | 'phase1' | 'phase2' | 'phase3' | 'ended'
   phaseTimer: 0,
   cycleCount: 0,
   maxCycles: 5,
   // Tutorial state
   showTutorial: false,
   tutorialStep: 0, // 0 = not started, 1-3 = tutorial steps
+  // Starting Stats Mode state
+  startingStatsMode: false,
+  startingStats: {
+    currentQuestionIndex: 0, // 0-5 for 6 questions
+    activePlayerId: null,
+    activePlayerName: '',
+    currentQuestion: '',
+    currentQuestionType: '', // 'physical' | 'emotional' | 'name'
+    timer: 15,
+    answers: [], // { playerId, playerName, question, questionType, answer }
+    questionAssignments: [], // { playerId, playerName, questionType, questionIndex }
+    avatarName: '',
+  },
   // Timer doesn't start until first submission in Phase 1/2
   timerStarted: false,
   suggestedAttributes: [], // { id, text, suggestedBy, votes: [] }
@@ -678,13 +691,30 @@ export const useGameStore = create((set, get) => ({
   },
   
   // Start the live date (host only)
-  startLiveDate: (daterValues = null, withTutorial = false) => {
+  startLiveDate: (daterValues = null, withTutorial = false, withStartingStats = false) => {
+    // Determine the starting phase
+    let startPhase = 'phase1'
+    if (withTutorial) startPhase = 'tutorial'
+    else if (withStartingStats) startPhase = 'starting-stats'
+    
     set({
       phase: 'live-date',
-      livePhase: withTutorial ? 'tutorial' : 'phase1', // Start with tutorial if enabled
+      livePhase: startPhase,
       showTutorial: withTutorial,
       tutorialStep: withTutorial ? 1 : 0,
-      phaseTimer: 30,
+      startingStatsMode: withStartingStats,
+      startingStats: withStartingStats ? {
+        currentQuestionIndex: 0,
+        activePlayerId: null,
+        activePlayerName: '',
+        currentQuestion: '',
+        currentQuestionType: '',
+        timer: 15,
+        answers: [],
+        questionAssignments: [],
+        avatarName: '',
+      } : initialLiveState.startingStats,
+      phaseTimer: withStartingStats ? 15 : 30, // Starting stats uses 15s timer
       cycleCount: 0,
       dateConversation: [],
       suggestedAttributes: [],
@@ -705,6 +735,15 @@ export const useGameStore = create((set, get) => ({
         dealbreakers: [],
       },
     })
+  },
+  
+  // Update starting stats state
+  setStartingStats: (stats) => set({ startingStats: stats }),
+  
+  // Set avatar name (from starting stats)
+  setAvatarName: (name) => {
+    const { avatar } = get()
+    set({ avatar: { ...avatar, name } })
   },
   
   // Set dater values (called after LLM generates them)

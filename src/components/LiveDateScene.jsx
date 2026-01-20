@@ -64,6 +64,10 @@ function LiveDateScene() {
   const tutorialStep = useGameStore((state) => state.tutorialStep)
   const setShowTutorial = useGameStore((state) => state.setShowTutorial)
   const setTutorialStep = useGameStore((state) => state.setTutorialStep)
+  const startingStatsMode = useGameStore((state) => state.startingStatsMode)
+  const startingStats = useGameStore((state) => state.startingStats)
+  const setStartingStats = useGameStore((state) => state.setStartingStats)
+  const setAvatarName = useGameStore((state) => state.setAvatarName)
   
   const [chatInput, setChatInput] = useState('')
   const [avatarBubble, setAvatarBubble] = useState('')
@@ -79,10 +83,27 @@ function LiveDateScene() {
   const [announcementPhase, setAnnouncementPhase] = useState('')
   const [reactionStreak, setReactionStreak] = useState({ positive: 0, negative: 0 }) // Track escalation
   
+  // Starting Stats Mode state
+  const [startingStatsInput, setStartingStatsInput] = useState('')
+  const [startingStatsTimer, setStartingStatsTimer] = useState(15)
+  const [hasSubmittedStartingStat, setHasSubmittedStartingStat] = useState(false)
+  const [showStartingStatsAnswer, setShowStartingStatsAnswer] = useState(null) // { playerName, answer }
+  const startingStatsTimerRef = useRef(null)
+  
   const chatEndRef = useRef(null)
   const phaseTimerRef = useRef(null)
   const lastPhaseRef = useRef('')
   const allVotedTriggeredRef = useRef(false) // Prevent multiple auto-advance triggers
+  
+  // Starting Stats question definitions
+  const STARTING_STATS_QUESTIONS = [
+    { type: 'physical', question: "What physical attribute would you like your date to have?" },
+    { type: 'physical', question: "What physical attribute would you like your date to have?" },
+    { type: 'physical', question: "What physical attribute would you like your date to have?" },
+    { type: 'emotional', question: "What emotional state is your date in?" },
+    { type: 'emotional', question: "What emotional state is your date in?" },
+    { type: 'name', question: "What should we name your date?" },
+  ]
   
   // Helper to sync conversation state to Firebase (host only)
   const syncConversationToFirebase = async (avatarText, daterText, syncSentiments = false) => {
@@ -336,6 +357,29 @@ function LiveDateScene() {
           setDaterValues(gameState.daterValues)
         }
       }
+      
+      // Sync starting stats state (for all players)
+      if (gameState.startingStats) {
+        setStartingStats(gameState.startingStats)
+        // Update local timer for non-hosts
+        if (!isHost && typeof gameState.startingStats.timer === 'number') {
+          setStartingStatsTimer(gameState.startingStats.timer)
+        }
+        // Show answer popup when a new answer comes in
+        const answers = gameState.startingStats.answers || []
+        if (answers.length > 0) {
+          const latestAnswer = answers[answers.length - 1]
+          if (latestAnswer && latestAnswer.answer) {
+            setShowStartingStatsAnswer({ 
+              playerName: latestAnswer.playerName, 
+              answer: latestAnswer.answer,
+              questionType: latestAnswer.questionType
+            })
+            // Hide after 3 seconds
+            setTimeout(() => setShowStartingStatsAnswer(null), 3000)
+          }
+        }
+      }
       } catch (error) {
         console.error('🔥 Error processing game state update:', error)
       }
@@ -396,6 +440,264 @@ function LiveDateScene() {
       handlePhaseEnd()
     }
   }, [phaseTimer, livePhase])
+  
+  // ============ STARTING STATS MODE LOGIC ============
+  
+  // Initialize Starting Stats phase (host only)
+  useEffect(() => {
+    if (livePhase !== 'starting-stats' || !isHost || !firebaseReady) return
+    
+    // Only initialize if no question assignments yet
+    if (startingStats.questionAssignments?.length > 0) return
+    
+    console.log('🎲 Initializing Starting Stats phase...')
+    
+    // Build question assignments based on available players
+    const availablePlayers = [...players]
+    const assignments = []
+    const playerQuestionCount = {} // Track how many of each type each player has answered
+    
+    // Shuffle players for randomness
+    const shuffledPlayers = availablePlayers.sort(() => Math.random() - 0.5)
+    
+    // Assign questions - 3 physical, 2 emotional, 1 name
+    for (let i = 0; i < STARTING_STATS_QUESTIONS.length; i++) {
+      const questionDef = STARTING_STATS_QUESTIONS[i]
+      
+      // Find a player who hasn't answered this type of question yet
+      let assignedPlayer = null
+      for (const player of shuffledPlayers) {
+        const key = `${player.id}-${questionDef.type}`
+        if (!playerQuestionCount[key]) {
+          assignedPlayer = player
+          playerQuestionCount[key] = true
+          break
+        }
+      }
+      
+      // If all players have answered this type, skip this question
+      if (!assignedPlayer && shuffledPlayers.length > 0) {
+        // If fewer than 6 players, just cycle through but skip duplicates
+        console.log(`⏭️ Skipping question ${i} (${questionDef.type}) - all players have answered this type`)
+        continue
+      }
+      
+      if (assignedPlayer) {
+        assignments.push({
+          questionIndex: i,
+          playerId: assignedPlayer.id,
+          playerName: assignedPlayer.username,
+          questionType: questionDef.type,
+          question: questionDef.question,
+        })
+      }
+    }
+    
+    // Set up the first question
+    const firstAssignment = assignments[0]
+    if (firstAssignment) {
+      const newStartingStats = {
+        ...startingStats,
+        questionAssignments: assignments,
+        currentQuestionIndex: 0,
+        activePlayerId: firstAssignment.playerId,
+        activePlayerName: firstAssignment.playerName,
+        currentQuestion: firstAssignment.question,
+        currentQuestionType: firstAssignment.questionType,
+        timer: 15,
+        answers: [],
+      }
+      
+      setStartingStats(newStartingStats)
+      setStartingStatsTimer(15)
+      
+      // Sync to Firebase
+      updateGameState(roomCode, { startingStats: newStartingStats })
+      console.log('🎲 Starting Stats initialized:', newStartingStats)
+    }
+  }, [livePhase, isHost, firebaseReady, players, startingStats.questionAssignments?.length])
+  
+  // Starting Stats timer (host only)
+  useEffect(() => {
+    if (livePhase !== 'starting-stats' || !isHost) return
+    
+    // Clear any existing timer
+    if (startingStatsTimerRef.current) {
+      clearInterval(startingStatsTimerRef.current)
+    }
+    
+    startingStatsTimerRef.current = setInterval(async () => {
+      setStartingStatsTimer(prev => {
+        const newTime = prev - 1
+        
+        // Sync timer to Firebase
+        if (firebaseReady && roomCode) {
+          const currentStats = useGameStore.getState().startingStats
+          updateGameState(roomCode, { 
+            startingStats: { ...currentStats, timer: newTime }
+          })
+        }
+        
+        // When timer hits 0, move to next question
+        if (newTime <= 0) {
+          moveToNextStartingStatsQuestion()
+          return 15 // Reset timer
+        }
+        
+        return newTime
+      })
+    }, 1000)
+    
+    return () => {
+      if (startingStatsTimerRef.current) {
+        clearInterval(startingStatsTimerRef.current)
+      }
+    }
+  }, [livePhase, isHost, firebaseReady, roomCode])
+  
+  // Move to next Starting Stats question
+  const moveToNextStartingStatsQuestion = async () => {
+    if (!isHost) return
+    
+    const currentStats = useGameStore.getState().startingStats
+    const assignments = currentStats.questionAssignments || []
+    const currentIndex = assignments.findIndex(
+      a => a.playerId === currentStats.activePlayerId && 
+           a.questionType === currentStats.currentQuestionType
+    )
+    
+    const nextIndex = currentIndex + 1
+    
+    if (nextIndex >= assignments.length) {
+      // All questions answered - complete the phase
+      await completeStartingStatsPhase()
+      return
+    }
+    
+    const nextAssignment = assignments[nextIndex]
+    const newStats = {
+      ...currentStats,
+      currentQuestionIndex: nextIndex,
+      activePlayerId: nextAssignment.playerId,
+      activePlayerName: nextAssignment.playerName,
+      currentQuestion: nextAssignment.question,
+      currentQuestionType: nextAssignment.questionType,
+      timer: 15,
+    }
+    
+    setStartingStats(newStats)
+    setStartingStatsTimer(15)
+    setHasSubmittedStartingStat(false)
+    
+    // Sync to Firebase
+    if (firebaseReady && roomCode) {
+      await updateGameState(roomCode, { startingStats: newStats })
+    }
+    
+    console.log('➡️ Moving to next Starting Stats question:', nextAssignment)
+  }
+  
+  // Submit Starting Stats answer
+  const submitStartingStatsAnswer = async (answer) => {
+    if (!answer.trim() || hasSubmittedStartingStat) return
+    
+    setHasSubmittedStartingStat(true)
+    
+    const currentStats = useGameStore.getState().startingStats
+    const newAnswer = {
+      playerId: playerId,
+      playerName: username,
+      question: currentStats.currentQuestion,
+      questionType: currentStats.currentQuestionType,
+      answer: answer.trim(),
+    }
+    
+    const newAnswers = [...(currentStats.answers || []), newAnswer]
+    const newStats = { ...currentStats, answers: newAnswers }
+    
+    // If this is the name question, also store the avatar name
+    if (currentStats.currentQuestionType === 'name') {
+      newStats.avatarName = answer.trim()
+    }
+    
+    setStartingStats(newStats)
+    setStartingStatsInput('')
+    
+    // Sync to Firebase
+    if (firebaseReady && roomCode) {
+      await updateGameState(roomCode, { startingStats: newStats })
+      await sendChatMessage(roomCode, { 
+        username, 
+        message: `📝 Submitted: "${answer.trim().substring(0, 30)}${answer.length > 30 ? '...' : ''}"` 
+      })
+    }
+    
+    // If host, immediately move to next question after a brief delay
+    if (isHost) {
+      setTimeout(() => moveToNextStartingStatsQuestion(), 2000)
+    }
+  }
+  
+  // Complete Starting Stats phase and transition to reaction round
+  const completeStartingStatsPhase = async () => {
+    if (!isHost) return
+    
+    console.log('🎉 Starting Stats complete! Applying attributes...')
+    
+    const currentStats = useGameStore.getState().startingStats
+    const answers = currentStats.answers || []
+    
+    // Extract attributes by type
+    const physicalAttrs = answers.filter(a => a.questionType === 'physical').map(a => a.answer)
+    const emotionalAttrs = answers.filter(a => a.questionType === 'emotional').map(a => a.answer)
+    const nameAnswer = answers.find(a => a.questionType === 'name')
+    
+    // Combine all attributes
+    const allAttributes = [
+      ...physicalAttrs,
+      ...emotionalAttrs.map(e => `emotionally ${e}`),
+    ]
+    
+    // Set avatar name if provided
+    if (nameAnswer) {
+      setAvatarName(nameAnswer.answer)
+    }
+    
+    // Add all attributes to the avatar
+    const currentAvatar = useGameStore.getState().avatar
+    const updatedAvatar = {
+      ...currentAvatar,
+      name: nameAnswer?.answer || currentAvatar.name,
+      attributes: [...(currentAvatar.attributes || []), ...allAttributes],
+    }
+    useGameStore.setState({ avatar: updatedAvatar })
+    
+    // Clear starting stats timer
+    if (startingStatsTimerRef.current) {
+      clearInterval(startingStatsTimerRef.current)
+    }
+    
+    // Transition to reaction round (phase0 - special first round)
+    // For now, we'll go directly to phase1 but mark it as reaction round
+    setLivePhase('phase1')
+    setPhaseTimer(30)
+    
+    // Sync to Firebase
+    if (firebaseReady && roomCode) {
+      await updateGameState(roomCode, {
+        livePhase: 'phase1',
+        phaseTimer: 30,
+        avatar: updatedAvatar,
+        startingStatsComplete: true,
+        // Store the initial attributes for the reaction round
+        initialStartingStatsAttributes: allAttributes,
+      })
+    }
+    
+    console.log('✅ Avatar created:', updatedAvatar)
+  }
+  
+  // ============ END STARTING STATS MODE LOGIC ============
   
   // Start Phase 1 - Dater asks Avatar about themselves
   // Only HOST generates questions; non-hosts receive via Firebase
@@ -1082,6 +1384,137 @@ function LiveDateScene() {
                 </p>
               )}
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Starting Stats Mode Overlay */}
+      <AnimatePresence>
+        {livePhase === 'starting-stats' && (
+          <motion.div 
+            className="starting-stats-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="starting-stats-container">
+              <div className="starting-stats-header">
+                <h1 className="starting-stats-title">🎲 Create Your Date</h1>
+                <div className="starting-stats-progress">
+                  Question {(startingStats.questionAssignments?.findIndex(
+                    a => a.playerId === startingStats.activePlayerId && 
+                         a.questionType === startingStats.currentQuestionType
+                  ) || 0) + 1} of {startingStats.questionAssignments?.length || 6}
+                </div>
+              </div>
+              
+              <div className="starting-stats-timer-bar">
+                <div 
+                  className="starting-stats-timer-fill"
+                  style={{ width: `${(startingStatsTimer / 15) * 100}%` }}
+                />
+                <span className="starting-stats-timer-text">{startingStatsTimer}s</span>
+              </div>
+              
+              {/* Show who's answering and the question */}
+              <div className="starting-stats-question-area">
+                <div className="question-type-badge">
+                  {startingStats.currentQuestionType === 'physical' && '👤 Physical Attribute'}
+                  {startingStats.currentQuestionType === 'emotional' && '💭 Emotional State'}
+                  {startingStats.currentQuestionType === 'name' && '📛 Name Your Date'}
+                </div>
+                
+                <div className="active-player-indicator">
+                  {startingStats.activePlayerId === playerId ? (
+                    <span className="your-turn">✨ Your Turn!</span>
+                  ) : (
+                    <span className="waiting-for">{startingStats.activePlayerName} is answering...</span>
+                  )}
+                </div>
+                
+                <h2 className="starting-stats-question">
+                  {startingStats.currentQuestion}
+                </h2>
+              </div>
+              
+              {/* Input area - only for active player */}
+              {startingStats.activePlayerId === playerId ? (
+                <div className="starting-stats-input-area">
+                  <form onSubmit={(e) => {
+                    e.preventDefault()
+                    submitStartingStatsAnswer(startingStatsInput)
+                  }}>
+                    <input
+                      type="text"
+                      className="starting-stats-input"
+                      value={startingStatsInput}
+                      onChange={(e) => setStartingStatsInput(e.target.value)}
+                      placeholder={
+                        startingStats.currentQuestionType === 'physical' 
+                          ? "e.g., 'has glowing red eyes'" 
+                          : startingStats.currentQuestionType === 'emotional'
+                          ? "e.g., 'nervous and sweaty'"
+                          : "e.g., 'Gerald'"
+                      }
+                      disabled={hasSubmittedStartingStat}
+                      autoFocus
+                    />
+                    <button 
+                      type="submit" 
+                      className="starting-stats-submit-btn"
+                      disabled={!startingStatsInput.trim() || hasSubmittedStartingStat}
+                    >
+                      {hasSubmittedStartingStat ? '✓ Submitted!' : 'Submit'}
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <div className="starting-stats-spectator">
+                  <span className="spectator-icon">👀</span>
+                  <span>Watching {startingStats.activePlayerName}...</span>
+                </div>
+              )}
+              
+              {/* Show submitted answers */}
+              {startingStats.answers && startingStats.answers.length > 0 && (
+                <div className="starting-stats-answers">
+                  <h3 className="answers-title">Avatar So Far:</h3>
+                  <div className="answers-list">
+                    {startingStats.answers.map((answer, i) => (
+                      <div key={i} className={`answer-item answer-${answer.questionType}`}>
+                        <span className="answer-type">
+                          {answer.questionType === 'physical' && '👤'}
+                          {answer.questionType === 'emotional' && '💭'}
+                          {answer.questionType === 'name' && '📛'}
+                        </span>
+                        <span className="answer-text">{answer.answer}</span>
+                        <span className="answer-by">- {answer.playerName}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Answer popup overlay */}
+            <AnimatePresence>
+              {showStartingStatsAnswer && (
+                <motion.div 
+                  className="answer-popup"
+                  initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, y: -20 }}
+                >
+                  <span className="answer-popup-icon">
+                    {showStartingStatsAnswer.questionType === 'physical' && '👤'}
+                    {showStartingStatsAnswer.questionType === 'emotional' && '💭'}
+                    {showStartingStatsAnswer.questionType === 'name' && '📛'}
+                  </span>
+                  <span className="answer-popup-player">{showStartingStatsAnswer.playerName}</span>
+                  <span className="answer-popup-text">"{showStartingStatsAnswer.answer}"</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

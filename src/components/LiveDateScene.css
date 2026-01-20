@@ -94,6 +94,307 @@
 }
 
 /* ============================================
+   STARTING STATS MODE OVERLAY
+   ============================================ */
+
+.starting-stats-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, #1a0a10 0%, #2d1520 50%, #1a0a10 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1002;
+  padding: 20px;
+}
+
+.starting-stats-container {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.starting-stats-header {
+  text-align: center;
+}
+
+.starting-stats-title {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ff4d6d 0%, #ff8fab 50%, #ffd166 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 8px 0;
+  text-shadow: 0 0 40px rgba(255, 77, 109, 0.5);
+}
+
+.starting-stats-progress {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.starting-stats-timer-bar {
+  position: relative;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.starting-stats-timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #06d6a0 0%, #ffd166 50%, #ff4d6d 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.starting-stats-timer-text {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.starting-stats-question-area {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  border: 1px solid rgba(255, 77, 109, 0.2);
+}
+
+.question-type-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  background: rgba(255, 77, 109, 0.2);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ff8fab;
+  margin-bottom: 12px;
+}
+
+.active-player-indicator {
+  margin-bottom: 16px;
+}
+
+.your-turn {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #06d6a0;
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { 
+    text-shadow: 0 0 10px rgba(6, 214, 160, 0.5);
+  }
+  50% { 
+    text-shadow: 0 0 30px rgba(6, 214, 160, 0.8), 0 0 60px rgba(6, 214, 160, 0.4);
+  }
+}
+
+.waiting-for {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.starting-stats-question {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.starting-stats-input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.starting-stats-input-area form {
+  display: flex;
+  gap: 12px;
+}
+
+.starting-stats-input {
+  flex: 1;
+  padding: 14px 18px;
+  font-size: 1rem;
+  border: 2px solid rgba(255, 77, 109, 0.3);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.starting-stats-input:focus {
+  border-color: #ff4d6d;
+  box-shadow: 0 0 20px rgba(255, 77, 109, 0.3);
+}
+
+.starting-stats-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.starting-stats-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.starting-stats-submit-btn {
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ff4d6d 0%, #ff8fab 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.starting-stats-submit-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(255, 77, 109, 0.4);
+}
+
+.starting-stats-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.starting-stats-spectator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.spectator-icon {
+  font-size: 1.5rem;
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.starting-stats-answers {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.answers-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.answer-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.answer-item.answer-physical {
+  border-left: 3px solid #06d6a0;
+}
+
+.answer-item.answer-emotional {
+  border-left: 3px solid #9d4edd;
+}
+
+.answer-item.answer-name {
+  border-left: 3px solid #ffd166;
+}
+
+.answer-type {
+  font-size: 1.2rem;
+}
+
+.answer-text {
+  flex: 1;
+  color: #fff;
+  font-weight: 500;
+}
+
+.answer-by {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+}
+
+/* Answer Popup */
+.answer-popup {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(145deg, #3d2233 0%, #4a2a3f 100%);
+  padding: 24px 32px;
+  border-radius: 16px;
+  text-align: center;
+  border: 2px solid rgba(255, 77, 109, 0.4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  z-index: 1003;
+}
+
+.answer-popup-icon {
+  display: block;
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.answer-popup-player {
+  display: block;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 4px;
+}
+
+.answer-popup-text {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* ============================================
    TUTORIAL OVERLAY
    ============================================ */
 
