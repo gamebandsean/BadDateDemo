@@ -863,16 +863,27 @@ function LiveDateScene() {
   const finishReactionRound = async () => {
     console.log('✅ Reaction round complete, starting Phase 1')
     
+    // Generate the opening question for Phase 1
+    const openingLine = getOpeningLine()
+    
     setLivePhase('phase1')
     setPhaseTimer(30)
+    setDaterBubble(openingLine)
+    setAvatarBubble('') // Clear avatar bubble
+    addDateMessage('dater', openingLine)
     
     if (firebaseReady && roomCode) {
       await updateGameState(roomCode, {
         livePhase: 'phase1',
         phaseTimer: 30,
         reactionRoundComplete: true,
+        currentQuestion: openingLine,
+        daterBubble: openingLine,
+        avatarBubble: '',
       })
     }
+    
+    console.log('❓ Dater asks:', openingLine)
   }
   
   // ============ END STARTING STATS MODE LOGIC ============
