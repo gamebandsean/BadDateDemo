@@ -592,6 +592,13 @@ function LiveDateScene() {
   const moveToNextStartingStatsQuestion = async () => {
     if (!isHost) return
     
+    // Guard: check phase is still starting-stats
+    const currentPhase = useGameStore.getState().livePhase
+    if (currentPhase !== 'starting-stats') {
+      console.log('⏭️ moveToNextStartingStatsQuestion skipped - phase is:', currentPhase)
+      return
+    }
+    
     const currentStats = useGameStore.getState().startingStats
     if (!currentStats) return
     
@@ -726,6 +733,19 @@ function LiveDateScene() {
   const completeStartingStatsPhase = async () => {
     if (!isHost) return
     
+    // Guard against being called multiple times
+    const currentPhase = useGameStore.getState().livePhase
+    if (currentPhase !== 'starting-stats') {
+      console.log('⏭️ completeStartingStatsPhase called but phase is already:', currentPhase)
+      return
+    }
+    
+    // Clear timer immediately to prevent any more calls
+    if (startingStatsTimerRef.current) {
+      clearInterval(startingStatsTimerRef.current)
+      startingStatsTimerRef.current = null
+    }
+    
     console.log('🎉 Starting Stats complete! Applying attributes...')
     
     const currentStats = useGameStore.getState().startingStats
@@ -755,11 +775,6 @@ function LiveDateScene() {
       attributes: [...(currentAvatar.attributes || []), ...allAttributes],
     }
     useGameStore.setState({ avatar: updatedAvatar })
-    
-    // Clear starting stats timer
-    if (startingStatsTimerRef.current) {
-      clearInterval(startingStatsTimerRef.current)
-    }
     
     // Transition to REACTION ROUND - dater reacts to all starting stats
     setLivePhase('reaction')

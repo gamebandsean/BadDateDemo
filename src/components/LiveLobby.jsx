@@ -41,6 +41,7 @@ function LiveLobby() {
       const registry = new PartySocket({
         host: PARTYKIT_HOST,
         room: 'roomregistry',
+        party: 'roomregistry',
       })
       
       registry.addEventListener('message', (event) => {
@@ -102,6 +103,7 @@ function LiveLobby() {
       const registry = new PartySocket({
         host: PARTYKIT_HOST,
         room: 'roomregistry',
+        party: 'roomregistry',
       })
       
       registry.addEventListener('open', () => {
@@ -114,7 +116,8 @@ function LiveLobby() {
             playerCount: 1
           }
         }))
-        registry.close()
+        // Don't close immediately - let the message be sent
+        setTimeout(() => registry.close(), 500)
       })
       
       // Update local state
@@ -195,6 +198,7 @@ function LiveLobby() {
       const registry = new PartySocket({
         host: PARTYKIT_HOST,
         room: 'roomregistry',
+        party: 'roomregistry',
       })
       
       await new Promise((resolve) => {
