@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
-import { isFirebaseAvailable, createRoom, joinRoom, generatePlayerId, subscribeToAvailableRooms } from '../services/firebase'
+import { isFirebaseAvailable, createRoom, joinRoom, generatePlayerId, subscribeToAvailableRooms, deleteAllRooms } from '../services/firebase'
 import './LiveLobby.css'
 
 // Main game entry screen - Bad Date
@@ -22,6 +22,8 @@ function LiveLobby() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [firebaseReady, setFirebaseReady] = useState(isFirebaseAvailable())
+  const [showAdminModal, setShowAdminModal] = useState(false)
+  const [adminStatus, setAdminStatus] = useState('')
   
   useEffect(() => {
     // Check again after a short delay in case Firebase is still initializing
@@ -123,6 +125,19 @@ function LiveLobby() {
     setPhase('live-game-lobby')
     setIsLoading(false)
   }
+  
+  // Admin: Delete all rooms
+  const handleDeleteAllRooms = async () => {
+    setAdminStatus('Deleting...')
+    const result = await deleteAllRooms()
+    if (result.success) {
+      setAdminStatus(`✅ Deleted ${result.count} room${result.count !== 1 ? 's' : ''}`)
+    } else {
+      setAdminStatus(`❌ Error: ${result.error || 'Failed to delete rooms'}`)
+    }
+    // Clear status after 3 seconds
+    setTimeout(() => setAdminStatus(''), 3000)
+  }
 
   // Main view - Choose Host or Join
   if (view === 'main') {
@@ -174,11 +189,72 @@ function LiveLobby() {
           >
             <h1 className="game-title">
               <span className="title-bad">Bad</span>
-              <span className="title-heart">💔</span>
+              <span 
+                className="title-heart clickable-heart"
+                onClick={() => setShowAdminModal(true)}
+                title="Admin Menu"
+              >
+                💔
+              </span>
               <span className="title-date">Date</span>
             </h1>
             <p className="game-tagline">Where love goes hilariously wrong</p>
           </motion.div>
+          
+          {/* Admin Modal */}
+          <AnimatePresence>
+            {showAdminModal && (
+              <motion.div 
+                className="admin-modal-overlay"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowAdminModal(false)}
+              >
+                <motion.div 
+                  className="admin-modal"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="admin-modal-header">
+                    <h3>🔧 Admin Menu</h3>
+                    <button 
+                      className="admin-close-btn"
+                      onClick={() => setShowAdminModal(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <div className="admin-modal-content">
+                    <p className="admin-warning">⚠️ These actions cannot be undone</p>
+                    
+                    <motion.button
+                      className="admin-action-btn danger"
+                      onClick={handleDeleteAllRooms}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span className="btn-icon">🗑️</span>
+                      <span>Delete All Rooms</span>
+                    </motion.button>
+                    
+                    {adminStatus && (
+                      <motion.div 
+                        className="admin-status"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        {adminStatus}
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           {!firebaseReady && (
             <div className="firebase-warning">

@@ -330,6 +330,30 @@ export const deleteRoom = async (roomCode) => {
   }
 }
 
+// Delete ALL rooms (admin function)
+export const deleteAllRooms = async () => {
+  if (!database) return { success: false, count: 0 }
+  
+  const roomsRef = ref(database, 'rooms')
+  try {
+    const snapshot = await get(roomsRef)
+    if (!snapshot.exists()) return { success: true, count: 0 }
+    
+    const rooms = snapshot.val()
+    const roomCodes = Object.keys(rooms)
+    const count = roomCodes.length
+    
+    // Delete the entire rooms node
+    await remove(roomsRef)
+    console.log(`🗑️ Deleted ${count} rooms`)
+    
+    return { success: true, count }
+  } catch (error) {
+    console.error('Error deleting all rooms:', error)
+    return { success: false, count: 0, error: error.message }
+  }
+}
+
 // Get all available rooms (rooms in lobby phase that haven't started)
 export const getAvailableRooms = async () => {
   if (!database) return []
