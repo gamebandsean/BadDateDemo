@@ -2,14 +2,11 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import { useGameStore } from '../store/gameStore'
-import { 
-  isFirebaseAvailable, 
-  subscribeToPlayers, 
-  subscribeToRoom,
-  updateGameState,
-  leaveRoom 
-} from '../services/firebase'
+import PartySocket from 'partysocket'
 import './LiveGameLobby.css'
+
+// PartyKit host
+const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999'
 
 function LiveGameLobby() {
   const setPhase = useGameStore((state) => state.setPhase)
@@ -22,59 +19,89 @@ function LiveGameLobby() {
   const setPlayers = useGameStore((state) => state.setPlayers)
   const username = useGameStore((state) => state.username)
   const playerId = useGameStore((state) => state.playerId)
+  const partyClient = useGameStore((state) => state.partyClient)
   
   const [copied, setCopied] = useState(false)
-  const [firebaseReady] = useState(isFirebaseAvailable())
   const [showTutorial, setShowTutorial] = useState(false)
   const [startingStatsMode, setStartingStatsMode] = useState(true) // Default ON
   
-  // Subscribe to real-time player updates
+  // Subscribe to PartyKit state updates
   useEffect(() => {
-    if (!firebaseReady || !roomCode) return
+    if (!partyClient) {
+      console.warn('No PartyKit client available')
+      return
+    }
     
-    // Subscribe to players
-    const unsubscribePlayers = subscribeToPlayers(roomCode, (playersList) => {
-      setPlayers(playersList)
-    })
+    console.log('📡 Setting up PartyKit state subscription in lobby')
     
-    // Subscribe to room for dater info and game state
-    const unsubscribeRoom = subscribeToRoom(roomCode, (roomData) => {
-      if (roomData?.dater && !selectedDater) {
-        setSelectedDater(roomData.dater)
+    const unsubscribe = partyClient.onStateChange((state) => {
+      console.log('📡 Lobby received state update:', state)
+      
+      // Update players list
+      if (state.players) {
+        setPlayers(state.players.map(p => ({
+          id: p.odId,
+          odId: p.odId,
+          username: p.username,
+          isHost: p.isHost
+        })))
+      }
+      
+      // Update dater if set
+      if (state.dater && !selectedDater) {
+        setSelectedDater(state.dater)
       }
       
       // Check if game has started (for non-hosts)
-      if (roomData?.gameState?.phase === 'live-date') {
-        console.log('🎮 Non-host detected game start, syncing state:', roomData.gameState)
+      if (state.phase !== 'lobby') {
+        console.log('🎮 Game started! Transitioning to live-date...')
         
-        // Sync ALL relevant state BEFORE transitioning (so it's set when LiveDateScene loads)
-        if (typeof roomData.gameState.showTutorial === 'boolean') {
-          useGameStore.getState().setShowTutorial(roomData.gameState.showTutorial)
+        // Sync state to local store before transitioning
+        if (typeof state.showTutorial === 'boolean') {
+          useGameStore.getState().setShowTutorial(state.showTutorial)
         }
-        if (typeof roomData.gameState.tutorialStep === 'number') {
-          useGameStore.getState().setTutorialStep(roomData.gameState.tutorialStep)
+        if (typeof state.tutorialStep === 'number') {
+          useGameStore.getState().setTutorialStep(state.tutorialStep)
         }
-        if (roomData.gameState.livePhase) {
-          useGameStore.getState().setLivePhase(roomData.gameState.livePhase)
+        if (state.phase) {
+          useGameStore.getState().setLivePhase(state.phase)
         }
-        // Sync Starting Stats mode!
-        if (typeof roomData.gameState.startingStatsMode === 'boolean') {
-          useGameStore.setState({ startingStatsMode: roomData.gameState.startingStatsMode })
+        if (typeof state.startingStatsMode === 'boolean') {
+          useGameStore.setState({ startingStatsMode: state.startingStatsMode })
         }
-        // Sync starting stats data if available
-        if (roomData.gameState.startingStats) {
-          useGameStore.getState().setStartingStats(roomData.gameState.startingStats)
+        if (state.startingStats) {
+          useGameStore.getState().setStartingStats(state.startingStats)
         }
         
+        // Transition to game
         setPhase('live-date')
       }
     })
     
     return () => {
-      unsubscribePlayers()
-      unsubscribeRoom()
+      unsubscribe()
     }
-  }, [firebaseReady, roomCode, setPlayers, setSelectedDater, selectedDater, setPhase])
+  }, [partyClient, setPlayers, setSelectedDater, selectedDater, setPhase])
+  
+  // Update registry with player count when players change
+  useEffect(() => {
+    if (isHost && roomCode && players.length > 0) {
+      const registry = new PartySocket({
+        host: PARTYKIT_HOST,
+        room: 'room-registry',
+        party: 'room-registry'
+      })
+      
+      registry.addEventListener('open', () => {
+        registry.send(JSON.stringify({
+          type: 'UPDATE_ROOM',
+          code: roomCode,
+          playerCount: players.length
+        }))
+        setTimeout(() => registry.close(), 500)
+      })
+    }
+  }, [isHost, roomCode, players.length])
   
   const copyCode = () => {
     navigator.clipboard.writeText(roomCode)
@@ -83,49 +110,58 @@ function LiveGameLobby() {
   }
   
   const handleStart = async () => {
-    // Determine starting phase
-    let startPhase = 'phase1'
-    let startTimer = 30
-    if (showTutorial) {
-      startPhase = 'tutorial'
-      startTimer = 0
-    } else if (startingStatsMode) {
-      startPhase = 'starting-stats'
-      startTimer = 15
+    if (!partyClient) {
+      console.error('No PartyKit client!')
+      return
     }
     
-    if (firebaseReady) {
-      // Update Firebase to signal game start to all players
-      await updateGameState(roomCode, { 
-        phase: 'live-date', 
-        livePhase: startPhase, // IMPORTANT: Set the live phase
-        phaseTimer: startTimer,
-        showTutorial,
-        tutorialStep: showTutorial ? 1 : 0, // IMPORTANT: Sync tutorial step for clients!
-        startingStatsMode,
-        compatibility: 50, // Reset compatibility
-        cycleCount: 0, // Reset round count
-        // Initialize starting stats state (will be populated by host in LiveDateScene)
-        startingStats: startingStatsMode ? {
-          currentQuestionIndex: 0,
-          activePlayerId: null,
-          activePlayerName: '',
-          currentQuestion: '',
-          currentQuestionType: '',
-          timer: 15,
-          answers: [],
-          questionAssignments: [], // Host will populate this
-          avatarName: ''
-        } : null
-      })
-    }
+    console.log('🚀 Starting game...')
+    
+    // Start the game via PartyKit
+    partyClient.startGame(showTutorial, startingStatsMode)
+    
+    // Remove room from registry (game has started)
+    const registry = new PartySocket({
+      host: PARTYKIT_HOST,
+      room: 'room-registry',
+      party: 'room-registry'
+    })
+    
+    registry.addEventListener('open', () => {
+      registry.send(JSON.stringify({
+        type: 'REMOVE_ROOM',
+        code: roomCode
+      }))
+      setTimeout(() => registry.close(), 500)
+    })
+    
+    // Update local state
     startLiveDate(null, showTutorial, startingStatsMode)
   }
   
   const handleBack = async () => {
-    if (firebaseReady && playerId) {
-      await leaveRoom(roomCode, playerId)
+    if (partyClient) {
+      partyClient.leave(playerId)
+      partyClient.disconnect()
     }
+    
+    // Remove room from registry if host leaves
+    if (isHost) {
+      const registry = new PartySocket({
+        host: PARTYKIT_HOST,
+        room: 'room-registry',
+        party: 'room-registry'
+      })
+      
+      registry.addEventListener('open', () => {
+        registry.send(JSON.stringify({
+          type: 'REMOVE_ROOM',
+          code: roomCode
+        }))
+        setTimeout(() => registry.close(), 500)
+      })
+    }
+    
     setPhase('live-lobby')
   }
   
@@ -198,8 +234,8 @@ function LiveGameLobby() {
             <AnimatePresence>
               {players.map((player, index) => (
                 <motion.div
-                  key={player.id}
-                  className={`player-item ${player.isHost ? 'is-host' : ''} ${player.id === playerId ? 'is-you' : ''}`}
+                  key={player.id || player.odId}
+                  className={`player-item ${player.isHost ? 'is-host' : ''} ${(player.id === playerId || player.odId === playerId) ? 'is-you' : ''}`}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
@@ -210,7 +246,7 @@ function LiveGameLobby() {
                   </span>
                   <span className="player-name">{player.username || 'Loading...'}</span>
                   {player.isHost && <span className="host-badge">👑 Host</span>}
-                  {player.id === playerId && !player.isHost && (
+                  {(player.id === playerId || player.odId === playerId) && !player.isHost && (
                     <span className="you-badge">You</span>
                   )}
                 </motion.div>

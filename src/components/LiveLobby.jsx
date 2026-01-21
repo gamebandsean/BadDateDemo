@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
-import { isFirebaseAvailable, createRoom, joinRoom, generatePlayerId, subscribeToAvailableRooms, deleteAllRooms } from '../services/firebase'
+import { PartyGameClient, generateRoomCode, generatePlayerId } from '../services/partyClient'
+import PartySocket from 'partysocket'
 import './LiveLobby.css'
+
+// PartyKit host - update after deployment
+const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999'
 
 // Main game entry screen - Bad Date
 
@@ -14,6 +18,7 @@ function LiveLobby() {
   const setPlayerId = useGameStore((state) => state.setPlayerId)
   const setSelectedDater = useGameStore((state) => state.setSelectedDater)
   const setPlayers = useGameStore((state) => state.setPlayers)
+  const setPartyClient = useGameStore((state) => state.setPartyClient)
   const daters = useGameStore((state) => state.daters)
   
   const [view, setView] = useState('main') // 'main', 'host', 'join'
@@ -21,36 +26,45 @@ function LiveLobby() {
   const [username, setUsernameLocal] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [firebaseReady, setFirebaseReady] = useState(isFirebaseAvailable())
+  const [partyKitReady, setPartyKitReady] = useState(true) // PartyKit is always "ready"
   const [showAdminModal, setShowAdminModal] = useState(false)
   const [adminStatus, setAdminStatus] = useState('')
   
-  useEffect(() => {
-    // Check again after a short delay in case Firebase is still initializing
-    const timer = setTimeout(() => {
-      setFirebaseReady(isFirebaseAvailable())
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [])
+  // Registry connection for room discovery
+  const registryRef = useRef(null)
   
-  // Subscribe to available rooms when in join view
+  // Connect to the registry room for room discovery
   useEffect(() => {
-    if (view === 'join' && firebaseReady) {
-      const unsubscribe = subscribeToAvailableRooms((rooms) => {
-        setAvailableRooms(rooms)
+    if (view === 'join') {
+      console.log('🔍 Connecting to room registry...')
+      
+      const registry = new PartySocket({
+        host: PARTYKIT_HOST,
+        room: 'room-registry',
       })
-      return () => unsubscribe()
+      
+      registry.addEventListener('message', (event) => {
+        const data = JSON.parse(event.data)
+        if (data.type === 'ROOMS_LIST') {
+          console.log('📋 Available rooms:', data.rooms)
+          setAvailableRooms(data.rooms || [])
+        }
+      })
+      
+      registry.addEventListener('open', () => {
+        console.log('✅ Connected to room registry')
+        // Request room list
+        registry.send(JSON.stringify({ type: 'GET_ROOMS' }))
+      })
+      
+      registryRef.current = registry
+      
+      return () => {
+        registry.close()
+        registryRef.current = null
+      }
     }
-  }, [view, firebaseReady])
-  
-  const generateRoomCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    let code = ''
-    for (let i = 0; i < 6; i++) {
-      code += chars[Math.floor(Math.random() * chars.length)]
-    }
-    return code
-  }
+  }, [view])
   
   const handleCreate = async () => {
     setIsLoading(true)
@@ -61,29 +75,63 @@ function LiveLobby() {
     const odId = generatePlayerId()
     const randomDater = daters[Math.floor(Math.random() * daters.length)]
     
-    if (firebaseReady) {
-      const success = await createRoom(roomCode, {
-        username: playerName,
-        odId: odId,
-        dater: randomDater,
-        avatar: { attributes: [] }
+    try {
+      // Create PartyKit client and connect to room
+      const client = new PartyGameClient(roomCode)
+      
+      // Wait for connection
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Connection timeout')), 5000)
+        
+        const checkConnection = () => {
+          if (client.isConnected()) {
+            clearTimeout(timeout)
+            resolve()
+          } else {
+            setTimeout(checkConnection, 100)
+          }
+        }
+        checkConnection()
       })
       
-      if (!success) {
-        setError('Failed to create room. Try again.')
-        setIsLoading(false)
-        return
-      }
+      // Join as host
+      client.join(odId, playerName)
+      client.setDater(randomDater)
+      
+      // Register room with the registry
+      const registry = new PartySocket({
+        host: PARTYKIT_HOST,
+        room: 'room-registry',
+      })
+      
+      registry.addEventListener('open', () => {
+        registry.send(JSON.stringify({
+          type: 'REGISTER_ROOM',
+          room: {
+            code: roomCode,
+            host: playerName,
+            daterName: randomDater?.name || 'Mystery Date',
+            playerCount: 1
+          }
+        }))
+        registry.close()
+      })
+      
+      // Update local state
+      setUsername(playerName)
+      setRoomCode(roomCode)
+      setIsHost(true)
+      setPlayerId(odId)
+      setSelectedDater(randomDater)
+      setPlayers([{ id: odId, odId, username: playerName, isHost: true }])
+      setPartyClient(client)
+      setPhase('live-game-lobby')
+      
+    } catch (err) {
+      console.error('Failed to create room:', err)
+      setError('Failed to create room. Try again.')
     }
     
-    // Update local state
-    setUsername(playerName)
-    setRoomCode(roomCode)
-    setIsHost(true)
-    setPlayerId(odId)
-    setSelectedDater(randomDater)
-    setPlayers([{ id: odId, username: playerName, isHost: true }])
-    setPhase('live-game-lobby')
     setIsLoading(false)
   }
   
@@ -99,42 +147,72 @@ function LiveLobby() {
     const playerName = username.trim()
     const odId = generatePlayerId()
     
-    if (firebaseReady) {
-      const result = await joinRoom(roomCode, {
-        username: playerName,
-        odId: odId
+    try {
+      // Create PartyKit client and connect to room
+      const client = new PartyGameClient(roomCode)
+      
+      // Wait for connection and initial state
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Connection timeout')), 5000)
+        
+        const unsubscribe = client.onStateChange((state) => {
+          clearTimeout(timeout)
+          unsubscribe()
+          
+          // Get dater from room state
+          if (state?.dater) {
+            setSelectedDater(state.dater)
+          }
+          
+          resolve()
+        })
       })
       
-      if (!result.success) {
-        setError(result.error || 'Failed to join room')
-        setIsLoading(false)
-        return
-      }
+      // Join as player
+      client.join(odId, playerName)
       
-      // Set dater from room data
-      if (result.roomData?.dater) {
-        setSelectedDater(result.roomData.dater)
-      }
+      // Update local state
+      setUsername(playerName)
+      setRoomCode(roomCode)
+      setIsHost(false)
+      setPlayerId(odId)
+      setPartyClient(client)
+      setPhase('live-game-lobby')
+      
+    } catch (err) {
+      console.error('Failed to join room:', err)
+      setError('Failed to join room. It may no longer exist.')
     }
     
-    // Update local state
-    setUsername(playerName)
-    setRoomCode(roomCode)
-    setIsHost(false)
-    setPlayerId(odId)
-    setPhase('live-game-lobby')
     setIsLoading(false)
   }
   
-  // Admin: Delete all rooms
+  // Admin: Delete all rooms (clears registry)
   const handleDeleteAllRooms = async () => {
     setAdminStatus('Deleting...')
-    const result = await deleteAllRooms()
-    if (result.success) {
-      setAdminStatus(`✅ Deleted ${result.count} room${result.count !== 1 ? 's' : ''}`)
-    } else {
-      setAdminStatus(`❌ Error: ${result.error || 'Failed to delete rooms'}`)
+    
+    try {
+      const registry = new PartySocket({
+        host: PARTYKIT_HOST,
+        room: 'room-registry',
+      })
+      
+      await new Promise((resolve) => {
+        registry.addEventListener('open', () => {
+          registry.send(JSON.stringify({ type: 'CLEAR_ALL_ROOMS' }))
+          setTimeout(() => {
+            registry.close()
+            resolve()
+          }, 500)
+        })
+      })
+      
+      setAdminStatus('✅ All rooms cleared')
+      setAvailableRooms([])
+    } catch (err) {
+      setAdminStatus(`❌ Error: ${err.message}`)
     }
+    
     // Clear status after 3 seconds
     setTimeout(() => setAdminStatus(''), 3000)
   }
@@ -256,12 +334,6 @@ function LiveLobby() {
             )}
           </AnimatePresence>
           
-          {!firebaseReady && (
-            <div className="firebase-warning">
-              ⚠️ Multiplayer unavailable - Firebase not configured
-            </div>
-          )}
-          
           {/* Username Input */}
           <div className="username-section">
             <label className="input-label">Your Name</label>
@@ -276,12 +348,22 @@ function LiveLobby() {
             />
           </div>
           
+          {error && (
+            <motion.div 
+              className="error-message-inline"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              {error}
+            </motion.div>
+          )}
+          
           {/* Main Action Buttons */}
           <div className="main-buttons">
             <motion.button
               className="mode-btn create-btn"
               onClick={handleCreate}
-              disabled={!firebaseReady || isLoading}
+              disabled={isLoading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -292,7 +374,6 @@ function LiveLobby() {
             <motion.button
               className="mode-btn join-btn"
               onClick={() => setView('join')}
-              disabled={!firebaseReady}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -316,7 +397,7 @@ function LiveLobby() {
     )
   }
 
-  // Host view - Create room
+  // Host view - Create room (kept for backwards compatibility, not currently used)
   if (view === 'host') {
     return (
       <div className="live-lobby">

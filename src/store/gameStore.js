@@ -612,6 +612,10 @@ export const useGameStore = create((set, get) => ({
   setIsHost: (isHost) => set({ isHost }),
   setSelectedDater: (dater) => set({ selectedDater: dater }),
   
+  // PartyKit client
+  partyClient: null,
+  setPartyClient: (client) => set({ partyClient: client }),
+  
   // Create a new live room (host)
   createLiveRoom: (roomCode, username) => {
     const { daters } = get()

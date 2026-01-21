@@ -2,5 +2,8 @@
   "$schema": "https://www.partykit.io/schema.json",
   "name": "bad-date-demo",
   "main": "server.ts",
-  "compatibilityDate": "2024-01-01"
+  "compatibilityDate": "2024-01-01",
+  "parties": {
+    "room-registry": "registry.ts"
+  }
 }
