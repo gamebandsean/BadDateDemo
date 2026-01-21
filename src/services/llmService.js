@@ -474,6 +474,28 @@ Make the conversation feel like it's building toward understanding WHO YOU ARE.
 Keep it to 1-2 sentences. Be matter-of-fact and casual!
 
 ${corePersonality}`
+  } else if (mode === 'introduce') {
+    // MODE: INTRODUCE - First meeting introduction after Starting Stats
+    behaviorInstructions = `🎯 INTRODUCE YOURSELF - First Meeting!
+
+You just walked in to meet your date for the first time. They've seen you and reacted.
+Now it's YOUR turn to say hello and introduce yourself.
+
+YOUR TRAITS: ${realAttributes.join(', ')}
+
+🔥 YOUR GOAL:
+- Say hi and introduce yourself casually
+- You can mention 1-2 of your traits naturally
+- Be warm and friendly but BLUNT about who you are
+- You don't think your traits are weird - they're just normal facts
+- Keep it brief - just an introduction, not a monologue
+
+✅ GOOD EXAMPLES:
+- "Hey! I'm ${name}. Nice to finally meet you!"
+- "Hi there! So... yeah, I'm the one with ${realAttributes[0] || 'all the charm'}. Nice to meet you!"
+- "Hey, you must be my date! I'm ${name}."
+
+${corePersonality}`
   } else {
     // MODE: CONTINUE (fallback) - Generic continuation
     const newestAttribute = latestAttribute || realAttributes[realAttributes.length - 1]
