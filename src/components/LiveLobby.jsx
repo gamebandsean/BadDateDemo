@@ -280,13 +280,13 @@ function LiveLobby() {
           <div className="main-buttons">
             <motion.button
               className="mode-btn create-btn"
-              onClick={() => setView('host')}
-              disabled={!firebaseReady}
+              onClick={handleCreate}
+              disabled={!firebaseReady || isLoading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               <span className="btn-icon">✨</span>
-              <span className="btn-text">Create a Date</span>
+              <span className="btn-text">{isLoading ? 'Creating...' : 'Create a Date'}</span>
             </motion.button>
             
             <motion.button
