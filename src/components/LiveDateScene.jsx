@@ -677,27 +677,174 @@ function LiveDateScene() {
       clearInterval(startingStatsTimerRef.current)
     }
     
-    // Transition to reaction round (phase0 - special first round)
-    // For now, we'll go directly to phase1 but mark it as reaction round
-    setLivePhase('phase1')
-    setPhaseTimer(30)
+    // Transition to REACTION ROUND - dater reacts to all starting stats
+    setLivePhase('reaction')
+    setPhaseTimer(0) // No timer for reaction round - it's driven by conversation
     
     // Sync to Firebase
     if (firebaseReady && roomCode) {
       await updateGameState(roomCode, {
-        livePhase: 'phase1',
-        phaseTimer: 30,
+        livePhase: 'reaction',
+        phaseTimer: 0,
         avatar: updatedAvatar,
         startingStatsComplete: true,
-        // Store the initial attributes for the reaction round
         initialStartingStatsAttributes: allAttributes,
       })
     }
     
     console.log('✅ Avatar created:', updatedAvatar)
+    console.log('🎭 Starting reaction round with attributes:', allAttributes)
+  }
+  
+  // Run the reaction round - dater reacts to all starting stats attributes
+  const runReactionRound = async () => {
+    if (!isHost || isGenerating) return
+    
+    setIsGenerating(true)
+    console.log('🎭 Running reaction round...')
+    
+    const currentAvatar = useGameStore.getState().avatar
+    const avatarName = currentAvatar.name || 'the date'
+    const attributes = currentAvatar.attributes || []
+    
+    if (attributes.length === 0) {
+      console.log('No attributes to react to, skipping reaction round')
+      await finishReactionRound()
+      return
+    }
+    
+    // Build a description of the avatar for the dater to react to
+    const attributeList = attributes.join(', ')
+    
+    try {
+      // First: Dater sees the avatar and reacts
+      const firstImpressionPrompt = `You are ${selectedDater.name}, meeting your blind date for the first time. 
+      
+Your date's name is ${avatarName}. When they walk in, you immediately notice: ${attributeList}.
+
+React naturally to seeing them for the first time. This is your FIRST IMPRESSION - be genuine, whether positive, negative, or mixed. Keep it to 1-2 sentences of dialogue only (no actions or narration).`
+
+      const daterReaction1 = await getDaterDateResponse(
+        selectedDater,
+        currentAvatar,
+        [], // Empty conversation - this is the first message
+        attributeList,
+        null, // No sentiment category yet
+        { positive: 0, negative: 0 }, // Fresh streak
+        false // Not final round
+      )
+      
+      if (daterReaction1) {
+        setDaterBubble(daterReaction1)
+        addDateMessage('dater', daterReaction1)
+        await syncConversationToFirebase(undefined, daterReaction1, false)
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      
+      // Check how dater feels about the attributes (score each one)
+      for (const attr of attributes) {
+        const matchResult = await checkAttributeMatch(attr, daterValues, selectedDater, daterReaction1)
+        if (matchResult.category) {
+          const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
+          if (wasAlreadyExposed) {
+            triggerGlow(matchResult.shortLabel)
+          }
+          const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
+          // Reduced multiplier for initial impressions (0.5x)
+          const change = Math.round(baseChanges[matchResult.category] * 0.5)
+          if (change !== 0) {
+            const newCompat = adjustCompatibility(change)
+            console.log(`First impression: ${change > 0 ? '+' : ''}${change}% (${matchResult.category}: ${matchResult.shortLabel})`)
+            if (firebaseReady && roomCode) {
+              await updateGameState(roomCode, { compatibility: newCompat })
+            }
+          }
+        }
+        // Small delay between scoring each attribute
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+      
+      // Sync sentiment categories
+      await syncConversationToFirebase(undefined, undefined, true)
+      
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Second: Avatar introduces themselves
+      const avatarIntro = await getAvatarDateResponse(
+        currentAvatar,
+        selectedDater,
+        [{ speaker: 'dater', message: daterReaction1 }],
+        attributeList,
+        'introduce' // Special mode for introduction
+      )
+      
+      if (avatarIntro) {
+        setAvatarBubble(avatarIntro)
+        addDateMessage('avatar', avatarIntro)
+        await syncConversationToFirebase(avatarIntro, undefined, false)
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      
+      // Third: Dater's follow-up reaction
+      const daterReaction2 = await getDaterDateResponse(
+        selectedDater,
+        currentAvatar,
+        [
+          { speaker: 'dater', message: daterReaction1 },
+          { speaker: 'avatar', message: avatarIntro }
+        ],
+        null,
+        null,
+        reactionStreak,
+        false
+      )
+      
+      if (daterReaction2) {
+        setDaterBubble(daterReaction2)
+        addDateMessage('dater', daterReaction2)
+        await syncConversationToFirebase(undefined, daterReaction2, false)
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 4000))
+      
+    } catch (error) {
+      console.error('Error in reaction round:', error)
+    }
+    
+    setIsGenerating(false)
+    await finishReactionRound()
+  }
+  
+  // Finish reaction round and move to Phase 1
+  const finishReactionRound = async () => {
+    console.log('✅ Reaction round complete, starting Phase 1')
+    
+    setLivePhase('phase1')
+    setPhaseTimer(30)
+    
+    if (firebaseReady && roomCode) {
+      await updateGameState(roomCode, {
+        livePhase: 'phase1',
+        phaseTimer: 30,
+        reactionRoundComplete: true,
+      })
+    }
   }
   
   // ============ END STARTING STATS MODE LOGIC ============
+  
+  // Trigger reaction round when phase changes to 'reaction'
+  useEffect(() => {
+    if (livePhase === 'reaction' && isHost && !isGenerating) {
+      // Small delay to let the UI update
+      const timer = setTimeout(() => {
+        runReactionRound()
+      }, 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [livePhase, isHost])
   
   // Start Phase 1 - Dater asks Avatar about themselves
   // Only HOST generates questions; non-hosts receive via Firebase
@@ -736,15 +883,17 @@ function LiveDateScene() {
   
   // Show phase announcement when phase changes
   useEffect(() => {
-    if (livePhase && livePhase !== lastPhaseRef.current && livePhase !== 'ended') {
+    // Don't show announcement for starting-stats (it has its own overlay) or ended
+    const skipAnnouncement = ['starting-stats', 'ended', 'waiting']
+    if (livePhase && livePhase !== lastPhaseRef.current && !skipAnnouncement.includes(livePhase)) {
       lastPhaseRef.current = livePhase
       setAnnouncementPhase(livePhase)
       setShowPhaseAnnouncement(true)
       
-      // Hide after 2 seconds
+      // Hide after 2.5 seconds (longer for reaction to build anticipation)
       const timer = setTimeout(() => {
         setShowPhaseAnnouncement(false)
-      }, 2000)
+      }, livePhase === 'reaction' ? 3000 : 2000)
       
       return () => clearTimeout(timer)
     }
@@ -753,6 +902,8 @@ function LiveDateScene() {
   // Get phase announcement content
   const getPhaseAnnouncement = () => {
     switch (announcementPhase) {
+      case 'reaction':
+        return { title: 'FIRST IMPRESSIONS', subtitle: 'Meeting Your Date', icon: '👋', description: 'Watch them meet for the first time!' }
       case 'phase1':
         return { title: 'PHASE 1', subtitle: 'Submit Answers', icon: '✨', description: 'Type an answer for your Avatar!' }
       case 'phase2':
@@ -1297,6 +1448,7 @@ function LiveDateScene() {
   
   const getPhaseTitle = () => {
     switch (livePhase) {
+      case 'reaction': return { line1: '👋 FIRST', line2: 'Impressions', line3: '' }
       case 'phase1': return { line1: 'PHASE 1', line2: 'Submit', line3: 'Answers' }
       case 'phase2': return { line1: 'PHASE 2', line2: 'Vote', line3: '' }
       case 'phase3': return { line1: 'PHASE 3', line2: 'Watch', line3: 'the Date' }
@@ -1307,6 +1459,7 @@ function LiveDateScene() {
   
   const getPhaseInstructions = () => {
     switch (livePhase) {
+      case 'reaction': return 'Watch them meet!'
       case 'phase1': 
         if (phaseTimer <= 0 && suggestedAttributes.length === 0) {
           return '⏳ Waiting for an answer...'
@@ -1550,8 +1703,10 @@ function LiveDateScene() {
           {/* Right: Round + Timer */}
           <div className="header-right">
             <div className="round-indicator">
-              <span className="round-label">Round</span>
-              <span className="round-value">{cycleCount + 1}/{maxCycles}</span>
+              <span className="round-label">{livePhase === 'reaction' ? 'Intro' : 'Round'}</span>
+              <span className="round-value">
+                {livePhase === 'reaction' ? '👋' : `${cycleCount + 1}/${maxCycles}`}
+              </span>
             </div>
             <div 
               className="header-timer"
@@ -1560,8 +1715,8 @@ function LiveDateScene() {
               title="Tap to see hidden info"
             >
               {phaseTimer > 0 && <span className="timer-value">{formatTime(phaseTimer)}</span>}
-              {livePhase === 'phase3' && <span className="timer-value">💬</span>}
-              {phaseTimer <= 0 && livePhase !== 'phase3' && <span className="timer-value">⏳</span>}
+              {(livePhase === 'phase3' || livePhase === 'reaction') && <span className="timer-value">💬</span>}
+              {phaseTimer <= 0 && livePhase !== 'phase3' && livePhase !== 'reaction' && <span className="timer-value">⏳</span>}
             </div>
           </div>
         </div>

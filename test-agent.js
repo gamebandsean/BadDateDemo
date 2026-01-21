@@ -307,48 +307,52 @@ async function runHostAgent() {
       }
 
       if (!votingStarted) {
-        log.warning(agentName, 'Voting UI never appeared')
-      } else {
-        log.success(agentName, 'Voting phase started!')
-
-        // Now cast the vote
-        const voteSuccess = await page.evaluate(() => {
-          // Option 1: Look for numbered buttons to click
-          const buttons = Array.from(document.querySelectorAll('button'))
-          const numberButton = buttons.find(btn => /^[1-9]$/.test(btn.textContent.trim()))
-          if (numberButton) {
-            numberButton.click()
-            console.log('Clicked vote button:', numberButton.textContent)
-            return true
-          }
-
-          // Option 2: Look for an input field to type a vote number
-          const inputs = Array.from(document.querySelectorAll('input'))
-          const voteInput = inputs.find(input =>
-            input.type === 'text' &&
-            input.offsetParent !== null && // visible
-            !input.disabled
-          )
-          if (voteInput) {
-            voteInput.focus()
-            voteInput.value = '1' // Vote for option 1
-            voteInput.dispatchEvent(new Event('input', { bubbles: true }))
-            voteInput.dispatchEvent(new Event('change', { bubbles: true }))
-            // Press Enter to submit
-            voteInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }))
-            console.log('Entered vote number in input field')
-            return true
-          }
-
-          return false
-        })
-
-        if (voteSuccess) {
-          log.success(agentName, 'Cast vote')
-        } else {
-          log.warning(agentName, 'Could not cast vote')
-        }
+        log.bug(agentName, 'VOTING_FAILED', `Round ${round}: Voting UI never appeared after 60 seconds`)
+        await page.screenshot({ path: `debug-${agentName}-no-voting-r${round}.png` })
+        return { success: false, reason: `Round ${round}: Voting required but UI never appeared` }
       }
+
+      log.success(agentName, 'Voting phase started!')
+
+      // Now cast the vote
+      const voteSuccess = await page.evaluate(() => {
+        // Option 1: Look for numbered buttons to click
+        const buttons = Array.from(document.querySelectorAll('button'))
+        const numberButton = buttons.find(btn => /^[1-9]$/.test(btn.textContent.trim()))
+        if (numberButton) {
+          numberButton.click()
+          console.log('Clicked vote button:', numberButton.textContent)
+          return true
+        }
+
+        // Option 2: Look for an input field to type a vote number
+        const inputs = Array.from(document.querySelectorAll('input'))
+        const voteInput = inputs.find(input =>
+          input.type === 'text' &&
+          input.offsetParent !== null && // visible
+          !input.disabled
+        )
+        if (voteInput) {
+          voteInput.focus()
+          voteInput.value = '1' // Vote for option 1
+          voteInput.dispatchEvent(new Event('input', { bubbles: true }))
+          voteInput.dispatchEvent(new Event('change', { bubbles: true }))
+          // Press Enter to submit
+          voteInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }))
+          console.log('Entered vote number in input field')
+          return true
+        }
+
+        return false
+      })
+
+      if (!voteSuccess) {
+        log.bug(agentName, 'VOTING_FAILED', `Round ${round}: Could not cast vote - no voting UI found`)
+        await page.screenshot({ path: `debug-${agentName}-vote-failed-r${round}.png` })
+        return { success: false, reason: `Round ${round}: Could not cast vote` }
+      }
+
+      log.success(agentName, 'Cast vote')
 
       // PHASE 3: Watch conversation and wait for next round
       log.action(agentName, 'Phase 3: Watching conversation...')
@@ -417,9 +421,11 @@ async function runHostAgent() {
 
         if (!nextRoundStarted) {
           log.bug(agentName, 'STUCK', `Round ${round}: Next round never started after conversation`)
-        } else {
-          log.success(agentName, `Round ${round} completed, Round ${round + 1} ready!`)
+          await page.screenshot({ path: `debug-${agentName}-stuck-r${round}.png` })
+          return { success: false, reason: `Round ${round}: Game stuck, next round never started` }
         }
+
+        log.success(agentName, `Round ${round} completed, Round ${round + 1} ready!`)
       } else {
         // Last round - just wait for conversation to finish
         await setTimeout(8000)
@@ -621,48 +627,52 @@ async function runClientAgent(clientNumber) {
       }
 
       if (!votingStarted) {
-        log.warning(agentName, 'Voting UI never appeared')
-      } else {
-        log.success(agentName, 'Voting phase started!')
-
-        // Now cast the vote
-        const voteSuccess = await page.evaluate(() => {
-          // Option 1: Look for numbered buttons to click
-          const buttons = Array.from(document.querySelectorAll('button'))
-          const numberButton = buttons.find(btn => /^[1-9]$/.test(btn.textContent.trim()))
-          if (numberButton) {
-            numberButton.click()
-            console.log('Clicked vote button:', numberButton.textContent)
-            return true
-          }
-
-          // Option 2: Look for an input field to type a vote number
-          const inputs = Array.from(document.querySelectorAll('input'))
-          const voteInput = inputs.find(input =>
-            input.type === 'text' &&
-            input.offsetParent !== null && // visible
-            !input.disabled
-          )
-          if (voteInput) {
-            voteInput.focus()
-            voteInput.value = '1' // Vote for option 1
-            voteInput.dispatchEvent(new Event('input', { bubbles: true }))
-            voteInput.dispatchEvent(new Event('change', { bubbles: true }))
-            // Press Enter to submit
-            voteInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }))
-            console.log('Entered vote number in input field')
-            return true
-          }
-
-          return false
-        })
-
-        if (voteSuccess) {
-          log.success(agentName, 'Cast vote')
-        } else {
-          log.warning(agentName, 'Could not cast vote')
-        }
+        log.bug(agentName, 'VOTING_FAILED', `Round ${round}: Voting UI never appeared after 60 seconds`)
+        await page.screenshot({ path: `debug-${agentName}-no-voting-r${round}.png` })
+        return { success: false, reason: `Round ${round}: Voting required but UI never appeared` }
       }
+
+      log.success(agentName, 'Voting phase started!')
+
+      // Now cast the vote
+      const voteSuccess = await page.evaluate(() => {
+        // Option 1: Look for numbered buttons to click
+        const buttons = Array.from(document.querySelectorAll('button'))
+        const numberButton = buttons.find(btn => /^[1-9]$/.test(btn.textContent.trim()))
+        if (numberButton) {
+          numberButton.click()
+          console.log('Clicked vote button:', numberButton.textContent)
+          return true
+        }
+
+        // Option 2: Look for an input field to type a vote number
+        const inputs = Array.from(document.querySelectorAll('input'))
+        const voteInput = inputs.find(input =>
+          input.type === 'text' &&
+          input.offsetParent !== null && // visible
+          !input.disabled
+        )
+        if (voteInput) {
+          voteInput.focus()
+          voteInput.value = '1' // Vote for option 1
+          voteInput.dispatchEvent(new Event('input', { bubbles: true }))
+          voteInput.dispatchEvent(new Event('change', { bubbles: true }))
+          // Press Enter to submit
+          voteInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }))
+          console.log('Entered vote number in input field')
+          return true
+        }
+
+        return false
+      })
+
+      if (!voteSuccess) {
+        log.bug(agentName, 'VOTING_FAILED', `Round ${round}: Could not cast vote - no voting UI found`)
+        await page.screenshot({ path: `debug-${agentName}-vote-failed-r${round}.png` })
+        return { success: false, reason: `Round ${round}: Could not cast vote` }
+      }
+
+      log.success(agentName, 'Cast vote')
 
       // PHASE 3: Watch conversation and wait for next round
       log.action(agentName, 'Phase 3: Watching conversation...')
@@ -731,9 +741,11 @@ async function runClientAgent(clientNumber) {
 
         if (!nextRoundStarted) {
           log.bug(agentName, 'STUCK', `Round ${round}: Next round never started after conversation`)
-        } else {
-          log.success(agentName, `Round ${round} completed, Round ${round + 1} ready!`)
+          await page.screenshot({ path: `debug-${agentName}-stuck-r${round}.png` })
+          return { success: false, reason: `Round ${round}: Game stuck, next round never started` }
         }
+
+        log.success(agentName, `Round ${round} completed, Round ${round + 1} ready!`)
       } else {
         // Last round - just wait for conversation to finish
         await setTimeout(8000)
