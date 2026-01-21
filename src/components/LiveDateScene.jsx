@@ -229,6 +229,10 @@ function LiveDateScene() {
             console.log('🏆 Winner:', winningAttr)
             // Use setTimeout to avoid state update during render
             setTimeout(async () => {
+              // IMPORTANT: Get current compatibility to preserve it
+              const currentCompatibility = useGameStore.getState().compatibility
+              console.log('💯 Auto-advance - preserving compatibility:', currentCompatibility)
+              
               // Set winner popup
               setWinnerText(winningAttr)
               setShowWinnerPopup(true)
@@ -236,9 +240,14 @@ function LiveDateScene() {
               setLivePhase('phase3')
               setPhaseTimer(0)
               
-              // Sync to Firebase
+              // Sync to Firebase - include compatibility
               if (firebaseReady && roomCode) {
-                await updateGameState(roomCode, { livePhase: 'phase3', phaseTimer: 0, winningAttribute: winningAttr })
+                await updateGameState(roomCode, { 
+                  livePhase: 'phase3', 
+                  phaseTimer: 0, 
+                  winningAttribute: winningAttr,
+                  compatibility: currentCompatibility // PRESERVE!
+                })
                 await clearSuggestions(roomCode)
                 await clearVotes(roomCode)
               }
@@ -866,6 +875,10 @@ function LiveDateScene() {
     // Generate the opening question for Phase 1
     const openingLine = getOpeningLine()
     
+    // Get current compatibility to preserve it
+    const currentCompatibility = useGameStore.getState().compatibility
+    console.log('💯 Preserving compatibility:', currentCompatibility)
+    
     setLivePhase('phase1')
     setPhaseTimer(30)
     setDaterBubble(openingLine)
@@ -880,6 +893,7 @@ function LiveDateScene() {
         currentQuestion: openingLine,
         daterBubble: openingLine,
         avatarBubble: '',
+        compatibility: currentCompatibility, // IMPORTANT: Preserve compatibility!
       })
     }
     
@@ -1068,6 +1082,10 @@ function LiveDateScene() {
     // Only host controls phase transitions
     if (!isHost && firebaseReady) return
     
+    // IMPORTANT: Get current compatibility to preserve it during phase transitions
+    const currentCompatibility = useGameStore.getState().compatibility
+    console.log('💯 Phase transition - preserving compatibility:', currentCompatibility)
+    
     switch (livePhase) {
       case 'phase1':
         // Check if anyone submitted an attribute
@@ -1093,12 +1111,13 @@ function LiveDateScene() {
         setUserVote(null)
         allVotedTriggeredRef.current = false // Reset for new voting round
         
-        // Sync to Firebase - include numbered attributes
+        // Sync to Firebase - include numbered attributes AND compatibility
         if (firebaseReady && roomCode) {
           await updateGameState(roomCode, { 
             livePhase: 'phase2', 
             phaseTimer: 30,
-            numberedAttributes: numbered
+            numberedAttributes: numbered,
+            compatibility: currentCompatibility // PRESERVE!
           })
         }
         break
@@ -1114,9 +1133,14 @@ function LiveDateScene() {
           setLivePhase('phase3')
           setPhaseTimer(0)
           
-          // Sync to Firebase
+          // Sync to Firebase - include compatibility
           if (firebaseReady && roomCode) {
-            await updateGameState(roomCode, { livePhase: 'phase3', phaseTimer: 0, winningAttribute: winningAttr })
+            await updateGameState(roomCode, { 
+              livePhase: 'phase3', 
+              phaseTimer: 0, 
+              winningAttribute: winningAttr,
+              compatibility: currentCompatibility // PRESERVE!
+            })
             await clearSuggestions(roomCode)
             await clearVotes(roomCode)
           }
