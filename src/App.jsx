@@ -29,7 +29,8 @@ function App() {
   const renderPhase = () => {
     switch (phase) {
       case 'lobby':
-        return <Lobby />
+        // Redirect old lobby to the new main screen (live-lobby)
+        return <LiveLobby />
       case 'matchmaking':
         return <Matchmaking />
       case 'chatting':
@@ -41,7 +42,7 @@ function App() {
         return <DateScene />
       case 'results':
         return <Results />
-      // Live Mode phases
+      // Main game flow (formerly "Live Mode")
       case 'live-lobby':
         return <LiveLobby />
       case 'live-game-lobby':
@@ -49,7 +50,7 @@ function App() {
       case 'live-date':
         return <LiveDateScene />
       default:
-        return <Lobby />
+        return <LiveLobby />
     }
   }
   

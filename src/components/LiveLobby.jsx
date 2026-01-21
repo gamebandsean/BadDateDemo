@@ -4,7 +4,7 @@ import { useGameStore } from '../store/gameStore'
 import { isFirebaseAvailable, createRoom, joinRoom, generatePlayerId, subscribeToAvailableRooms } from '../services/firebase'
 import './LiveLobby.css'
 
-// Live Mode entry screen - Room Browser Version
+// Main game entry screen - Bad Date
 
 function LiveLobby() {
   const setPhase = useGameStore((state) => state.setPhase)
@@ -127,26 +127,58 @@ function LiveLobby() {
   // Main view - Choose Host or Join
   if (view === 'main') {
     return (
-      <div className="live-lobby">
+      <div className="live-lobby main-lobby">
+        {/* Floating hearts background */}
+        <div className="lobby-background">
+          <div className="floating-hearts">
+            {[...Array(12)].map((_, i) => (
+              <motion.span
+                key={i}
+                className="floating-heart"
+                initial={{ 
+                  y: '100vh', 
+                  x: `${Math.random() * 100}vw`,
+                  opacity: 0,
+                  rotate: Math.random() * 360
+                }}
+                animate={{ 
+                  y: '-20vh',
+                  opacity: [0, 1, 1, 0],
+                  rotate: Math.random() * 360 + 180
+                }}
+                transition={{
+                  duration: 8 + Math.random() * 4,
+                  repeat: Infinity,
+                  delay: Math.random() * 5,
+                  ease: 'linear'
+                }}
+              >
+                {['💔', '💕', '❤️', '💘', '💗', '💖', '💝'][Math.floor(Math.random() * 7)]}
+              </motion.span>
+            ))}
+          </div>
+        </div>
+        
         <motion.div 
-          className="live-lobby-card"
+          className="live-lobby-card main-card"
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.4 }}
         >
-          <div className="live-lobby-header">
-            <button 
-              className="back-btn"
-              onClick={() => setPhase('lobby')}
-            >
-              ← Back
-            </button>
-            <h2 className="live-lobby-title">
-              <span className="title-icon">📺</span>
-              Live Mode
-            </h2>
-            <p className="live-lobby-subtitle">Play with friends in real-time!</p>
-          </div>
+          {/* Game Title */}
+          <motion.div 
+            className="title-container"
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+          >
+            <h1 className="game-title">
+              <span className="title-bad">Bad</span>
+              <span className="title-heart">💔</span>
+              <span className="title-date">Date</span>
+            </h1>
+            <p className="game-tagline">Where love goes hilariously wrong</p>
+          </motion.div>
           
           {!firebaseReady && (
             <div className="firebase-warning">
@@ -164,6 +196,7 @@ function LiveLobby() {
               value={username}
               onChange={(e) => setUsernameLocal(e.target.value)}
               maxLength={15}
+              autoFocus
             />
           </div>
           
@@ -177,7 +210,7 @@ function LiveLobby() {
               whileTap={{ scale: 0.98 }}
             >
               <span className="btn-icon">✨</span>
-              <span className="btn-text">Host a Date</span>
+              <span className="btn-text">Create a Date</span>
             </motion.button>
             
             <motion.button
