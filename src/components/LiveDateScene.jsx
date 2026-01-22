@@ -1070,7 +1070,12 @@ function LiveDateScene() {
   
   // Finish reaction round and move to Phase 1
   const finishReactionRound = async () => {
-    console.log('✅ Reaction round complete, starting Phase 1')
+    console.log('✅ Reaction round complete, waiting 10s before Phase 1...')
+    
+    // Give players 10 seconds to read the conversation before starting Phase 1
+    await new Promise(resolve => setTimeout(resolve, 10000))
+    
+    console.log('⏰ Delay complete, starting Phase 1')
     
     // Generate the opening question for Phase 1
     const openingLine = getOpeningLine()
