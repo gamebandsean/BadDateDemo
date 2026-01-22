@@ -614,7 +614,12 @@ function LiveDateScene() {
   
   // Move to next Starting Stats question
   const moveToNextStartingStatsQuestion = async () => {
-    if (!isHost) return
+    console.log('🎯 moveToNextStartingStatsQuestion called, isHost:', isHost)
+    
+    if (!isHost) {
+      console.log('❌ Not host, returning')
+      return
+    }
     
     // Guard: check phase is still starting-stats
     const currentPhase = useGameStore.getState().livePhase
@@ -624,13 +629,24 @@ function LiveDateScene() {
     }
     
     const currentStats = useGameStore.getState().startingStats
-    if (!currentStats) return
+    if (!currentStats) {
+      console.log('❌ No currentStats, returning')
+      return
+    }
     
     const assignments = currentStats.questionAssignments || []
+    
+    console.log('📋 Current stats:', {
+      currentQuestionIndex: currentStats.currentQuestionIndex,
+      activePlayerId: currentStats.activePlayerId,
+      answersCount: currentStats.answers?.length,
+      assignmentsCount: assignments.length
+    })
     
     // Use currentQuestionIndex if available, otherwise find by active player
     let currentIndex = currentStats.currentQuestionIndex
     if (typeof currentIndex !== 'number' || currentIndex < 0) {
+      console.log('⚠️ currentQuestionIndex invalid, using findIndex')
       currentIndex = assignments.findIndex(
         a => a.playerId === currentStats.activePlayerId && 
              a.questionType === currentStats.currentQuestionType
@@ -752,13 +768,20 @@ function LiveDateScene() {
     }
     
     console.log('📝 Starting Stats answer submitted:', newAnswer, 'Total answers:', newAnswers.length)
+    console.log('📝 isHost:', isHost, 'Current questionIndex:', currentStats.currentQuestionIndex)
     
     // If host, directly advance to next question (don't wait for state sync)
     if (isHost) {
+      console.log('🚀 Host scheduling moveToNextStartingStatsQuestion in 100ms')
       setTimeout(() => {
+        console.log('⏰ Timeout fired, checking phase...')
         const phase = useGameStore.getState().livePhase
+        console.log('⏰ Current phase:', phase)
         if (phase === 'starting-stats') {
+          console.log('✅ Calling moveToNextStartingStatsQuestion')
           moveToNextStartingStatsQuestion()
+        } else {
+          console.log('❌ Phase changed, not calling moveToNextStartingStatsQuestion')
         }
       }, 100)
     }
