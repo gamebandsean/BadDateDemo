@@ -89,14 +89,14 @@ function LiveDateScene() {
   const lastPhaseRef = useRef('')
   const allVotedTriggeredRef = useRef(false) // Prevent multiple auto-advance triggers
   
-  // Starting Stats question definitions
+  // Starting Stats question definitions - Players build the Avatar (the dater going on the date)
   const STARTING_STATS_QUESTIONS = [
-    { type: 'physical', question: "What physical attribute would you like your date to have?" },
-    { type: 'physical', question: "What physical attribute would you like your date to have?" },
-    { type: 'physical', question: "What physical attribute would you like your date to have?" },
-    { type: 'emotional', question: "What emotional state is your date in?" },
-    { type: 'emotional', question: "What emotional state is your date in?" },
-    { type: 'name', question: "What should we name your date?" },
+    { type: 'physical', question: "What physical attribute do YOU have?" },
+    { type: 'physical', question: "What physical attribute do YOU have?" },
+    { type: 'physical', question: "What physical attribute do YOU have?" },
+    { type: 'emotional', question: "What emotional state are YOU in?" },
+    { type: 'emotional', question: "What emotional state are YOU in?" },
+    { type: 'name', question: "What is YOUR name?" },
   ]
   
   // Helper to sync conversation state via PartyKit (host only)
@@ -1846,9 +1846,9 @@ function LiveDateScene() {
                 {/* Show who's answering and the question */}
                 <div className="starting-stats-question-area">
                   <div className="question-type-badge">
-                    {startingStats.currentQuestionType === 'physical' && '👤 Physical Attribute'}
-                    {startingStats.currentQuestionType === 'emotional' && '💭 Emotional State'}
-                    {startingStats.currentQuestionType === 'name' && '📛 Name Your Date'}
+                    {startingStats.currentQuestionType === 'physical' && '👤 Your Physical Trait'}
+                    {startingStats.currentQuestionType === 'emotional' && '💭 Your Emotional State'}
+                    {startingStats.currentQuestionType === 'name' && '📛 Your Name'}
                   </div>
                   
                   <div className="active-player-indicator">

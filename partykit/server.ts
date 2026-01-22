@@ -467,13 +467,14 @@ export default class GameRoom implements Party.Server {
   }
 
   initializeStartingStats() {
+    // Players build the Avatar (the dater going on the date)
     const QUESTIONS = [
-      { type: 'physical', question: "What physical attribute would you like your date to have?" },
-      { type: 'physical', question: "What physical attribute would you like your date to have?" },
-      { type: 'physical', question: "What physical attribute would you like your date to have?" },
-      { type: 'emotional', question: "What emotional state is your date in?" },
-      { type: 'emotional', question: "What emotional state is your date in?" },
-      { type: 'name', question: "What should we name your date?" },
+      { type: 'physical', question: "What physical attribute do YOU have?" },
+      { type: 'physical', question: "What physical attribute do YOU have?" },
+      { type: 'physical', question: "What physical attribute do YOU have?" },
+      { type: 'emotional', question: "What emotional state are YOU in?" },
+      { type: 'emotional', question: "What emotional state are YOU in?" },
+      { type: 'name', question: "What is YOUR name?" },
     ];
     
     const shuffledPlayers = [...this.state.players].sort(() => Math.random() - 0.5);

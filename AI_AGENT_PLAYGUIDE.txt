@@ -57,18 +57,18 @@ STEP 2: STARTING STATS (Optional - Default ON)
 If "Starting Stats" mode is enabled, before the date begins:
 
 1. PHYSICAL ATTRIBUTES (3 questions)
-   - 3 random players are asked: "What physical attribute would you like your date to have?"
+   - 3 random players are asked: "What physical attribute do YOU have?"
    - Each player has 15 seconds to type an answer
    - All players see who is answering and what they submit
    - Examples: "has 8 arms", "is made of cheese", "glows in the dark"
 
 2. EMOTIONAL STATE (2 questions)
-   - 2 random players are asked: "What emotional state is your date in?"
+   - 2 random players are asked: "What emotional state are YOU in?"
    - Same 15-second timer per player
    - Examples: "anxious and sweaty", "overconfident", "secretly terrified"
 
 3. NAMING THE DATE (1 question)
-   - 1 random player is asked: "What should we name your date?"
+   - 1 random player is asked: "What is YOUR name?"
    - Example: "Bartholomew", "Xena the Destroyer", "Greg"
 
 After all questions:
