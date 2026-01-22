@@ -1647,12 +1647,15 @@ function LiveDateScene() {
       console.log('Non-host skipping handleRoundComplete')
       return
     }
-    const newRoundCount = cycleCount + 1
+    
+    // IMPORTANT: Get CURRENT values from store (not closure values!)
+    const currentCycleCount = useGameStore.getState().cycleCount
+    const newRoundCount = currentCycleCount + 1
     incrementCycle()
     
     // IMPORTANT: Get CURRENT compatibility from store (not closure value!)
     const currentCompatibility = useGameStore.getState().compatibility
-    console.log(`Round ${newRoundCount}/${maxCycles} complete, compatibility: ${currentCompatibility}`)
+    console.log(`Round ${newRoundCount}/${maxCycles} complete, compatibility: ${currentCompatibility}, cycleCount: ${currentCycleCount} -> ${newRoundCount}`)
     
     if (newRoundCount >= maxCycles) {
       // Game over!
