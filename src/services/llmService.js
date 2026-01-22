@@ -843,10 +843,30 @@ export async function runAttributePromptChain(avatar, dater, newAttribute, conve
   console.log('🔗 Avatar said:', avatarResponse?.substring(0, 50) + '...')
   console.log('🔗 Dater said:', daterResponse?.substring(0, 50) + '...')
   
+  // Build prompts for debug display
+  const avatarPromptChain = buildAvatarPromptChain({
+    attribute: newAttribute,
+    daterLastMessage: lastDaterMessage,
+    avatarName: avatar.name || 'Your Date',
+    allAttributes: avatar.attributes || [],
+    isVisible: visibility === 'VISIBLE'
+  })
+  
+  const daterPromptChain = buildDaterPromptChain({
+    attribute: newAttribute,
+    avatarLastMessage: avatarResponse,
+    allVisibleAttributes: (avatar.attributes || []).filter(a => classifyAttribute(a) === 'VISIBLE'),
+    isVisible: visibility === 'VISIBLE'
+  })
+  
   return {
     avatarResponse,
     daterResponse,
-    visibility
+    visibility,
+    debugPrompts: {
+      avatar: avatarPromptChain,
+      dater: daterPromptChain
+    }
   }
 }
 

@@ -76,6 +76,10 @@ function LiveDateScene() {
   const [announcementPhase, setAnnouncementPhase] = useState('')
   const [reactionStreak, setReactionStreak] = useState({ positive: 0, negative: 0 }) // Track escalation
   
+  // LLM Debug state (host only)
+  const [showLLMDebug, setShowLLMDebug] = useState(false)
+  const [lastLLMPrompt, setLastLLMPrompt] = useState({ avatar: '', dater: '' })
+  
   // Starting Stats Mode state
   const [startingStatsInput, setStartingStatsInput] = useState('')
   const [startingStatsTimer, setStartingStatsTimer] = useState(15)
@@ -1459,12 +1463,17 @@ function LiveDateScene() {
         .find(msg => msg.speaker === 'dater')?.message || ''
       
       // Run the full prompt chain: Avatar responds, then Dater reacts
-      const { avatarResponse: avatarResponse1, daterResponse: daterReaction1, visibility } = await runAttributePromptChain(
+      const { avatarResponse: avatarResponse1, daterResponse: daterReaction1, visibility, debugPrompts } = await runAttributePromptChain(
         avatarWithNewAttr,
         selectedDater,
         attrToUse,
         getConversation().slice(-10)
       )
+      
+      // Store prompts for debug display
+      if (debugPrompts) {
+        setLastLLMPrompt(debugPrompts)
+      }
       
       console.log('🔗 Prompt chain result:', { avatarResponse1, daterReaction1, visibility })
       
@@ -1958,7 +1967,12 @@ function LiveDateScene() {
           
           {/* Right: Round + Timer */}
           <div className="header-right">
-            <div className="round-indicator">
+            <div 
+              className="round-indicator"
+              onClick={() => isHost && setShowLLMDebug(!showLLMDebug)}
+              style={{ cursor: isHost ? 'pointer' : 'default' }}
+              title={isHost ? 'Tap to show LLM prompt debug' : ''}
+            >
               <span className="round-label">{livePhase === 'reaction' ? 'Intro' : 'Round'}</span>
               <span className="round-value">
                 {livePhase === 'reaction' ? '👋' : `${cycleCount + 1}/${maxCycles}`}
@@ -2008,6 +2022,75 @@ function LiveDateScene() {
                   <span className="value-header">💀 Dealbreakers</span>
                   {(daterValues?.dealbreakers || []).map((v, i) => <span key={i}>{v}</span>)}
                 </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* LLM Debug Panel (Host only) */}
+        <AnimatePresence>
+          {showLLMDebug && isHost && (
+            <motion.div 
+              className="llm-debug-popup"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                background: 'rgba(0, 0, 0, 0.95)',
+                border: '2px solid #ff69b4',
+                borderRadius: '12px',
+                padding: '20px',
+                maxWidth: '90vw',
+                maxHeight: '80vh',
+                overflow: 'auto',
+                zIndex: 9999,
+                color: '#fff',
+                fontSize: '12px',
+                fontFamily: 'monospace',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+                <h3 style={{ margin: 0, color: '#ff69b4' }}>🔧 LLM Prompt Debug</h3>
+                <button 
+                  onClick={() => setShowLLMDebug(false)}
+                  style={{ background: '#ff69b4', border: 'none', borderRadius: '4px', padding: '5px 10px', cursor: 'pointer' }}
+                >
+                  ✕ Close
+                </button>
+              </div>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ color: '#4ecdc4', margin: '0 0 10px 0' }}>🎭 Avatar Prompt Chain:</h4>
+                <pre style={{ 
+                  background: '#1a1a2e', 
+                  padding: '10px', 
+                  borderRadius: '6px', 
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  maxHeight: '300px',
+                  overflow: 'auto'
+                }}>
+                  {lastLLMPrompt.avatar || 'No prompt yet - wait for Phase 3 conversation'}
+                </pre>
+              </div>
+              
+              <div>
+                <h4 style={{ color: '#ff6b6b', margin: '0 0 10px 0' }}>💕 Dater Prompt Chain:</h4>
+                <pre style={{ 
+                  background: '#1a1a2e', 
+                  padding: '10px', 
+                  borderRadius: '6px', 
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  maxHeight: '300px',
+                  overflow: 'auto'
+                }}>
+                  {lastLLMPrompt.dater || 'No prompt yet - wait for Phase 3 conversation'}
+                </pre>
               </div>
             </motion.div>
           )}
