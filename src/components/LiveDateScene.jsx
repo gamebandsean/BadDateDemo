@@ -214,10 +214,12 @@ function LiveDateScene() {
       }
       
       // Sync numbered attributes for voting - ALWAYS sync even if empty
-      if (Array.isArray(state.numberedAttributes)) {
-        const numberedArray = state.numberedAttributes
+      if (state.numberedAttributes !== undefined) {
+        const numberedArray = Array.isArray(state.numberedAttributes) ? state.numberedAttributes : []
         const votesMap = state.votes || {}
         const totalVotes = Object.keys(votesMap).length
+        
+        console.log('🗳️ CLIENT received numberedAttributes from server:', numberedArray.length, 'items', JSON.stringify(numberedArray))
         
         // Build numbered attributes with votes
         const numberedWithVotes = numberedArray.filter(attr => attr).map(attr => {
@@ -231,7 +233,7 @@ function LiveDateScene() {
           }
         })
         
-        console.log('🗳️ Syncing numbered attributes:', numberedWithVotes.length, 'items')
+        console.log('🗳️ Setting local numberedAttributes:', numberedWithVotes.length, 'items')
         setNumberedAttributes(numberedWithVotes)
         
         // Auto-advance to Phase 3 if all players have voted (host only)
@@ -448,6 +450,14 @@ function LiveDateScene() {
   useEffect(() => {
     phaseTimerValueRef.current = phaseTimer
   }, [phaseTimer])
+  
+  // Debug: Log when numberedAttributes or phase changes
+  useEffect(() => {
+    console.log('🔍 DEBUG: livePhase =', livePhase, ', numberedAttributes.length =', numberedAttributes.length, ', isHost =', isHost)
+    if (livePhase === 'phase2') {
+      console.log('🔍 DEBUG Phase2: Voting overlay should show?', numberedAttributes.length > 0, numberedAttributes)
+    }
+  }, [livePhase, numberedAttributes, isHost])
   
   // Phase timer countdown - only host runs the timer, others sync from PartyKit
   // Timer starts immediately when phase begins
@@ -1325,6 +1335,7 @@ function LiveDateScene() {
         // Sync to PartyKit - include numbered attributes, compatibility AND cycleCount
         if (partyClient) {
           const currentCycleCount = useGameStore.getState().cycleCount
+          console.log('🗳️ HOST syncing numberedAttributes to PartyKit:', numbered.length, 'items', JSON.stringify(numbered))
           partyClient.syncState( { 
             phase: 'phase2', 
             phaseTimer: 30,
@@ -1332,6 +1343,8 @@ function LiveDateScene() {
             compatibility: currentCompatibility, // PRESERVE!
             cycleCount: currentCycleCount // PRESERVE!
           })
+        } else {
+          console.log('⚠️ No partyClient - cannot sync numberedAttributes!')
         }
         break
         
