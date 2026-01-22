@@ -1650,13 +1650,15 @@ function LiveDateScene() {
     const newRoundCount = cycleCount + 1
     incrementCycle()
     
-    console.log(`Round ${newRoundCount}/${maxCycles} complete`)
+    // IMPORTANT: Get CURRENT compatibility from store (not closure value!)
+    const currentCompatibility = useGameStore.getState().compatibility
+    console.log(`Round ${newRoundCount}/${maxCycles} complete, compatibility: ${currentCompatibility}`)
     
     if (newRoundCount >= maxCycles) {
       // Game over!
       setLivePhase('ended')
       if (partyClient) {
-        partyClient.syncState( { phase: 'ended', compatibility, cycleCount: newRoundCount })
+        partyClient.syncState( { phase: 'ended', compatibility: currentCompatibility, cycleCount: newRoundCount })
       }
       setTimeout(() => setPhase('results'), 2000)
     } else {
@@ -1680,7 +1682,7 @@ function LiveDateScene() {
           partyClient.syncState( { 
             phase: 'phase1', 
             phaseTimer: 30, 
-            compatibility,
+            compatibility: currentCompatibility, // Use fresh value from store!
             currentQuestion: nextQuestion,
             daterBubble: nextQuestion, // Sync dater bubble to match question
             avatarBubble: '', // Clear avatar bubble for new round
