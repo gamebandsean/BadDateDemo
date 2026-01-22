@@ -82,6 +82,7 @@ function LiveDateScene() {
   const [hasSubmittedStartingStat, setHasSubmittedStartingStat] = useState(false)
   const startingStatsTimerRef = useRef(null)
   const lastActivePlayerRef = useRef(null)
+  const lastAnswerCountRef = useRef(0)
   
   const chatEndRef = useRef(null)
   const phaseTimerRef = useRef(null)
@@ -347,6 +348,27 @@ function LiveDateScene() {
           setHasSubmittedStartingStat(false)
           setStartingStatsInput('')
         }
+        
+        // HOST: Detect when a new answer was added and advance to next question
+        const newAnswerCount = state.startingStats.answers?.length || 0
+        if (isHost && newAnswerCount > lastAnswerCountRef.current) {
+          console.log('📥 Host detected new answer:', lastAnswerCountRef.current, '->', newAnswerCount)
+          lastAnswerCountRef.current = newAnswerCount
+          
+          // Clear timer and advance to next question
+          if (startingStatsTimerRef.current) {
+            clearInterval(startingStatsTimerRef.current)
+            startingStatsTimerRef.current = null
+          }
+          
+          // Advance to next question (use setTimeout to avoid calling during render)
+          setTimeout(() => {
+            const phase = useGameStore.getState().livePhase
+            if (phase === 'starting-stats') {
+              moveToNextStartingStatsQuestion()
+            }
+          }, 100)
+        }
       }
       } catch (error) {
         console.error('🎉 Error processing PartyKit state update:', error)
@@ -521,6 +543,7 @@ function LiveDateScene() {
     setHasSubmittedStartingStat(false)
     setStartingStatsInput('')
     lastActivePlayerRef.current = firstAssignment.playerId
+    lastAnswerCountRef.current = 0
     
     // Sync to PartyKit
     partyClient.syncState( { 
@@ -720,23 +743,15 @@ function LiveDateScene() {
     setStartingStats(newStats)
     setStartingStatsInput('')
     
-    // Sync to PartyKit
+    // Update answer count ref to prevent double-advance
+    lastAnswerCountRef.current = newAnswers.length
+    
+    // Sync to PartyKit - this will trigger the host to advance via the state sync listener
     if (partyClient) {
       partyClient.syncState({ startingStats: newStats })
     }
     
-    console.log('📝 Starting Stats answer submitted:', newAnswer)
-    
-    // If host, move to next question immediately
-    if (isHost) {
-      // Use setTimeout(0) to ensure state updates are processed first
-      setTimeout(() => {
-        const phase = useGameStore.getState().livePhase
-        if (phase === 'starting-stats') {
-          moveToNextStartingStatsQuestion()
-        }
-      }, 0)
-    }
+    console.log('📝 Starting Stats answer submitted:', newAnswer, 'Total answers:', newAnswers.length)
   }
   
   // Complete Starting Stats phase and transition to reaction round
