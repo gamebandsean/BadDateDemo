@@ -266,10 +266,21 @@ function LiveDateScene() {
         }
       }
       
-      // Sync phase
+      // Sync phase - but don't let server overwrite host's forward progress
       if (state.phase) {
-        console.log('🎉 Syncing phase:', state.phase)
-        setLivePhase(state.phase)
+        const currentLocalPhase = useGameStore.getState().livePhase
+        const phaseOrder = ['lobby', 'starting-stats', 'reaction', 'phase1', 'phase2', 'phase3', 'ended']
+        const serverPhaseIndex = phaseOrder.indexOf(state.phase)
+        const localPhaseIndex = phaseOrder.indexOf(currentLocalPhase)
+        
+        // Only sync phase if server is ahead or equal, OR if not host
+        // This prevents race conditions where server's old state overwrites host's forward progress
+        if (!isHost || serverPhaseIndex >= localPhaseIndex) {
+          console.log('🎉 Syncing phase:', state.phase, '(local was:', currentLocalPhase, ')')
+          setLivePhase(state.phase)
+        } else {
+          console.log('⏭️ Ignoring server phase', state.phase, '- host already at', currentLocalPhase)
+        }
         
         if (state.phase === 'ended' && !isHost) {
           console.log('🏁 Game ended - transitioning non-host to results')
