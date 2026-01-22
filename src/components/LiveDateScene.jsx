@@ -243,17 +243,24 @@ function LiveDateScene() {
               setLivePhase('phase3')
               setPhaseTimer(0)
               
-              // Sync via PartyKit
+              // Sync via PartyKit - include showWinnerPopup
               if (partyClient) {
-                partyClient.setPhase('phase3', 0)
-                partyClient.setWinningAttribute(winningAttr)
-                partyClient.setCompatibility(currentCompatibility)
+                partyClient.syncState({
+                  phase: 'phase3',
+                  phaseTimer: 0,
+                  winningAttribute: winningAttr,
+                  showWinnerPopup: true,
+                  compatibility: currentCompatibility
+                })
                 partyClient.clearSuggestions()
                 partyClient.clearVotes()
               }
               
               setTimeout(() => {
                 setShowWinnerPopup(false)
+                if (partyClient) {
+                  partyClient.syncState({ showWinnerPopup: false })
+                }
                 setTimeout(() => generateDateConversation(winningAttr), 300)
               }, 5000)
             }, 500)
@@ -266,16 +273,14 @@ function LiveDateScene() {
         setCompatibility(state.compatibility)
       }
       
-      // Sync winning attribute and show popup
+      // Sync winning attribute
       if (state.winningAttribute) {
-        const previousWinnerText = winnerText
         setWinnerText(state.winningAttribute)
-        
-        if (!isHost && state.winningAttribute !== previousWinnerText && state.phase === 'phase3') {
-          console.log('🏆 Non-host showing winner popup:', state.winningAttribute)
-          setShowWinnerPopup(true)
-          setTimeout(() => setShowWinnerPopup(false), 5000)
-        }
+      }
+      
+      // Sync winner popup state (server-controlled)
+      if (typeof state.showWinnerPopup === 'boolean') {
+        setShowWinnerPopup(state.showWinnerPopup)
       }
       
       // Sync phase - but don't let server overwrite host's forward progress
@@ -1305,12 +1310,13 @@ function LiveDateScene() {
           setLivePhase('phase3')
           setPhaseTimer(0)
           
-          // Sync to PartyKit - include compatibility
+          // Sync to PartyKit - include compatibility AND showWinnerPopup
           if (partyClient) {
             partyClient.syncState( { 
               phase: 'phase3', 
               phaseTimer: 0, 
               winningAttribute: winningAttr,
+              showWinnerPopup: true,
               compatibility: currentCompatibility // PRESERVE!
             })
             partyClient.clearSuggestions()
@@ -1320,6 +1326,9 @@ function LiveDateScene() {
           // After 5 seconds, hide popup and start conversation
           setTimeout(() => {
             setShowWinnerPopup(false)
+            if (partyClient) {
+              partyClient.syncState({ showWinnerPopup: false })
+            }
             setTimeout(() => generateDateConversation(winningAttr), 300)
           }, 5000)
         }
