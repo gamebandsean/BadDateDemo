@@ -80,7 +80,6 @@ function LiveDateScene() {
   const [startingStatsInput, setStartingStatsInput] = useState('')
   const [startingStatsTimer, setStartingStatsTimer] = useState(15)
   const [hasSubmittedStartingStat, setHasSubmittedStartingStat] = useState(false)
-  const [showStartingStatsAnswer, setShowStartingStatsAnswer] = useState(null) // { playerName, answer }
   const startingStatsTimerRef = useRef(null)
   
   const chatEndRef = useRef(null)
@@ -337,18 +336,7 @@ function LiveDateScene() {
         if (!isHost && typeof state.startingStats.timer === 'number') {
           setStartingStatsTimer(state.startingStats.timer)
         }
-        const answers = state.startingStats.answers || []
-        if (answers.length > 0) {
-          const latestAnswer = answers[answers.length - 1]
-          if (latestAnswer && latestAnswer.answer) {
-            setShowStartingStatsAnswer({ 
-              playerName: latestAnswer.playerName, 
-              answer: latestAnswer.answer,
-              questionType: latestAnswer.questionType
-            })
-            setTimeout(() => setShowStartingStatsAnswer(null), 3000)
-          }
-        }
+        // Note: Removed popup display - answers are shown in the "Avatar So Far" list
       }
       } catch (error) {
         console.error('🎉 Error processing PartyKit state update:', error)
@@ -603,15 +591,23 @@ function LiveDateScene() {
     if (!currentStats) return
     
     const assignments = currentStats.questionAssignments || []
-    const currentIndex = assignments.findIndex(
-      a => a.playerId === currentStats.activePlayerId && 
-           a.questionType === currentStats.currentQuestionType
-    )
+    
+    // Use currentQuestionIndex if available, otherwise find by active player
+    let currentIndex = currentStats.currentQuestionIndex
+    if (typeof currentIndex !== 'number' || currentIndex < 0) {
+      currentIndex = assignments.findIndex(
+        a => a.playerId === currentStats.activePlayerId && 
+             a.questionType === currentStats.currentQuestionType
+      )
+    }
     
     const nextIndex = currentIndex + 1
     
-    if (nextIndex >= assignments.length) {
-      // All questions answered - complete the phase
+    console.log('📊 Starting Stats progress:', { currentIndex, nextIndex, total: assignments.length })
+    
+    // If currentIndex is -1 or nextIndex is past the end, complete the phase
+    if (currentIndex < 0 || nextIndex >= assignments.length) {
+      console.log('🏁 All Starting Stats questions completed, transitioning...')
       await completeStartingStatsPhase()
       return
     }
@@ -718,14 +714,15 @@ function LiveDateScene() {
     
     console.log('📝 Starting Stats answer submitted:', newAnswer)
     
-    // If host, move to next question after a brief delay to show the answer
+    // If host, move to next question immediately
     if (isHost) {
+      // Use setTimeout(0) to ensure state updates are processed first
       setTimeout(() => {
         const phase = useGameStore.getState().livePhase
         if (phase === 'starting-stats') {
           moveToNextStartingStatsQuestion()
         }
-      }, 1500)
+      }, 0)
     }
   }
   
@@ -1809,25 +1806,6 @@ function LiveDateScene() {
               </div>
             )}
             
-            {/* Answer popup overlay */}
-            <AnimatePresence>
-              {showStartingStatsAnswer && (
-                <motion.div 
-                  className="answer-popup"
-                  initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, y: -20 }}
-                >
-                  <span className="answer-popup-icon">
-                    {showStartingStatsAnswer.questionType === 'physical' && '👤'}
-                    {showStartingStatsAnswer.questionType === 'emotional' && '💭'}
-                    {showStartingStatsAnswer.questionType === 'name' && '📛'}
-                  </span>
-                  <span className="answer-popup-player">{showStartingStatsAnswer.playerName}</span>
-                  <span className="answer-popup-text">"{showStartingStatsAnswer.answer}"</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
