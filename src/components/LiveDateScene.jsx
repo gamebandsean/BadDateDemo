@@ -1313,8 +1313,8 @@ function LiveDateScene() {
               winningAttribute: winningAttr,
               compatibility: currentCompatibility // PRESERVE!
             })
-            await clearSuggestions(roomCode)
-            await clearVotes(roomCode)
+            partyClient.clearSuggestions()
+            partyClient.clearVotes()
           }
           
           // After 5 seconds, hide popup and start conversation
@@ -1620,11 +1620,11 @@ function LiveDateScene() {
             daterBubble: nextQuestion, // Sync dater bubble to match question
             avatarBubble: '', // Clear avatar bubble for new round
             cycleCount: newRoundCount,
-            suggestedAttributes: null, // Clear in Firebase
-            numberedAttributes: null
+            suggestedAttributes: [], // Clear suggestions
+            numberedAttributes: []
           })
-          await clearSuggestions(roomCode)
-          await clearVotes(roomCode)
+          partyClient.clearSuggestions()
+          partyClient.clearVotes()
         }
       }
       // Non-hosts will receive the question via PartyKit subscription
