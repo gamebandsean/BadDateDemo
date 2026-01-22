@@ -1844,7 +1844,7 @@ function LiveDateScene() {
             ) : (
               <div className="starting-stats-container">
                 <div className="starting-stats-header">
-                  <h1 className="starting-stats-title">🎲 Create Your Date</h1>
+                  <h1 className="starting-stats-title">🎲 Create Your Dater</h1>
                   <div className="starting-stats-progress">
                     Question {(startingStats.questionAssignments?.findIndex(
                       a => a.playerId === startingStats.activePlayerId && 
