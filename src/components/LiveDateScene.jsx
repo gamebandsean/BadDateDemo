@@ -1500,7 +1500,7 @@ function LiveDateScene() {
       
       // Get the last thing the dater said for context
       const lastDaterMessage = getConversation()
-        .slice(-10)
+        .slice(-20) // Keep more history for better memory
         .reverse()
         .find(msg => msg.speaker === 'dater')?.message || ''
       
@@ -1509,7 +1509,7 @@ function LiveDateScene() {
         avatarWithNewAttr,
         selectedDater,
         attrToUse,
-        getConversation().slice(-10)
+        getConversation().slice(-20) // Keep more history for better memory
       )
       
       // Store prompts for debug display
@@ -1546,7 +1546,7 @@ function LiveDateScene() {
         const avatarResponse2 = await getAvatarDateResponse(
           avatarWithNewAttr,
           selectedDater,
-          getConversation().slice(-10), // Fresh state already includes recent messages
+          getConversation().slice(-20), // Keep more history for better memory
           attrToUse, // Pass the latest attribute for context
           'react' // Mode: responding to what the Dater just said
         )
@@ -1566,7 +1566,7 @@ function LiveDateScene() {
           const daterReaction2 = await getDaterDateResponse(
             selectedDater,
             avatarWithNewAttr,
-            getConversation().slice(-10), // Fresh state already includes recent messages
+            getConversation().slice(-20), // Keep more history for better memory
             null,
             sentimentHit2,
             currentStreak, // Pass streak for escalating reactions
@@ -1587,7 +1587,7 @@ function LiveDateScene() {
           const avatarResponse3 = await getAvatarDateResponse(
             avatarWithNewAttr,
             selectedDater,
-            getConversation().slice(-10), // Fresh state already includes recent messages
+            getConversation().slice(-20), // Keep more history for better memory
             attrToUse, // Pass latest attribute for context
             'connect' // Mode: draw connections between ALL traits
           )
@@ -1607,7 +1607,7 @@ function LiveDateScene() {
             const daterReaction3 = await getDaterDateResponse(
               selectedDater,
               avatarWithNewAttr,
-              getConversation().slice(-10), // Fresh state already includes recent messages
+              getConversation().slice(-20), // Keep more history for better memory
               null,
               sentimentHit3,
               currentStreak, // Pass streak for escalating reactions
