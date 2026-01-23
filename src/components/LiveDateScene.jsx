@@ -80,6 +80,16 @@ function LiveDateScene() {
   const [showLLMDebug, setShowLLMDebug] = useState(false)
   const [lastLLMPrompt, setLastLLMPrompt] = useState({ avatar: '', dater: '' })
   
+  // Plot Twist state
+  const plotTwist = useGameStore((state) => state.plotTwist)
+  const plotTwistCompleted = useGameStore((state) => state.plotTwistCompleted)
+  const setPlotTwist = useGameStore((state) => state.setPlotTwist)
+  const resetPlotTwist = useGameStore((state) => state.resetPlotTwist)
+  const [plotTwistInput, setPlotTwistInput] = useState('')
+  const [hasSubmittedPlotTwist, setHasSubmittedPlotTwist] = useState(false)
+  const plotTwistTimerRef = useRef(null)
+  const plotTwistAnimationRef = useRef(null)
+  
   // Starting Stats Mode state
   const [startingStatsInput, setStartingStatsInput] = useState('')
   const [startingStatsTimer, setStartingStatsTimer] = useState(15)
@@ -303,7 +313,7 @@ function LiveDateScene() {
       // Sync phase - but don't let server overwrite host's forward progress
       if (state.phase) {
         const currentLocalPhase = useGameStore.getState().livePhase
-        const phaseOrder = ['lobby', 'starting-stats', 'reaction', 'phase1', 'phase2', 'phase3', 'ended']
+        const phaseOrder = ['lobby', 'starting-stats', 'reaction', 'phase1', 'phase2', 'phase3', 'plot-twist', 'ended']
         const serverPhaseIndex = phaseOrder.indexOf(state.phase)
         const localPhaseIndex = phaseOrder.indexOf(currentLocalPhase)
         
@@ -435,6 +445,25 @@ function LiveDateScene() {
           }, 100)
         }
       }
+      
+      // Sync plot twist state
+      if (state.plotTwist) {
+        setPlotTwist(state.plotTwist)
+        // Reset submission state when sub-phase changes to 'input'
+        if (state.plotTwist.subPhase === 'input') {
+          const currentPlotTwist = useGameStore.getState().plotTwist
+          if (currentPlotTwist.subPhase !== 'input') {
+            setHasSubmittedPlotTwist(false)
+            setPlotTwistInput('')
+          }
+        }
+      }
+      
+      // Sync plot twist completed flag
+      if (state.plotTwistCompleted !== undefined) {
+        useGameStore.setState({ plotTwistCompleted: state.plotTwistCompleted })
+      }
+      
       } catch (error) {
         console.error('🎉 Error processing PartyKit state update:', error)
       }
@@ -443,7 +472,7 @@ function LiveDateScene() {
     return () => {
       unsubscribe()
     }
-  }, [partyClient, roomCode, isHost, setSuggestedAttributes, setCompatibility, setLivePhase, setPhaseTimer, setPlayerChat, setNumberedAttributes, setShowTutorial, setTutorialStep, setPlayers])
+  }, [partyClient, roomCode, isHost, setSuggestedAttributes, setCompatibility, setLivePhase, setPhaseTimer, setPlayerChat, setNumberedAttributes, setShowTutorial, setTutorialStep, setPlayers, setPlotTwist])
   
   // Track timer value in a ref for the interval to access
   const phaseTimerValueRef = useRef(phaseTimer)
@@ -1653,12 +1682,20 @@ function LiveDateScene() {
     // IMPORTANT: Get ALL current values from store (not closure values!)
     const currentCycleCount = useGameStore.getState().cycleCount
     const currentMaxCycles = useGameStore.getState().maxCycles
+    const currentPlotTwistCompleted = useGameStore.getState().plotTwistCompleted
     const newRoundCount = currentCycleCount + 1
     incrementCycle()
     
     // IMPORTANT: Get CURRENT compatibility from store (not closure value!)
     const currentCompatibility = useGameStore.getState().compatibility
     console.log(`Round ${newRoundCount}/${currentMaxCycles} complete, compatibility: ${currentCompatibility}, cycleCount: ${currentCycleCount} -> ${newRoundCount}`)
+    
+    // Check if we should trigger Plot Twist (after Round 3, i.e., newRoundCount === 3)
+    if (newRoundCount === 3 && !currentPlotTwistCompleted) {
+      console.log('🎭 Triggering Plot Twist after Round 3!')
+      startPlotTwist()
+      return
+    }
     
     if (newRoundCount >= currentMaxCycles) {
       // Game over!
@@ -1703,6 +1740,352 @@ function LiveDateScene() {
       // Non-hosts will receive the question via PartyKit subscription
     }
   }
+  
+  // ============================================
+  // PLOT TWIST FUNCTIONS
+  // ============================================
+  
+  // Start the plot twist round (host only)
+  const startPlotTwist = () => {
+    if (!isHost) return
+    
+    console.log('🎭 Starting Plot Twist!')
+    
+    // Reset plot twist state
+    const initialPlotTwist = {
+      subPhase: 'interstitial',
+      timer: 15,
+      answers: [],
+      winningAnswer: null,
+      animationIndex: -1,
+    }
+    setPlotTwist(initialPlotTwist)
+    setHasSubmittedPlotTwist(false)
+    setPlotTwistInput('')
+    
+    // Set the phase
+    setLivePhase('plot-twist')
+    
+    // Sync to PartyKit
+    const currentCompatibility = useGameStore.getState().compatibility
+    const currentCycleCount = useGameStore.getState().cycleCount
+    if (partyClient) {
+      partyClient.syncState({
+        phase: 'plot-twist',
+        plotTwist: initialPlotTwist,
+        compatibility: currentCompatibility,
+        cycleCount: currentCycleCount,
+      })
+    }
+    
+    // Show interstitial for 3 seconds, then move to input phase
+    setTimeout(() => {
+      advancePlotTwistToInput()
+    }, 3000)
+  }
+  
+  // Move from interstitial to input phase
+  const advancePlotTwistToInput = () => {
+    if (!isHost) return
+    
+    const newPlotTwist = {
+      ...useGameStore.getState().plotTwist,
+      subPhase: 'input',
+      timer: 15,
+    }
+    setPlotTwist(newPlotTwist)
+    
+    // Sync to PartyKit
+    if (partyClient) {
+      partyClient.syncState({ plotTwist: newPlotTwist })
+    }
+    
+    // Start the 15 second timer
+    startPlotTwistTimer()
+  }
+  
+  // Start the plot twist input timer
+  const startPlotTwistTimer = () => {
+    if (plotTwistTimerRef.current) {
+      clearInterval(plotTwistTimerRef.current)
+    }
+    
+    plotTwistTimerRef.current = setInterval(() => {
+      const currentPlotTwist = useGameStore.getState().plotTwist
+      const newTimer = currentPlotTwist.timer - 1
+      
+      if (newTimer <= 0) {
+        clearInterval(plotTwistTimerRef.current)
+        // Timer ended - move to reveal phase
+        advancePlotTwistToReveal()
+      } else {
+        const updatedPlotTwist = { ...currentPlotTwist, timer: newTimer }
+        setPlotTwist(updatedPlotTwist)
+        
+        // Sync timer every 5 seconds to reduce traffic
+        if (newTimer % 5 === 0 && partyClient) {
+          partyClient.syncState({ plotTwist: updatedPlotTwist })
+        }
+      }
+    }, 1000)
+  }
+  
+  // Submit a plot twist answer (any player)
+  const submitPlotTwistAnswer = (answer) => {
+    if (!answer.trim() || hasSubmittedPlotTwist) return
+    
+    setHasSubmittedPlotTwist(true)
+    setPlotTwistInput('')
+    
+    // Submit via PartyKit
+    if (partyClient) {
+      partyClient.submitPlotTwistAnswer(playerId, username, answer.trim())
+    }
+    
+    console.log(`🎭 Submitted plot twist answer: "${answer}"`)
+  }
+  
+  // Move to reveal phase (show all answers)
+  const advancePlotTwistToReveal = () => {
+    if (!isHost) return
+    
+    if (plotTwistTimerRef.current) {
+      clearInterval(plotTwistTimerRef.current)
+    }
+    
+    const currentPlotTwist = useGameStore.getState().plotTwist
+    
+    // If no answers were submitted, use a fallback
+    let answers = currentPlotTwist.answers || []
+    if (answers.length === 0) {
+      answers = [{ odId: 'system', username: 'The Universe', answer: 'Pretend nothing happened' }]
+    }
+    
+    const newPlotTwist = {
+      ...currentPlotTwist,
+      subPhase: 'reveal',
+      answers: answers,
+    }
+    setPlotTwist(newPlotTwist)
+    
+    // Sync to PartyKit
+    if (partyClient) {
+      partyClient.syncState({ plotTwist: newPlotTwist })
+    }
+    
+    // Show answers for 2 seconds, then start animation
+    setTimeout(() => {
+      startPlotTwistAnimation()
+    }, 2000)
+  }
+  
+  // Start the winner selection animation
+  const startPlotTwistAnimation = () => {
+    if (!isHost) return
+    
+    const currentPlotTwist = useGameStore.getState().plotTwist
+    const answers = currentPlotTwist.answers || []
+    
+    if (answers.length === 0) {
+      finishPlotTwist()
+      return
+    }
+    
+    const newPlotTwist = { ...currentPlotTwist, subPhase: 'animation' }
+    setPlotTwist(newPlotTwist)
+    
+    if (partyClient) {
+      partyClient.syncState({ plotTwist: newPlotTwist })
+    }
+    
+    // Animation: highlight each answer in sequence, speeding up
+    // Slow: 400ms -> Medium: 200ms -> Fast: 100ms -> then random final pick
+    const animationCycles = [
+      { count: answers.length * 2, delay: 400 },   // Slow pass
+      { count: answers.length * 2, delay: 200 },   // Medium pass
+      { count: answers.length * 3, delay: 100 },   // Fast pass
+      { count: answers.length * 4, delay: 50 },    // Faster pass
+    ]
+    
+    let currentIndex = 0
+    let cycleIndex = 0
+    let stepCount = 0
+    
+    const animate = () => {
+      const currentPlotTwistState = useGameStore.getState().plotTwist
+      const currentAnswers = currentPlotTwistState.answers || []
+      
+      if (currentAnswers.length === 0) {
+        finishPlotTwist()
+        return
+      }
+      
+      const cycle = animationCycles[cycleIndex]
+      currentIndex = (currentIndex + 1) % currentAnswers.length
+      stepCount++
+      
+      // Update the highlighted index
+      const updatedPlotTwist = { ...currentPlotTwistState, animationIndex: currentIndex }
+      setPlotTwist(updatedPlotTwist)
+      
+      if (partyClient) {
+        partyClient.syncState({ plotTwist: updatedPlotTwist })
+      }
+      
+      // Check if we should move to next speed cycle
+      if (stepCount >= cycle.count) {
+        cycleIndex++
+        stepCount = 0
+        
+        if (cycleIndex >= animationCycles.length) {
+          // Animation complete - pick random winner
+          const winnerIndex = Math.floor(Math.random() * currentAnswers.length)
+          declareWinner(currentAnswers[winnerIndex], winnerIndex)
+          return
+        }
+      }
+      
+      plotTwistAnimationRef.current = setTimeout(animate, cycle.delay)
+    }
+    
+    // Start animation
+    animate()
+  }
+  
+  // Declare the winning answer
+  const declareWinner = (winner, winnerIndex) => {
+    if (!isHost) return
+    
+    console.log(`🎭 Plot Twist Winner: "${winner.answer}" by ${winner.username}`)
+    
+    const currentPlotTwist = useGameStore.getState().plotTwist
+    const newPlotTwist = {
+      ...currentPlotTwist,
+      subPhase: 'winner',
+      winningAnswer: winner,
+      animationIndex: winnerIndex,
+    }
+    setPlotTwist(newPlotTwist)
+    
+    if (partyClient) {
+      partyClient.syncState({ plotTwist: newPlotTwist })
+    }
+    
+    // Show winner for 3 seconds, then generate reaction
+    setTimeout(() => {
+      generatePlotTwistReaction(winner)
+    }, 3000)
+  }
+  
+  // Generate LLM reaction to the plot twist
+  const generatePlotTwistReaction = async (winner) => {
+    if (!isHost) return
+    
+    const currentPlotTwist = useGameStore.getState().plotTwist
+    const newPlotTwist = { ...currentPlotTwist, subPhase: 'reaction' }
+    setPlotTwist(newPlotTwist)
+    
+    if (partyClient) {
+      partyClient.syncState({ plotTwist: newPlotTwist })
+    }
+    
+    setIsGenerating(true)
+    
+    try {
+      // Create context for the plot twist scenario
+      const plotTwistContext = `PLOT TWIST SCENARIO: Someone else just started hitting on ${selectedDater?.name || 'your date'}! 
+The avatar's response to this situation: "${winner.answer}"
+This is a dramatic moment - react to what the avatar did!`
+      
+      // Get Dater's reaction first
+      const daterReaction = await getDaterDateResponse(
+        selectedDater,
+        avatar,
+        useGameStore.getState().dateConversation || [],
+        plotTwistContext,
+        avatar.attributes || []
+      )
+      
+      setDaterBubble(daterReaction)
+      addDateMessage('dater', daterReaction)
+      syncConversationToPartyKit(undefined, daterReaction)
+      
+      // Wait a moment, then get Avatar's response
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      
+      const avatarFollowUp = await getAvatarDateResponse(
+        avatar,
+        selectedDater,
+        useGameStore.getState().dateConversation || [],
+        daterReaction,
+        avatar.attributes || []
+      )
+      
+      setAvatarBubble(avatarFollowUp)
+      addDateMessage('avatar', avatarFollowUp)
+      syncConversationToPartyKit(avatarFollowUp, undefined)
+      
+      // Wait for reading, then finish plot twist
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      
+    } catch (error) {
+      console.error('Error generating plot twist reaction:', error)
+      setDaterBubble("Well, THAT was unexpected!")
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    }
+    
+    setIsGenerating(false)
+    finishPlotTwist()
+  }
+  
+  // Finish plot twist and continue to next round
+  const finishPlotTwist = () => {
+    if (!isHost) return
+    
+    console.log('🎭 Plot Twist complete - continuing to Round 4')
+    
+    // Mark plot twist as completed
+    useGameStore.setState({ plotTwistCompleted: true })
+    
+    // Clear any remaining timers
+    if (plotTwistTimerRef.current) clearInterval(plotTwistTimerRef.current)
+    if (plotTwistAnimationRef.current) clearTimeout(plotTwistAnimationRef.current)
+    
+    // Continue to next round (Phase 1 of Round 4)
+    const currentCompatibility = useGameStore.getState().compatibility
+    const currentCycleCount = useGameStore.getState().cycleCount
+    
+    setLivePhase('phase1')
+    setPhaseTimer(30)
+    
+    const nextQuestion = getOpeningLine()
+    setDaterBubble(nextQuestion)
+    setAvatarBubble('')
+    addDateMessage('dater', nextQuestion)
+    
+    setSuggestedAttributes([])
+    setNumberedAttributes([])
+    
+    if (partyClient) {
+      partyClient.syncState({
+        phase: 'phase1',
+        phaseTimer: 30,
+        compatibility: currentCompatibility,
+        cycleCount: currentCycleCount,
+        plotTwistCompleted: true,
+        daterBubble: nextQuestion,
+        avatarBubble: '',
+        suggestedAttributes: [],
+        numberedAttributes: [],
+      })
+      partyClient.clearSuggestions()
+      partyClient.clearVotes()
+    }
+  }
+  
+  // ============================================
+  // END PLOT TWIST FUNCTIONS
+  // ============================================
   
   const handleChatSubmit = async (e) => {
     e.preventDefault()
@@ -1771,6 +2154,7 @@ function LiveDateScene() {
       case 'phase1': return { line1: 'PHASE 1', line2: 'Submit', line3: 'Answers' }
       case 'phase2': return { line1: 'PHASE 2', line2: 'Vote', line3: '' }
       case 'phase3': return { line1: 'PHASE 3', line2: 'Watch', line3: 'the Date' }
+      case 'plot-twist': return { line1: '🎭 PLOT', line2: 'Twist!', line3: '' }
       case 'ended': return { line1: 'DONE', line2: 'Date', line3: 'Over' }
       default: return { line1: '', line2: '', line3: '' }
     }
@@ -1786,6 +2170,7 @@ function LiveDateScene() {
         return 'Submit an answer!'
       case 'phase2': return 'Vote for the best answer!'
       case 'phase3': return 'Chat with other players'
+      case 'plot-twist': return 'What do you do?'
       default: return ''
     }
   }
@@ -1987,6 +2372,163 @@ function LiveDateScene() {
         )}
       </AnimatePresence>
       
+      {/* Plot Twist Overlay */}
+      <AnimatePresence>
+        {livePhase === 'plot-twist' && (
+          <motion.div 
+            className="plot-twist-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {/* Interstitial - Title Card */}
+            {plotTwist.subPhase === 'interstitial' && (
+              <motion.div 
+                className="plot-twist-interstitial"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', damping: 12 }}
+              >
+                <div className="plot-twist-badge">🎭 PLOT TWIST</div>
+                <h1 className="plot-twist-title">Another Person Hit on Your Date!</h1>
+                <p className="plot-twist-subtitle">What Do You Do?</p>
+              </motion.div>
+            )}
+            
+            {/* Input Phase - Everyone answers */}
+            {plotTwist.subPhase === 'input' && (
+              <div className="plot-twist-input-container">
+                <div className="plot-twist-header">
+                  <div className="plot-twist-badge">🎭 PLOT TWIST</div>
+                  <h2>Another Person Hit on Your Date!</h2>
+                  <p className="plot-twist-question">What Do You Do?</p>
+                </div>
+                
+                <div className="plot-twist-timer-bar">
+                  <div 
+                    className="plot-twist-timer-fill"
+                    style={{ width: `${(plotTwist.timer / 15) * 100}%` }}
+                  />
+                  <span className="plot-twist-timer-text">{plotTwist.timer}s</span>
+                </div>
+                
+                {!hasSubmittedPlotTwist ? (
+                  <div className="plot-twist-input-area">
+                    <form onSubmit={(e) => {
+                      e.preventDefault()
+                      submitPlotTwistAnswer(plotTwistInput)
+                    }}>
+                      <input
+                        type="text"
+                        className="plot-twist-input"
+                        value={plotTwistInput}
+                        onChange={(e) => setPlotTwistInput(e.target.value)}
+                        placeholder="e.g., 'Challenge them to a dance-off'"
+                        autoFocus
+                      />
+                      <button 
+                        type="submit" 
+                        className="plot-twist-submit-btn"
+                        disabled={!plotTwistInput.trim()}
+                      >
+                        Submit
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <div className="plot-twist-submitted">
+                    <span className="submitted-icon">✓</span>
+                    <span>Answer submitted! Waiting for others...</span>
+                  </div>
+                )}
+                
+                <div className="plot-twist-answer-count">
+                  {plotTwist.answers?.length || 0} / {players.length} players answered
+                </div>
+              </div>
+            )}
+            
+            {/* Reveal Phase - Show all answers */}
+            {plotTwist.subPhase === 'reveal' && (
+              <div className="plot-twist-reveal">
+                <div className="plot-twist-badge">🎭 PLOT TWIST</div>
+                <h2>Everyone's Answers:</h2>
+                <div className="plot-twist-answers-grid">
+                  {(plotTwist.answers || []).map((answer, index) => (
+                    <motion.div 
+                      key={answer.odId}
+                      className="plot-twist-answer-card"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <span className="answer-text">"{answer.answer}"</span>
+                      <span className="answer-by">- {answer.username}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Animation Phase - Spinning selection */}
+            {plotTwist.subPhase === 'animation' && (
+              <div className="plot-twist-animation">
+                <div className="plot-twist-badge spinning">🎭 CHOOSING...</div>
+                <div className="plot-twist-answers-grid animated">
+                  {(plotTwist.answers || []).map((answer, index) => (
+                    <motion.div 
+                      key={answer.odId}
+                      className={`plot-twist-answer-card ${plotTwist.animationIndex === index ? 'highlighted' : ''}`}
+                      animate={plotTwist.animationIndex === index ? {
+                        scale: [1, 1.15, 1],
+                        boxShadow: ['0 0 0px rgba(255,255,255,0)', '0 0 30px rgba(255,200,100,0.8)', '0 0 0px rgba(255,255,255,0)']
+                      } : {}}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <span className="answer-text">"{answer.answer}"</span>
+                      <span className="answer-by">- {answer.username}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Winner Phase - Announce the winner */}
+            {plotTwist.subPhase === 'winner' && plotTwist.winningAnswer && (
+              <motion.div 
+                className="plot-twist-winner"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', damping: 10 }}
+              >
+                <div className="winner-confetti">🎉</div>
+                <div className="plot-twist-badge winner">🏆 WINNER!</div>
+                <div className="winner-answer-card">
+                  <span className="winner-answer">"{plotTwist.winningAnswer.answer}"</span>
+                  <span className="winner-by">by {plotTwist.winningAnswer.username}</span>
+                </div>
+              </motion.div>
+            )}
+            
+            {/* Reaction Phase - LLM generating */}
+            {plotTwist.subPhase === 'reaction' && (
+              <div className="plot-twist-reaction">
+                <div className="plot-twist-badge">💬 Reaction</div>
+                {isGenerating && (
+                  <motion.div 
+                    className="generating-indicator"
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    {selectedDater?.name} is reacting...
+                  </motion.div>
+                )}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
       {/* Fallback Mode Warning */}
       {usingFallback && (
         <div className="fallback-warning">
@@ -2023,9 +2565,9 @@ function LiveDateScene() {
               style={{ cursor: isHost ? 'pointer' : 'default' }}
               title={isHost ? 'Tap to show LLM prompt debug' : ''}
             >
-              <span className="round-label">{livePhase === 'reaction' ? 'Intro' : 'Round'}</span>
+              <span className="round-label">{livePhase === 'reaction' ? 'Intro' : livePhase === 'plot-twist' ? 'Plot' : 'Round'}</span>
               <span className="round-value">
-                {livePhase === 'reaction' ? '👋' : `${cycleCount + 1}/${maxCycles}`}
+                {livePhase === 'reaction' ? '👋' : livePhase === 'plot-twist' ? '🎭' : `${cycleCount + 1}/${maxCycles}`}
               </span>
             </div>
             <div 
@@ -2036,7 +2578,8 @@ function LiveDateScene() {
             >
               {phaseTimer > 0 && <span className="timer-value">{formatTime(phaseTimer)}</span>}
               {(livePhase === 'phase3' || livePhase === 'reaction') && <span className="timer-value">💬</span>}
-              {phaseTimer <= 0 && livePhase !== 'phase3' && livePhase !== 'reaction' && <span className="timer-value">⏳</span>}
+              {livePhase === 'plot-twist' && <span className="timer-value">🎭</span>}
+              {phaseTimer <= 0 && livePhase !== 'phase3' && livePhase !== 'reaction' && livePhase !== 'plot-twist' && <span className="timer-value">⏳</span>}
             </div>
           </div>
         </div>

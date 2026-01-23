@@ -389,7 +389,7 @@ function LiveLobby() {
           <div className="live-info">
             <div className="info-item">
               <span className="info-icon">👥</span>
-              <span>2-20 players</span>
+              <span>1-20 players</span>
             </div>
             <div className="info-item">
               <span className="info-icon">⏱️</span>

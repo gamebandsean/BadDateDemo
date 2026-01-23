@@ -105,10 +105,10 @@ function Lobby() {
             <div className="mode-info">
               <h3 className="mode-title">Live Mode</h3>
               <p className="mode-description">
-                Play with up to 20 friends! Vote on attributes together in real-time.
+                Play solo or with up to 20 friends! Vote on attributes together in real-time.
               </p>
               <div className="mode-features">
-                <span>👥 2-20 players</span>
+                <span>👥 1-20 players</span>
                 <span>🗳️ Vote on traits</span>
                 <span>⏱️ Timed phases</span>
               </div>

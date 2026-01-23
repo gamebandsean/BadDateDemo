@@ -421,6 +421,343 @@
 }
 
 /* ============================================
+   PLOT TWIST OVERLAY
+   ============================================ */
+
+.plot-twist-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, 
+    rgba(60, 20, 60, 0.98) 0%, 
+    rgba(30, 10, 40, 0.98) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1002;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+}
+
+.plot-twist-badge {
+  display: inline-block;
+  background: linear-gradient(90deg, #ff4d6d 0%, #ff8c42 100%);
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  box-shadow: 0 0 30px rgba(255, 77, 109, 0.5);
+}
+
+.plot-twist-badge.spinning {
+  animation: pulse-glow 0.5s ease-in-out infinite;
+}
+
+.plot-twist-badge.winner {
+  background: linear-gradient(90deg, #ffd700 0%, #ff8c42 100%);
+  font-size: 1.1rem;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 30px rgba(255, 77, 109, 0.5); }
+  50% { box-shadow: 0 0 50px rgba(255, 140, 66, 0.8); }
+}
+
+/* Interstitial */
+.plot-twist-interstitial {
+  text-align: center;
+  max-width: 400px;
+}
+
+.plot-twist-title {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 12px 0;
+  text-shadow: 0 0 30px rgba(255, 77, 109, 0.6);
+  line-height: 1.2;
+}
+
+.plot-twist-subtitle {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+}
+
+/* Input Phase */
+.plot-twist-input-container {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.plot-twist-header {
+  text-align: center;
+}
+
+.plot-twist-header h2 {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 8px 0;
+}
+
+.plot-twist-question {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.plot-twist-timer-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.plot-twist-timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff4d6d 0%, #ff8c42 100%);
+  border-radius: 4px;
+  transition: width 1s linear;
+}
+
+.plot-twist-timer-text {
+  position: absolute;
+  right: 0;
+  top: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.plot-twist-input-area {
+  width: 100%;
+}
+
+.plot-twist-input-area form {
+  display: flex;
+  gap: 12px;
+}
+
+.plot-twist-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 77, 109, 0.3);
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-size: 1rem;
+  color: #fff;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  transition: all 0.2s ease;
+}
+
+.plot-twist-input:focus {
+  outline: none;
+  border-color: #ff4d6d;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 20px rgba(255, 77, 109, 0.3);
+}
+
+.plot-twist-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.plot-twist-submit-btn {
+  background: linear-gradient(135deg, #ff4d6d 0%, #ff8c42 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.plot-twist-submit-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px rgba(255, 77, 109, 0.5);
+}
+
+.plot-twist-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.plot-twist-submitted {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  background: rgba(6, 214, 160, 0.2);
+  border: 2px solid rgba(6, 214, 160, 0.5);
+  border-radius: 12px;
+  color: #06d6a0;
+  font-weight: 600;
+}
+
+.submitted-icon {
+  font-size: 1.4rem;
+}
+
+.plot-twist-answer-count {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Reveal Phase */
+.plot-twist-reveal,
+.plot-twist-animation {
+  text-align: center;
+  width: 100%;
+  max-width: 500px;
+}
+
+.plot-twist-reveal h2,
+.plot-twist-animation h2 {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 20px 0;
+}
+
+.plot-twist-answers-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plot-twist-answer-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.plot-twist-answer-card.highlighted {
+  background: rgba(255, 77, 109, 0.3);
+  border-color: #ff4d6d;
+  transform: scale(1.05);
+}
+
+.plot-twist-answer-card .answer-text {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+.plot-twist-answer-card .answer-by {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Winner Phase */
+.plot-twist-winner {
+  text-align: center;
+}
+
+.winner-confetti {
+  font-size: 4rem;
+  margin-bottom: 12px;
+  animation: bounce 0.5s ease infinite alternate;
+}
+
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-10px); }
+}
+
+.winner-answer-card {
+  background: linear-gradient(145deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 140, 66, 0.2) 100%);
+  border: 3px solid rgba(255, 215, 0, 0.6);
+  border-radius: 20px;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
+}
+
+.winner-answer {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.winner-by {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+/* Reaction Phase */
+.plot-twist-reaction {
+  text-align: center;
+}
+
+.generating-indicator {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 20px;
+}
+
+/* Mobile adjustments for plot twist */
+@media (max-width: 480px) {
+  .plot-twist-title {
+    font-size: 1.6rem;
+  }
+  
+  .plot-twist-subtitle {
+    font-size: 1.2rem;
+  }
+  
+  .plot-twist-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .plot-twist-input-area form {
+    flex-direction: column;
+  }
+  
+  .plot-twist-submit-btn {
+    width: 100%;
+  }
+  
+  .winner-answer-card {
+    padding: 18px 24px;
+  }
+  
+  .winner-answer {
+    font-size: 1.2rem;
+  }
+}
+
+/* ============================================
    TUTORIAL OVERLAY
    ============================================ */
 

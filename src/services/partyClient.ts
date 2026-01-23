@@ -18,8 +18,22 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export interface PlotTwistAnswer {
+  odId: string;
+  username: string;
+  answer: string;
+}
+
+export interface PlotTwistState {
+  subPhase: 'interstitial' | 'input' | 'reveal' | 'animation' | 'winner' | 'reaction';
+  timer: number;
+  answers: PlotTwistAnswer[];
+  winningAnswer: PlotTwistAnswer | null;
+  animationIndex: number;
+}
+
 export interface GameState {
-  phase: 'lobby' | 'starting-stats' | 'reaction' | 'phase1' | 'phase2' | 'phase3' | 'ended';
+  phase: 'lobby' | 'starting-stats' | 'reaction' | 'phase1' | 'phase2' | 'phase3' | 'plot-twist' | 'ended';
   players: Player[];
   host: string | null;
   dater: any | null;
@@ -43,6 +57,8 @@ export interface GameState {
   showTutorial: boolean;
   tutorialStep: number;
   startingStatsMode: boolean;
+  plotTwist: PlotTwistState;
+  plotTwistCompleted: boolean;
 }
 
 export interface Player {
@@ -121,7 +137,8 @@ type GameAction =
   | { type: 'END_GAME' }
   | { type: 'SET_TUTORIAL_STEP'; step: number }
   | { type: 'SYNC_STATE'; state: Partial<GameState> }
-  | { type: 'SEND_CHAT'; username: string; message: string };
+  | { type: 'SEND_CHAT'; username: string; message: string }
+  | { type: 'SUBMIT_PLOT_TWIST_ANSWER'; odId: string; username: string; answer: string };
 
 // Callback type for state updates
 type StateCallback = (state: GameState) => void;
@@ -303,6 +320,12 @@ export class PartyGameClient {
 
   sendChatMessage(username: string, message: string) {
     this.send({ type: 'SEND_CHAT', username, message });
+  }
+
+  // ============ Plot Twist Actions ============
+  
+  submitPlotTwistAnswer(odId: string, username: string, answer: string) {
+    this.send({ type: 'SUBMIT_PLOT_TWIST_ANSWER', odId, username, answer });
   }
 
   // ============ Connection Management ============

@@ -2,7 +2,7 @@ import type * as Party from "partykit/server";
 
 // Game state - single source of truth
 interface GameState {
-  phase: 'lobby' | 'starting-stats' | 'reaction' | 'phase1' | 'phase2' | 'phase3' | 'ended';
+  phase: 'lobby' | 'starting-stats' | 'reaction' | 'phase1' | 'phase2' | 'phase3' | 'plot-twist' | 'ended';
   players: Player[];
   host: string | null;
   hostConnectionId: string | null; // Track host's WebSocket connection ID
@@ -37,6 +37,10 @@ interface GameState {
   showTutorial: boolean;
   tutorialStep: number;
   startingStatsMode: boolean;
+  
+  // Plot Twist (after Round 3)
+  plotTwist: PlotTwistState;
+  plotTwistCompleted: boolean;
 }
 
 interface Player {
@@ -100,6 +104,20 @@ interface QuestionAssignment {
   question: string;
 }
 
+interface PlotTwistAnswer {
+  odId: string;
+  username: string;
+  answer: string;
+}
+
+interface PlotTwistState {
+  subPhase: 'interstitial' | 'input' | 'reveal' | 'animation' | 'winner' | 'reaction';
+  timer: number;
+  answers: PlotTwistAnswer[];
+  winningAnswer: PlotTwistAnswer | null;
+  animationIndex: number;
+}
+
 // Action types that clients can send
 type GameAction = 
   | { type: 'JOIN'; odId: string; username: string }
@@ -123,7 +141,8 @@ type GameAction =
   | { type: 'END_GAME' }
   | { type: 'SET_TUTORIAL_STEP'; step: number }
   | { type: 'SYNC_STATE'; state: Partial<GameState> } // For host to sync complex state
-  | { type: 'SEND_CHAT'; username: string; message: string };
+  | { type: 'SEND_CHAT'; username: string; message: string }
+  | { type: 'SUBMIT_PLOT_TWIST_ANSWER'; odId: string; username: string; answer: string };
 
 // Initial state factory
 function createInitialState(): GameState {
@@ -153,6 +172,14 @@ function createInitialState(): GameState {
     showTutorial: false,
     tutorialStep: 0,
     startingStatsMode: true,
+    plotTwist: {
+      subPhase: 'interstitial',
+      timer: 15,
+      answers: [],
+      winningAnswer: null,
+      animationIndex: -1,
+    },
+    plotTwistCompleted: false,
   };
 }
 
@@ -463,6 +490,23 @@ export default class GameRoom implements Party.Server {
           timestamp: Date.now(),
         };
         this.state.playerChat = [...this.state.playerChat.slice(-50), chatMsg]; // Keep last 50 messages
+        break;
+      }
+      
+      case 'SUBMIT_PLOT_TWIST_ANSWER': {
+        // Don't allow duplicate answers from same player
+        const alreadyAnswered = this.state.plotTwist.answers.some(
+          a => a.odId === action.odId
+        );
+        if (alreadyAnswered) return;
+        
+        this.state.plotTwist.answers.push({
+          odId: action.odId,
+          username: action.username,
+          answer: action.answer,
+        });
+        
+        console.log(`Plot twist answer from ${action.username}: "${action.answer}"`);
         break;
       }
     }

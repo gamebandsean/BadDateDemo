@@ -66,6 +66,16 @@ const initialLiveState = {
   exposedValues: [], // array of { category, value, shortLabel }
   // Track which values are currently glowing
   glowingValues: [], // array of shortLabels currently glowing
+  // Plot Twist state (triggered after Round 3)
+  plotTwist: {
+    subPhase: 'interstitial', // 'interstitial' | 'input' | 'reveal' | 'animation' | 'winner' | 'reaction'
+    timer: 15,
+    answers: [], // { odId, username, answer }
+    winningAnswer: null, // { odId, username, answer }
+    animationIndex: -1, // Which answer is currently highlighted during animation
+  },
+  // Track if plot twist has occurred this game
+  plotTwistCompleted: false,
 }
 
 /**
@@ -965,6 +975,69 @@ export const useGameStore = create((set, get) => ({
         likes: [],
         dislikes: [],
         dealbreakers: [],
+      },
+    })
+  },
+  
+  // ============================================
+  // PLOT TWIST ACTIONS
+  // ============================================
+  
+  // Set entire plot twist state (for PartyKit sync)
+  setPlotTwist: (plotTwist) => set({ plotTwist }),
+  
+  // Update plot twist sub-phase
+  setPlotTwistSubPhase: (subPhase) => {
+    const { plotTwist } = get()
+    set({ plotTwist: { ...plotTwist, subPhase } })
+  },
+  
+  // Set plot twist timer
+  setPlotTwistTimer: (timer) => {
+    const { plotTwist } = get()
+    set({ plotTwist: { ...plotTwist, timer } })
+  },
+  
+  // Add a plot twist answer
+  addPlotTwistAnswer: (odId, username, answer) => {
+    const { plotTwist } = get()
+    // Don't add duplicate answers from same player
+    if (plotTwist.answers.some(a => a.odId === odId)) return
+    set({
+      plotTwist: {
+        ...plotTwist,
+        answers: [...plotTwist.answers, { odId, username, answer }],
+      },
+    })
+  },
+  
+  // Set all plot twist answers (for sync)
+  setPlotTwistAnswers: (answers) => {
+    const { plotTwist } = get()
+    set({ plotTwist: { ...plotTwist, answers } })
+  },
+  
+  // Set the winning answer
+  setPlotTwistWinner: (winningAnswer) => {
+    const { plotTwist } = get()
+    set({ plotTwist: { ...plotTwist, winningAnswer } })
+  },
+  
+  // Set animation index (for winner selection animation)
+  setPlotTwistAnimationIndex: (index) => {
+    const { plotTwist } = get()
+    set({ plotTwist: { ...plotTwist, animationIndex: index } })
+  },
+  
+  // Reset plot twist state
+  resetPlotTwist: () => {
+    set({
+      plotTwist: {
+        subPhase: 'interstitial',
+        timer: 15,
+        answers: [],
+        winningAnswer: null,
+        animationIndex: -1,
       },
     })
   },
