@@ -106,12 +106,12 @@ function LiveDateScene() {
   
   // Starting Stats question definitions - Players build the Avatar (the dater going on the date)
   const STARTING_STATS_QUESTIONS = [
-    { type: 'physical', question: "What physical attribute do YOU have?" },
-    { type: 'physical', question: "What physical attribute do YOU have?" },
-    { type: 'physical', question: "What physical attribute do YOU have?" },
-    { type: 'emotional', question: "What emotional state are YOU in?" },
-    { type: 'emotional', question: "What emotional state are YOU in?" },
-    { type: 'name', question: "What is YOUR name?" },
+    { type: 'physical', question: "What physical attribute do you want to have?" },
+    { type: 'physical', question: "What physical attribute do you want to have?" },
+    { type: 'physical', question: "What physical attribute do you want to have?" },
+    { type: 'emotional', question: "What emotional state do you want to be in?" },
+    { type: 'emotional', question: "What emotional state do you want to be in?" },
+    { type: 'name', question: "What do you want your name to be?" },
   ]
   
   // Helper to sync conversation state via PartyKit (host only)
