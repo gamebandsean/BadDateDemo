@@ -234,12 +234,27 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
     }
     
     const sentimentGuide = {
-      loves: `🥰 YOU LOVE THIS! React with genuine excitement, attraction, or delight. This hit one of your LOVES - you're really into what they just said/showed. Be enthusiastic, flirty, impressed, or smitten. Show STRONG POSITIVE emotion.`,
+      loves: `🥰💥 MANDATORY STRONG REACTION - YOU LOVE THIS!
+⚠️ YOU MUST DIRECTLY ADDRESS THIS IN YOUR RESPONSE - DO NOT IGNORE IT!
+This hit one of your LOVES - this is a BIG DEAL to you!
+- React with OBVIOUS excitement, attraction, or delight
+- EXPLICITLY mention what you love about this
+- Be enthusiastic, flirty, impressed, or smitten
+- This should be the MAIN FOCUS of your response
+- Make it CRYSTAL CLEAR you are into this`,
       likes: `😊 YOU LIKE THIS! React positively - interested, pleased, intrigued. This hit one of your LIKES - it's a good sign. Be warm, engaged, and show you appreciate what they said. Moderate positive reaction.`,
       dislikes: `😬 YOU DON'T LIKE THIS. React with discomfort, concern, or disappointment. This hit one of your DISLIKES - it bothers you. Be visibly put off, skeptical, or uneasy. Show clear negative reaction but stay polite.`,
-      dealbreakers: `😱 THIS IS A DEALBREAKER! React with horror, disgust, fear, or shock. This hit one of your DEALBREAKERS - this is REALLY BAD. Be genuinely alarmed, disturbed, or repulsed. STRONG NEGATIVE reaction. You can't hide your distress.`
+      dealbreakers: `😱💥 MANDATORY STRONG REACTION - THIS IS A DEALBREAKER!
+⚠️ YOU MUST DIRECTLY ADDRESS THIS IN YOUR RESPONSE - DO NOT IGNORE IT!
+This hit one of your DEALBREAKERS - this is a HUGE problem for you!
+- React with OBVIOUS horror, disgust, fear, or shock
+- EXPLICITLY call out what's wrong
+- Be genuinely alarmed, disturbed, or repulsed
+- This should be the MAIN FOCUS of your response
+- You CANNOT pretend this is okay or brush it off
+- Make your distress CRYSTAL CLEAR`
     }
-    sentimentInstruction = `\n\n🎯 HOW YOU FEEL ABOUT THIS:\n${sentimentGuide[sentimentHit]}${escalationNote}${finalRoundInstruction}\n\nYour reaction MUST match this sentiment AND escalation level! Don't be neutral - show clear ${isPositive ? 'POSITIVE' : 'NEGATIVE'} emotion that BUILDS on previous reactions.`
+    sentimentInstruction = `\n\n🎯 HOW YOU FEEL ABOUT THIS:\n${sentimentGuide[sentimentHit]}${escalationNote}${finalRoundInstruction}\n\n⚠️ CRITICAL: Your reaction MUST directly address what triggered this sentiment! Don't talk around it - confront it head-on. Show clear ${isPositive ? 'POSITIVE' : 'NEGATIVE'} emotion that is IMPOSSIBLE to miss.`
   } else if (isFinalRound) {
     // Even if no sentiment hit, still add finality instruction
     sentimentInstruction = finalRoundInstruction
