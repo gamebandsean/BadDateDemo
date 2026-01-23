@@ -23,6 +23,18 @@
   z-index: 1;
 }
 
+/* Version number */
+.version-number {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: 'Bricolage Grotesque', monospace;
+  z-index: 10;
+  letter-spacing: 0.5px;
+}
+
 /* Floating hearts background */
 .lobby-background {
   position: absolute;

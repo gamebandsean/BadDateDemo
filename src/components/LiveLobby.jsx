@@ -8,6 +8,9 @@ import './LiveLobby.css'
 // PartyKit host - update after deployment
 const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999'
 
+// Game version - increment with each deployment
+const GAME_VERSION = '0.01.01'
+
 // Main game entry screen - Bad Date
 
 function LiveLobby() {
@@ -225,6 +228,9 @@ function LiveLobby() {
   if (view === 'main') {
     return (
       <div className="live-lobby main-lobby">
+        {/* Version number */}
+        <div className="version-number">v{GAME_VERSION}</div>
+        
         {/* Floating hearts background */}
         <div className="lobby-background">
           <div className="floating-hearts">
