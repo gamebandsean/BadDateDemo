@@ -1984,12 +1984,23 @@ function LiveDateScene() {
   const generatePlotTwistReaction = async (winner) => {
     if (!isHost) return
     
-    const currentPlotTwist = useGameStore.getState().plotTwist
-    const newPlotTwist = { ...currentPlotTwist, subPhase: 'reaction' }
-    setPlotTwist(newPlotTwist)
+    // IMPORTANT: Switch to phase3 to close the overlay and show the date window
+    // This lets players see the conversation happening
+    setLivePhase('phase3')
+    setPhaseTimer(0)
+    
+    const currentCompatibility = useGameStore.getState().compatibility
+    const currentCycleCount = useGameStore.getState().cycleCount
     
     if (partyClient) {
-      partyClient.syncState({ plotTwist: newPlotTwist })
+      partyClient.syncState({ 
+        phase: 'phase3', 
+        phaseTimer: 0,
+        compatibility: currentCompatibility,
+        cycleCount: currentCycleCount,
+        // Clear the plot twist overlay state
+        plotTwist: { ...useGameStore.getState().plotTwist, subPhase: 'done' }
+      })
     }
     
     setIsGenerating(true)
@@ -2513,21 +2524,7 @@ This is a dramatic moment - react to what the avatar did!`
               </motion.div>
             )}
             
-            {/* Reaction Phase - LLM generating */}
-            {plotTwist.subPhase === 'reaction' && (
-              <div className="plot-twist-reaction">
-                <div className="plot-twist-badge">💬 Reaction</div>
-                {isGenerating && (
-                  <motion.div 
-                    className="generating-indicator"
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    {selectedDater?.name} is reacting...
-                  </motion.div>
-                )}
-              </div>
-            )}
+            {/* Reaction Phase - now happens in the main date window, not here */}
           </motion.div>
         )}
       </AnimatePresence>
