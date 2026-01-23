@@ -9,7 +9,7 @@ import './LiveLobby.css'
 const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999'
 
 // Game version - increment with each deployment
-const GAME_VERSION = '0.01.06'
+const GAME_VERSION = '0.01.07'
 
 // Main game entry screen - Bad Date
 
@@ -77,7 +77,8 @@ function LiveLobby() {
     const roomCode = generateRoomCode()
     const playerName = username.trim() || `Player${Math.floor(Math.random() * 1000)}`
     const odId = generatePlayerId()
-    const randomDater = daters[Math.floor(Math.random() * daters.length)]
+    // Always use Maya for now (id: 2)
+    const randomDater = daters.find(d => d.name === 'Maya') || daters[0]
     
     try {
       // Create PartyKit client and connect to room
