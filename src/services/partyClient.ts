@@ -33,7 +33,7 @@ export interface PlotTwistState {
 }
 
 export interface GameState {
-  phase: 'lobby' | 'starting-stats' | 'reaction' | 'phase1' | 'phase2' | 'phase3' | 'plot-twist' | 'ended';
+  phase: 'lobby' | 'starting-stats' | 'reaction' | 'phase1' | 'answer-selection' | 'phase3' | 'plot-twist' | 'ended';
   players: Player[];
   host: string | null;
   dater: any | null;

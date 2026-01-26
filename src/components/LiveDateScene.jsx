@@ -90,6 +90,15 @@ function LiveDateScene() {
   const plotTwistTimerRef = useRef(null)
   const plotTwistAnimationRef = useRef(null)
   
+  // Answer Selection state (replaces voting)
+  const [answerSelection, setAnswerSelection] = useState({
+    subPhase: 'idle', // 'idle' | 'showing' | 'animation' | 'winner'
+    answers: [],
+    animationIndex: -1,
+    winningAnswer: null
+  })
+  const answerSelectionAnimationRef = useRef(null)
+  
   // Starting Stats Mode state
   const [startingStatsInput, setStartingStatsInput] = useState('')
   const [startingStatsTimer, setStartingStatsTimer] = useState(15)
@@ -101,7 +110,6 @@ function LiveDateScene() {
   const chatEndRef = useRef(null)
   const phaseTimerRef = useRef(null)
   const lastPhaseRef = useRef('')
-  const allVotedTriggeredRef = useRef(false) // Prevent multiple auto-advance triggers
   const allPlotTwistAnsweredRef = useRef(false) // Prevent multiple plot twist auto-advance triggers
   
   // Starting Stats question definitions - Players build the Avatar (the dater going on the date)
@@ -243,49 +251,6 @@ function LiveDateScene() {
         
         console.log('🗳️ Setting local numberedAttributes:', numberedWithVotes.length, 'items')
         setNumberedAttributes(numberedWithVotes)
-        
-        // Auto-advance to Phase 3 if all players have voted (host only)
-        if (isHost && state.phase === 'phase2' && players.length > 0 && totalVotes >= players.length && !allVotedTriggeredRef.current) {
-          console.log('🎯 All players have voted! Auto-advancing to Phase 3')
-          allVotedTriggeredRef.current = true
-          
-          const sortedByVotes = [...numberedWithVotes].sort((a, b) => b.votes.length - a.votes.length)
-          const winningAttr = sortedByVotes[0]?.text || null
-          
-          if (winningAttr) {
-            console.log('🏆 Winner:', winningAttr)
-            setTimeout(async () => {
-              const currentCompatibility = useGameStore.getState().compatibility
-              
-              setWinnerText(winningAttr)
-              setShowWinnerPopup(true)
-              applyWinningAttribute()
-              setLivePhase('phase3')
-              setPhaseTimer(0)
-              
-              // Sync via PartyKit - include showWinnerPopup
-              if (partyClient) {
-                partyClient.syncState({
-                  phase: 'phase3',
-                  phaseTimer: 0,
-                  winningAttribute: winningAttr,
-                  showWinnerPopup: true,
-                  compatibility: currentCompatibility
-                })
-                partyClient.clearSuggestions()
-                partyClient.clearVotes()
-              }
-              
-              setTimeout(() => {
-                setShowWinnerPopup(false)
-                if (partyClient) {
-                  partyClient.syncState({ showWinnerPopup: false })
-                }
-                setTimeout(() => generateDateConversation(winningAttr), 100)
-              }, 3000)
-            }, 500)
-          }
-        }
       }
       
       // Sync compatibility
@@ -311,7 +276,7 @@ function LiveDateScene() {
       // Sync phase - but don't let server overwrite host's forward progress
       if (state.phase) {
         const currentLocalPhase = useGameStore.getState().livePhase
-        const phaseOrder = ['lobby', 'starting-stats', 'reaction', 'phase1', 'phase2', 'phase3', 'plot-twist', 'ended']
+        const phaseOrder = ['lobby', 'starting-stats', 'reaction', 'phase1', 'answer-selection', 'phase3', 'plot-twist', 'ended']
         const serverPhaseIndex = phaseOrder.indexOf(state.phase)
         const localPhaseIndex = phaseOrder.indexOf(currentLocalPhase)
         
@@ -478,6 +443,11 @@ function LiveDateScene() {
         useGameStore.setState({ plotTwistCompleted: state.plotTwistCompleted })
       }
       
+      // Sync answer selection state (for non-host clients)
+      if (state.answerSelection) {
+        setAnswerSelection(state.answerSelection)
+      }
+      
       } catch (error) {
         console.error('🎉 Error processing PartyKit state update:', error)
       }
@@ -494,13 +464,13 @@ function LiveDateScene() {
     phaseTimerValueRef.current = phaseTimer
   }, [phaseTimer])
   
-  // Debug: Log when numberedAttributes or phase changes
+  // Debug: Log when phase changes
   useEffect(() => {
-    console.log('🔍 DEBUG: livePhase =', livePhase, ', numberedAttributes.length =', numberedAttributes.length, ', isHost =', isHost)
-    if (livePhase === 'phase2') {
-      console.log('🔍 DEBUG Phase2: Voting overlay should show?', numberedAttributes.length > 0, numberedAttributes)
+    console.log('🔍 DEBUG: livePhase =', livePhase, ', isHost =', isHost)
+    if (livePhase === 'answer-selection') {
+      console.log('🔍 DEBUG Answer Selection: answers =', answerSelection.answers.length, ', subPhase =', answerSelection.subPhase)
     }
-  }, [livePhase, numberedAttributes, isHost])
+  }, [livePhase, answerSelection, isHost])
   
   // Debug: Log when suggestedAttributes changes
   useEffect(() => {
@@ -514,8 +484,8 @@ function LiveDateScene() {
     // Only the host should run the timer
     if (!isHost && partyClient) return
     
-    // Run timer during Phase 1, Phase 2, and Phase 3
-    const shouldRunTimer = livePhase === 'phase1' || livePhase === 'phase2' || livePhase === 'phase3'
+    // Run timer during Phase 1 and Phase 3 (answer-selection has no timer)
+    const shouldRunTimer = livePhase === 'phase1' || livePhase === 'phase3'
     
     if (shouldRunTimer) {
       phaseTimerRef.current = setInterval(async () => {
@@ -540,8 +510,8 @@ function LiveDateScene() {
   
   // Handle phase transitions when timer hits 0
   useEffect(() => {
-    // Only trigger once when timer reaches 0
-    if (phaseTimer === 0 && (livePhase === 'phase1' || livePhase === 'phase2')) {
+    // Only trigger once when timer reaches 0 (only Phase 1 needs timer-based transitions now)
+    if (phaseTimer === 0 && livePhase === 'phase1') {
       console.log('⏰ Timer hit 0, triggering phase end for:', livePhase)
       handlePhaseEnd()
     }
@@ -1243,8 +1213,8 @@ function LiveDateScene() {
         return { title: 'FIRST IMPRESSIONS', subtitle: 'Meeting Your Date', icon: '👋', description: 'Watch them meet for the first time!' }
       case 'phase1':
         return { title: 'PHASE 1', subtitle: 'Submit Answers', icon: '✨', description: 'Type an answer for your Avatar!' }
-      case 'phase2':
-        return { title: 'PHASE 2', subtitle: 'Vote', icon: '🗳️', description: 'Pick the best answer!' }
+      case 'answer-selection':
+        return { title: 'SELECTING', subtitle: 'Answer', icon: '🎲', description: 'Picking an answer...' }
       case 'phase3':
         return { title: 'PHASE 3', subtitle: 'Watch the Date', icon: '👀', description: 'See how they react!' }
       default:
@@ -1364,74 +1334,18 @@ function LiveDateScene() {
           console.log('Waiting for at least one attribute suggestion...')
           return // Don't transition, stay in Phase 1
         }
-        // Move to Phase 2 - voting
-        // Create numbered attributes from suggestions (with safeguards)
-        console.log('📋 Processing suggestions for voting:', suggestedAttributes)
-        const numbered = suggestedAttributes
+        // Move to Answer Selection - show all answers and randomly pick one
+        console.log('📋 Processing suggestions for answer selection:', suggestedAttributes)
+        const answers = suggestedAttributes
           .filter(attr => attr && (attr.text || typeof attr === 'string'))
           .map((attr, index) => ({
-            number: index + 1,
+            id: index,
             text: typeof attr === 'string' ? attr : (attr.text || 'Unknown'),
-            submittedBy: attr.username || 'Anonymous',
-            votes: []
+            submittedBy: attr.username || 'Anonymous'
           }))
-        setNumberedAttributes(numbered)
-        setLivePhase('phase2')
-        setPhaseTimer(30)
-        setUserVote(null)
-        allVotedTriggeredRef.current = false // Reset for new voting round
         
-        // Sync to PartyKit - include numbered attributes, compatibility AND cycleCount
-        if (partyClient) {
-          const currentCycleCount = useGameStore.getState().cycleCount
-          console.log('🗳️ HOST syncing numberedAttributes to PartyKit:', numbered.length, 'items', JSON.stringify(numbered))
-          partyClient.syncState( { 
-            phase: 'phase2', 
-            phaseTimer: 30,
-            numberedAttributes: numbered,
-            compatibility: currentCompatibility, // PRESERVE!
-            cycleCount: currentCycleCount // PRESERVE!
-          })
-        } else {
-          console.log('⚠️ No partyClient - cannot sync numberedAttributes!')
-        }
-        break
-        
-      case 'phase2':
-        // Move to Phase 3 - show winner popup first, then run conversation
-        const winningAttr = getWinningAttributeText()
-        if (winningAttr) {
-          // Show the winner popup
-          setWinnerText(winningAttr)
-          setShowWinnerPopup(true)
-          applyWinningAttribute()
-          setLivePhase('phase3')
-          setPhaseTimer(0)
-          
-          // Sync to PartyKit - include compatibility, cycleCount AND showWinnerPopup
-          if (partyClient) {
-            const currentCycleCount = useGameStore.getState().cycleCount
-            partyClient.syncState( { 
-              phase: 'phase3', 
-              phaseTimer: 0, 
-              winningAttribute: winningAttr,
-              showWinnerPopup: true,
-              compatibility: currentCompatibility, // PRESERVE!
-              cycleCount: currentCycleCount // PRESERVE!
-            })
-            partyClient.clearSuggestions()
-            partyClient.clearVotes()
-          }
-          
-          // After 3 seconds, hide popup and start conversation
-          setTimeout(() => {
-            setShowWinnerPopup(false)
-            if (partyClient) {
-              partyClient.syncState({ showWinnerPopup: false })
-            }
-            setTimeout(() => generateDateConversation(winningAttr), 100)
-          }, 3000)
-        }
+        // Start the answer selection sequence
+        startAnswerSelection(answers)
         break
         
       // Phase 3 ends are handled by handleRoundComplete() after conversation finishes
@@ -2119,6 +2033,227 @@ This is a dramatic moment - react to what the avatar did!`
   // END PLOT TWIST FUNCTIONS
   // ============================================
   
+  // ============================================
+  // ANSWER SELECTION FUNCTIONS (replaces voting)
+  // ============================================
+  
+  // Start the answer selection sequence
+  const startAnswerSelection = (answers) => {
+    if (!isHost) return
+    
+    console.log('🎰 Starting answer selection with', answers.length, 'answers')
+    
+    const currentCompatibility = useGameStore.getState().compatibility
+    const currentCycleCount = useGameStore.getState().cycleCount
+    
+    // If no answers, skip to generating a default
+    if (answers.length === 0) {
+      console.log('⚠️ No answers submitted, using fallback')
+      const fallbackAnswer = 'mysterious'
+      completeAnswerSelection(fallbackAnswer)
+      return
+    }
+    
+    // Set the phase and show the interstitial
+    setLivePhase('answer-selection')
+    setPhaseTimer(0)
+    setAnswerSelection({
+      subPhase: 'showing',
+      answers: answers,
+      animationIndex: -1,
+      winningAnswer: null
+    })
+    
+    // Sync to PartyKit
+    if (partyClient) {
+      partyClient.syncState({
+        phase: 'answer-selection',
+        phaseTimer: 0,
+        answerSelection: {
+          subPhase: 'showing',
+          answers: answers,
+          animationIndex: -1,
+          winningAnswer: null
+        },
+        compatibility: currentCompatibility,
+        cycleCount: currentCycleCount
+      })
+    }
+    
+    // Show all answers for 2 seconds, then start animation
+    setTimeout(() => {
+      startAnswerSelectionAnimation()
+    }, 2000)
+  }
+  
+  // Start the cycling animation
+  const startAnswerSelectionAnimation = () => {
+    if (!isHost) return
+    
+    const currentAnswers = answerSelection.answers
+    if (currentAnswers.length === 0) {
+      completeAnswerSelection('mysterious')
+      return
+    }
+    
+    // If only one answer, just pick it immediately
+    if (currentAnswers.length === 1) {
+      declareAnswerSelectionWinner(currentAnswers[0], 0)
+      return
+    }
+    
+    setAnswerSelection(prev => ({ ...prev, subPhase: 'animation' }))
+    
+    if (partyClient) {
+      partyClient.syncState({
+        answerSelection: { ...answerSelection, subPhase: 'animation' }
+      })
+    }
+    
+    // Animation: highlight each answer in sequence, speeding up
+    const animationCycles = [
+      { count: currentAnswers.length * 2, delay: 400 },   // Slow pass
+      { count: currentAnswers.length * 2, delay: 200 },   // Medium pass
+      { count: currentAnswers.length * 3, delay: 100 },   // Fast pass
+      { count: currentAnswers.length * 4, delay: 50 },    // Faster pass
+    ]
+    
+    let currentIndex = 0
+    let cycleIndex = 0
+    let stepCount = 0
+    
+    const animate = () => {
+      const answers = answerSelection.answers
+      
+      if (answers.length === 0) {
+        completeAnswerSelection('mysterious')
+        return
+      }
+      
+      const cycle = animationCycles[cycleIndex]
+      currentIndex = (currentIndex + 1) % answers.length
+      stepCount++
+      
+      // Update the highlighted index
+      setAnswerSelection(prev => ({ ...prev, animationIndex: currentIndex }))
+      
+      if (partyClient) {
+        partyClient.syncState({
+          answerSelection: { ...answerSelection, animationIndex: currentIndex }
+        })
+      }
+      
+      // Check if we should move to next speed cycle
+      if (stepCount >= cycle.count) {
+        cycleIndex++
+        stepCount = 0
+        
+        if (cycleIndex >= animationCycles.length) {
+          // Animation complete - pick random winner
+          const winnerIndex = Math.floor(Math.random() * answers.length)
+          declareAnswerSelectionWinner(answers[winnerIndex], winnerIndex)
+          return
+        }
+      }
+      
+      answerSelectionAnimationRef.current = setTimeout(animate, cycle.delay)
+    }
+    
+    // Start animation
+    animate()
+  }
+  
+  // Declare the winning answer
+  const declareAnswerSelectionWinner = (winner, winnerIndex) => {
+    if (!isHost) return
+    
+    console.log('🏆 Answer selection winner:', winner.text)
+    
+    setAnswerSelection(prev => ({
+      ...prev,
+      subPhase: 'winner',
+      animationIndex: winnerIndex,
+      winningAnswer: winner
+    }))
+    
+    if (partyClient) {
+      partyClient.syncState({
+        answerSelection: {
+          ...answerSelection,
+          subPhase: 'winner',
+          animationIndex: winnerIndex,
+          winningAnswer: winner
+        }
+      })
+    }
+    
+    // Show winner for 2 seconds, then proceed to Phase 3
+    setTimeout(() => {
+      completeAnswerSelection(winner.text)
+    }, 2000)
+  }
+  
+  // Complete the answer selection and move to Phase 3
+  const completeAnswerSelection = (winningText) => {
+    if (!isHost) return
+    
+    const currentCompatibility = useGameStore.getState().compatibility
+    const currentCycleCount = useGameStore.getState().cycleCount
+    
+    // Clear animation ref
+    if (answerSelectionAnimationRef.current) {
+      clearTimeout(answerSelectionAnimationRef.current)
+    }
+    
+    // Show winner popup and apply the attribute
+    setWinnerText(winningText)
+    setShowWinnerPopup(true)
+    applyWinningAttribute()
+    setLivePhase('phase3')
+    setPhaseTimer(0)
+    
+    // Reset answer selection state
+    setAnswerSelection({
+      subPhase: 'idle',
+      answers: [],
+      animationIndex: -1,
+      winningAnswer: null
+    })
+    
+    // Sync to PartyKit
+    if (partyClient) {
+      partyClient.syncState({
+        phase: 'phase3',
+        phaseTimer: 0,
+        winningAttribute: winningText,
+        showWinnerPopup: true,
+        compatibility: currentCompatibility,
+        cycleCount: currentCycleCount,
+        answerSelection: {
+          subPhase: 'idle',
+          answers: [],
+          animationIndex: -1,
+          winningAnswer: null
+        }
+      })
+      partyClient.clearSuggestions()
+      partyClient.clearVotes()
+    }
+    
+    // After 3 seconds, hide popup and start conversation
+    setTimeout(() => {
+      setShowWinnerPopup(false)
+      if (partyClient) {
+        partyClient.syncState({ showWinnerPopup: false })
+      }
+      setTimeout(() => generateDateConversation(winningText), 100)
+    }, 3000)
+  }
+  
+  // ============================================
+  // END ANSWER SELECTION FUNCTIONS
+  // ============================================
+  
   const handleChatSubmit = async (e) => {
     e.preventDefault()
     if (!chatInput.trim()) return
@@ -2144,28 +2279,7 @@ This is a dramatic moment - react to what the avatar did!`
         addPlayerChatMessage(username, `💡 ${truncate(message, 35)}`)
       }
     } 
-    // In Phase 2, check if it's a vote
-    else if (livePhase === 'phase2') {
-      const num = parseInt(message)
-      if (!isNaN(num) && num >= 1 && num <= numberedAttributes.length) {
-        // Submit vote via PartyKit if available
-        if (partyClient && playerId) {
-          partyClient.vote(playerId, num)
-          partyClient.sendChatMessage(username, `Vote: #${num}`)
-        } else {
-          voteForNumberedAttribute(num, username)
-        }
-        addPlayerChatMessage(username, `Vote: #${num}`)
-        setUserVote(num)
-      } else {
-        // Regular chat message (not a vote)
-        if (partyClient) {
-          partyClient.sendChatMessage(username, truncate(message))
-        }
-        addPlayerChatMessage(username, truncate(message))
-      }
-    }
-    // Phase 3 - just regular chat
+    // Regular chat (Phase 3 and others)
     else {
       if (partyClient) {
         partyClient.sendChatMessage(username, truncate(message))
@@ -2184,7 +2298,7 @@ This is a dramatic moment - react to what the avatar did!`
     switch (livePhase) {
       case 'reaction': return { line1: '👋 FIRST', line2: 'Impressions', line3: '' }
       case 'phase1': return { line1: 'PHASE 1', line2: 'Submit', line3: 'Answers' }
-      case 'phase2': return { line1: 'PHASE 2', line2: 'Vote', line3: '' }
+      case 'answer-selection': return { line1: '🎲', line2: 'Selecting', line3: 'Answer' }
       case 'phase3': return { line1: 'PHASE 3', line2: 'Watch', line3: 'the Date' }
       case 'plot-twist': return { line1: '🎭 PLOT', line2: 'Twist!', line3: '' }
       case 'ended': return { line1: 'DONE', line2: 'Date', line3: 'Over' }
@@ -2200,7 +2314,7 @@ This is a dramatic moment - react to what the avatar did!`
           return '⏳ Waiting for an answer...'
         }
         return 'Submit an answer!'
-      case 'phase2': return 'Vote for the best answer!'
+      case 'answer-selection': return 'Selecting an answer...'
       case 'phase3': return 'Chat with other players'
       case 'plot-twist': return 'What do you do?'
       default: return ''
@@ -2766,38 +2880,49 @@ This is a dramatic moment - react to what the avatar did!`
       
       {/* Date Screen - Characters with Speech Bubbles */}
       <div className="date-screen">
-        {/* Phase 2 Overlay - Voting */}
+        {/* Answer Selection Overlay - Replaces Voting */}
         <AnimatePresence>
-          {livePhase === 'phase2' && numberedAttributes.length > 0 && (
+          {livePhase === 'answer-selection' && answerSelection.answers.length > 0 && (
             <motion.div 
-              className="voting-overlay"
+              className="answer-selection-overlay"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <h3>Vote for an Answer!</h3>
-              <div className="voting-options">
-                {(numberedAttributes || []).map((attr) => (
-                  <motion.div 
-                    key={attr.number}
-                    className={`vote-option ${userVote === attr.number ? 'voted' : ''}`}
-                    onClick={async () => {
-                      if (partyClient && playerId) {
-                        partyClient.vote(playerId, attr.number)
-                        partyClient.sendChatMessage(username, `Vote: #${attr.number}`)
-                      } else {
-                        voteForNumberedAttribute(attr.number, username)
-                      }
-                      setUserVote(attr.number)
-                    }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <span className="vote-number">{attr.number}</span>
-                    <span className="vote-text">{attr.text}</span>
-                    <span className="vote-count">{attr.votes?.length || 0} votes</span>
-                  </motion.div>
-                ))}
+              <div className="answer-selection-content">
+                <div className="answer-selection-badge">🎲 SELECTING ANSWER</div>
+                
+                {answerSelection.subPhase === 'showing' && (
+                  <h2>All Answers Submitted!</h2>
+                )}
+                
+                {answerSelection.subPhase === 'animation' && (
+                  <h2 className="selecting-text">Selecting...</h2>
+                )}
+                
+                {answerSelection.subPhase === 'winner' && (
+                  <h2 className="winner-text">Winner!</h2>
+                )}
+                
+                <div className="answer-selection-grid">
+                  {answerSelection.answers.map((answer, index) => (
+                    <motion.div 
+                      key={answer.id}
+                      className={`answer-selection-card ${answerSelection.animationIndex === index ? 'highlighted' : ''} ${answerSelection.subPhase === 'winner' && answerSelection.winningAnswer?.id === answer.id ? 'winner' : ''}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ 
+                        opacity: 1, 
+                        y: 0,
+                        scale: answerSelection.animationIndex === index ? 1.1 : 1,
+                        boxShadow: answerSelection.animationIndex === index ? '0 0 20px rgba(255, 215, 0, 0.8)' : 'none'
+                      }}
+                      transition={{ delay: index * 0.1, duration: 0.1 }}
+                    >
+                      <span className="answer-text">{answer.text}</span>
+                      <span className="answer-author">— {answer.submittedBy}</span>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             </motion.div>
           )}
@@ -2928,13 +3053,13 @@ This is a dramatic moment - react to what the avatar did!`
           <input
             type="text"
             className="chat-input"
-            placeholder={livePhase === 'phase1' ? 'Type your answer...' : livePhase === 'phase2' ? 'Enter # to vote...' : 'Chat...'}
+            placeholder={livePhase === 'phase1' ? 'Type your answer...' : 'Chat...'}
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             maxLength={100}
           />
           <button type="submit" className="chat-send-btn">
-            {livePhase === 'phase1' ? '✨' : livePhase === 'phase2' ? '🗳️' : '💬'}
+            {livePhase === 'phase1' ? '✨' : '💬'}
           </button>
         </form>
       </div>

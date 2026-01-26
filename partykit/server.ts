@@ -2,7 +2,7 @@ import type * as Party from "partykit/server";
 
 // Game state - single source of truth
 interface GameState {
-  phase: 'lobby' | 'starting-stats' | 'reaction' | 'phase1' | 'phase2' | 'phase3' | 'plot-twist' | 'ended';
+  phase: 'lobby' | 'starting-stats' | 'reaction' | 'phase1' | 'answer-selection' | 'phase3' | 'plot-twist' | 'ended';
   players: Player[];
   host: string | null;
   hostConnectionId: string | null; // Track host's WebSocket connection ID
