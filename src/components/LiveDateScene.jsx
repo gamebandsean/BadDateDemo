@@ -3084,20 +3084,20 @@ This is a dramatic moment - react to what the avatar did!`
       {/* Header Section - Compact horizontal layout */}
       <div className={`live-header ${showTutorial && getTutorialContent().highlight === 'compatibility' ? 'tutorial-highlight' : ''}`}>
         <div className="header-row">
-          {/* Left: Call to Action */}
-          <div className="header-cta">
+          {/* Left: Call to Action - Click to toggle debug view */}
+          <div 
+            className="header-cta"
+            onClick={() => setShowCompatDebug(!showCompatDebug)}
+            style={{ cursor: 'pointer' }}
+            title="Tap to toggle debug info"
+          >
             <span className="cta-line1">{getPhaseTitle().line1}</span>
             <span className="cta-line2">{getPhaseTitle().line2}</span>
             <span className="cta-line3">{getPhaseTitle().line3}</span>
           </div>
           
-          {/* Center: Compatibility (hidden, click to reveal) */}
-          <div 
-            className="compatibility-display compatibility-hidden"
-            onClick={() => setShowCompatDebug(!showCompatDebug)}
-            style={{ cursor: 'pointer' }}
-            title="Tap to see compatibility"
-          >
+          {/* Center: Compatibility (hidden, shows when debug is on) */}
+          <div className="compatibility-display compatibility-hidden">
             <span className="compat-heart">❤️</span>
             {showCompatDebug && (
               <span className="compat-debug">{compatibility}%</span>
