@@ -444,8 +444,9 @@ function LiveDateScene() {
         useGameStore.setState({ plotTwistCompleted: state.plotTwistCompleted })
       }
       
-      // Sync answer selection state (for non-host clients)
-      if (state.answerSelection) {
+      // Sync answer selection state (for non-host clients only - host generates this state)
+      if (state.answerSelection && !isHost) {
+        console.log('🎡 CLIENT syncing answerSelection from server:', state.answerSelection.subPhase, 'slices:', state.answerSelection.slices?.length || 0)
         setAnswerSelection(state.answerSelection)
       }
       
