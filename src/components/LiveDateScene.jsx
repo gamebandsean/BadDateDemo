@@ -1718,16 +1718,17 @@ function LiveDateScene() {
         
         await new Promise(resolve => setTimeout(resolve, 2500))
         
-        // Check match FIRST to know how Dater should react
-        const sentimentHit1 = await checkAndScore(avatarResponse1, 1) // Full scoring
-        // Sync sentiment categories after scoring
-        await syncConversationToPartyKit(undefined, undefined, true)
-        
-        // Use the dater reaction from the prompt chain
+        // Use the dater reaction from the prompt chain FIRST
         if (daterReaction1) {
           setDaterBubble(daterReaction1)
           addDateMessage('dater', daterReaction1)
           await syncConversationToPartyKit(undefined, daterReaction1, undefined)
+          
+          // THEN check match and score - attribute applies when dater responds
+          const sentimentHit1 = await checkAndScore(avatarResponse1, 1) // Full scoring
+          // Sync sentiment categories after scoring
+          await syncConversationToPartyKit(undefined, undefined, true)
+          
           // Show reaction feedback when Maya responds (if there was a sentiment hit)
           if (sentimentHit1) {
             showReactionFeedback(sentimentHit1)
@@ -1754,17 +1755,13 @@ function LiveDateScene() {
           
           await new Promise(resolve => setTimeout(resolve, 2500))
           
-          // Check match FIRST
-          const sentimentHit2 = await checkAndScore(avatarResponse2, 0.25) // 25% scoring
-          await syncConversationToPartyKit(undefined, undefined, true)
-          
-          // Dater reacts - informed by sentiment and escalating streak
+          // Dater reacts FIRST (no sentiment hit yet - will score after)
           const daterReaction2 = await getDaterDateResponse(
             selectedDater,
             avatarWithNewAttr,
             getConversation().slice(-20), // Keep more history for better memory
             null,
-            sentimentHit2,
+            null, // No sentiment hit - score happens after dater responds
             currentStreak, // Pass streak for escalating reactions
             isFinalRound // Pass if this is the last round for finality
           )
@@ -1773,6 +1770,11 @@ function LiveDateScene() {
             setDaterBubble(daterReaction2)
             addDateMessage('dater', daterReaction2)
             await syncConversationToPartyKit(undefined, daterReaction2, undefined)
+            
+            // THEN check match and score - attribute applies when dater responds
+            const sentimentHit2 = await checkAndScore(avatarResponse2, 0.25) // 25% scoring
+            await syncConversationToPartyKit(undefined, undefined, true)
+            
             // Show reaction feedback when Maya responds (if there was a sentiment hit)
             if (sentimentHit2) {
               showReactionFeedback(sentimentHit2)
@@ -1799,17 +1801,13 @@ function LiveDateScene() {
             
             await new Promise(resolve => setTimeout(resolve, 2500))
             
-            // Check match FIRST
-            const sentimentHit3 = await checkAndScore(avatarResponse3, 0.10) // 10% scoring
-            await syncConversationToPartyKit(undefined, undefined, true)
-            
-            // Dater reacts - informed by sentiment and escalating streak
+            // Dater reacts FIRST (no sentiment hit yet - will score after)
             const daterReaction3 = await getDaterDateResponse(
               selectedDater,
               avatarWithNewAttr,
               getConversation().slice(-20), // Keep more history for better memory
               null,
-              sentimentHit3,
+              null, // No sentiment hit - score happens after dater responds
               currentStreak, // Pass streak for escalating reactions
               isFinalRound // Pass if this is the last round for finality
             )
@@ -1818,6 +1816,11 @@ function LiveDateScene() {
               setDaterBubble(daterReaction3)
               addDateMessage('dater', daterReaction3)
               await syncConversationToPartyKit(undefined, daterReaction3, undefined)
+              
+              // THEN check match and score - attribute applies when dater responds
+              const sentimentHit3 = await checkAndScore(avatarResponse3, 0.10) // 10% scoring
+              await syncConversationToPartyKit(undefined, undefined, true)
+              
               // Show reaction feedback when Maya responds (if there was a sentiment hit)
               if (sentimentHit3) {
                 showReactionFeedback(sentimentHit3)
