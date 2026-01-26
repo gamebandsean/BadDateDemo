@@ -19,83 +19,50 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
  */
 const LLM_RESPONSE_CHECKLIST = `
 ═══════════════════════════════════════════════════════════════
-🚨 CRITICAL FORMAT RULE - DIALOGUE ONLY 🚨
+🚨 CRITICAL: PURE DIALOGUE, EXTREMELY SHORT 🚨
 ═══════════════════════════════════════════════════════════════
 
-⛔ ABSOLUTELY NO ACTION DESCRIPTIONS! ⛔
-- ❌ FORBIDDEN: *smiles*, *laughs*, *leans in*, *raises eyebrow*, *nods*
-- ❌ FORBIDDEN: *nervously*, *excitedly*, *sarcastically*
-- ❌ FORBIDDEN: Any text in asterisks that describes actions or emotions
-- ✅ ALLOWED: Just speak! Express emotion through WORDS, not stage directions
+📏 LENGTH RULES:
+- 1 sentence is IDEAL
+- 2 sentences ONLY if absolutely necessary
+- Each sentence: 5-12 words MAX
+- CUT unnecessary words ruthlessly
 
-ONLY exception: Involuntary physical traits (e.g., *tail wags*, *wings flutter*)
+⛔ ABSOLUTELY FORBIDDEN:
+- ❌ NO asterisks (*smiles*, *laughs*, *leans in*)
+- ❌ NO action descriptions of ANY kind
+- ❌ NO stage directions or narration
+- ❌ NO filler words (Well, So, I mean, Oh)
+- ❌ NO long explanations
+
+✅ ONLY ALLOWED:
+- Pure spoken dialogue
+- Short punchy sentences
+- Emotion through word choice ONLY
 
 Examples:
-❌ WRONG: *laughs nervously* "Oh wow, that's... interesting!"
-✅ RIGHT: "Oh wow, that's... interesting!"
+❌ WRONG: *laughs nervously* "Oh wow, that's... interesting! I've never heard that before."
+✅ RIGHT: "Wait, seriously?"
 
-❌ WRONG: "That's amazing!" *leans forward with interest*
-✅ RIGHT: "That's amazing! Tell me more!"
+❌ WRONG: "That's amazing! *leans forward* Tell me more about yourself and how you got into that!"
+✅ RIGHT: "That's incredible."
 
-❌ WRONG: *raises an eyebrow* "Really?"
-✅ RIGHT: "Wait, really?"
+❌ WRONG: *raises an eyebrow* "Well, I have to say, that's quite a unique perspective you have there."
+✅ RIGHT: "Huh. That's new."
 
-═══════════════════════════════════════════════════════════════
-📋 RESPONSE CHECKLIST:
-═══════════════════════════════════════════════════════════════
-
-✅ FORMAT:
-- Response is 1-2 sentences MAX
-- Response is PURE DIALOGUE - just speaking, no narration
-- NO asterisks except for involuntary physical reactions
-
-✅ CONTENT:
-- Responding to what was ACTUALLY said
-- Not inventing new information
-- Staying consistent with what's been established
-- Only knowing what's been shared in conversation
-
-✅ CHARACTER:
-- Sounds like THIS specific character
-- Using their speech patterns
-- Reaction matches their personality
-
-✅ EMOTION:
-- Reaction intensity matches the situation
-- If something is BAD → allowed to react negatively!
-- If something is GOOD → showing genuine interest!
-- Not being artificially neutral or polite
-
-✅ TIMING:
-- If this is your first response after the avatar has answered a question, you should react to the question and the answer.
-- If this is not your first response, you should react to the previous response, as well as the current question and answer.
-- If this is the final response, you should react to the entire conversation.
-
-Instead: Just STATE things directly and plainly!
-
+REMEMBER: Dialogue only. Keep it SHORT. No actions.
 ═══════════════════════════════════════════════════════════════
 `
 
 /**
- * Strip action descriptions from responses (e.g., *smiles*, *leans in*)
- * Only allows physical trait actions like *tail wags* or *wings spread*
+ * Strip ALL action descriptions from responses
+ * We want pure dialogue only - no asterisks at all
  */
 function stripActionDescriptions(text) {
   if (!text) return text
   
-  // List of allowed physical trait actions (involuntary/physical)
-  const allowedActions = ['tail', 'wing', 'tentacle', 'antenna', 'fin', 'claw', 'hoof', 'paw']
-  
-  // Replace action descriptions in asterisks, but keep allowed physical ones
-  return text.replace(/\*[^*]+\*/g, (match) => {
-    const inner = match.toLowerCase()
-    // Keep if it's a physical trait action
-    if (allowedActions.some(action => inner.includes(action))) {
-      return match
-    }
-    // Remove common action descriptions
-    return ''
-  }).replace(/\s+/g, ' ').trim()
+  // Remove ALL asterisk content - we want pure dialogue
+  return text.replace(/\*[^*]+\*/g, '').replace(/\s+/g, ' ').trim()
 }
 
 /**
