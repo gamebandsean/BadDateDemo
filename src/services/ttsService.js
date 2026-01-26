@@ -22,7 +22,7 @@ let isPlaying = false
 let currentAudio = null
 
 // TTS enabled state
-let ttsEnabled = true
+let ttsEnabled = false // Disabled for testing - set to true to re-enable
 
 /**
  * Enable or disable TTS

@@ -99,7 +99,7 @@ function LiveDateScene() {
   const [plotTwistInput, setPlotTwistInput] = useState('')
   
   // Text-to-Speech state
-  const [ttsEnabled, setTtsEnabledState] = useState(true)
+  const [ttsEnabled, setTtsEnabledState] = useState(false) // Disabled for testing
   const lastSpokenDater = useRef('')
   const lastSpokenAvatar = useRef('')
   const [hasSubmittedPlotTwist, setHasSubmittedPlotTwist] = useState(false)
