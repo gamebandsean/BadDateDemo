@@ -1550,7 +1550,8 @@
     0 0 0 8px #1a1225,
     0 0 0 12px #333,
     0 8px 30px rgba(0,0,0,0.5);
-  transition: transform 0.05s linear;
+  /* No CSS transition - animation is handled by requestAnimationFrame for smoothness */
+  will-change: transform;
 }
 
 /* Winning slice pulse */

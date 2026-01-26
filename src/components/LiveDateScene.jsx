@@ -2227,23 +2227,33 @@ This is a dramatic moment - react to what the avatar did!`
     
     console.log('🎡 Spinning wheel to', finalAngle, 'degrees, winner:', winningSlice.label)
     
-    // Animate the spin
-    let startTime = Date.now()
-    const duration = 4000 // 4 seconds
+    // Animate the spin with ease-in-out (slow start → fast middle → slow end)
+    let startTime = null
+    const duration = 6000 // 6 seconds for longer, more dramatic spin
     const startAngle = 0
     
-    const animateSpin = () => {
-      const elapsed = Date.now() - startTime
+    const animateSpin = (timestamp) => {
+      if (!startTime) startTime = timestamp
+      const elapsed = timestamp - startTime
       const progress = Math.min(elapsed / duration, 1)
       
-      // Easing function: slow down near the end (ease-out cubic)
-      const eased = 1 - Math.pow(1 - progress, 3)
+      // Ease-in-out cubic: starts slow, speeds up in middle, slows at end
+      // This gives the classic wheel spin feel
+      let eased
+      if (progress < 0.5) {
+        // First half: ease-in (accelerate)
+        eased = 4 * progress * progress * progress
+      } else {
+        // Second half: ease-out (decelerate)
+        eased = 1 - Math.pow(-2 * progress + 2, 3) / 2
+      }
+      
       const currentAngle = startAngle + (finalAngle * eased)
       
       setAnswerSelection(prev => ({ ...prev, spinAngle: currentAngle }))
       
-      // Sync periodically (every 100ms) to reduce traffic
-      if (partyClient && elapsed % 100 < 20) {
+      // Sync less frequently to reduce jitter (every 200ms)
+      if (partyClient && Math.floor(elapsed / 200) !== Math.floor((elapsed - 16) / 200)) {
         partyClient.syncState({
           answerSelection: { ...answerSelection, spinAngle: currentAngle }
         })
@@ -2252,10 +2262,10 @@ This is a dramatic moment - react to what the avatar did!`
       if (progress < 1) {
         wheelSpinRef.current = requestAnimationFrame(animateSpin)
       } else {
-        // Spin complete - declare winner
+        // Spin complete - declare winner after a moment
         setTimeout(() => {
           declareWheelWinner(winningSlice)
-        }, 500)
+        }, 800)
       }
     }
     

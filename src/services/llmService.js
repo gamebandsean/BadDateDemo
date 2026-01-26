@@ -1383,10 +1383,13 @@ function getFallbackDaterValues(dater) {
  * @returns {Array} - Array of grouped slices: {id, label, weight, originalAnswers: [{id, text, submittedBy}]}
  */
 export async function groupSimilarAnswers(question, answers) {
+  console.log('🎯 groupSimilarAnswers called with', answers.length, 'answers:', answers.map(a => a.text))
+  
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
   
   // If only 1 or no answers, no grouping needed
   if (answers.length <= 1) {
+    console.log('🎯 Only', answers.length, 'answer(s) - no grouping needed')
     return answers.map(a => ({
       id: a.id,
       label: a.text,
@@ -1405,6 +1408,8 @@ export async function groupSimilarAnswers(question, answers) {
       originalAnswers: [a]
     }))
   }
+  
+  console.log('🎯 Calling LLM to group', answers.length, 'answers...')
   
   const answerList = answers.map((a, i) => `${i + 1}. "${a.text}" (by ${a.submittedBy})`).join('\n')
   
