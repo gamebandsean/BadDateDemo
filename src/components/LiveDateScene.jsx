@@ -77,6 +77,10 @@ function LiveDateScene() {
   const [compatibilityHistory, setCompatibilityHistory] = useState([])
   const [breakdownSentences, setBreakdownSentences] = useState([])
   const [isGeneratingBreakdown, setIsGeneratingBreakdown] = useState(false)
+  
+  // Reaction feedback - shows temporarily when date reacts to an attribute
+  const [reactionFeedback, setReactionFeedback] = useState(null)
+  const reactionFeedbackTimeout = useRef(null)
   const [winnerText, setWinnerText] = useState('')
   // Timer starts immediately when phase begins (no waiting for submissions)
   const [showPhaseAnnouncement, setShowPhaseAnnouncement] = useState(false)
@@ -162,6 +166,63 @@ function LiveDateScene() {
         exposedValues: currentExposed,
         glowingValues: currentGlowing,
       })
+    }
+  }
+  
+  // Show reaction feedback temporarily (auto-clears after 4 seconds)
+  const showReactionFeedback = (category, topic) => {
+    const daterName = selectedDater?.name || 'Maya'
+    
+    // Generate varied emotional reactions based on category
+    const reactions = {
+      loves: [
+        `${daterName} is totally into this!`,
+        `This really excited ${daterName}!`,
+        `${daterName} loved hearing that!`,
+        `${daterName}'s heart skipped a beat!`,
+        `This turned ${daterName} on!`
+      ],
+      likes: [
+        `${daterName} thought that was sweet.`,
+        `This made ${daterName} smile.`,
+        `${daterName} liked that!`,
+        `${daterName} found that charming.`,
+        `That earned some points with ${daterName}.`
+      ],
+      dislikes: [
+        `${daterName} didn't love that...`,
+        `This made ${daterName} uncomfortable.`,
+        `${daterName} cringed a little.`,
+        `That was a bit off-putting for ${daterName}.`,
+        `${daterName} was not impressed.`
+      ],
+      dealbreakers: [
+        `This horrified ${daterName}!`,
+        `${daterName} is absolutely terrified!`,
+        `MAJOR red flag for ${daterName}!`,
+        `${daterName} wants to run away!`,
+        `This scared ${daterName} to death!`
+      ]
+    }
+    
+    const categoryReactions = reactions[category] || reactions.dislikes
+    const randomReaction = categoryReactions[Math.floor(Math.random() * categoryReactions.length)]
+    
+    // Clear any existing timeout
+    if (reactionFeedbackTimeout.current) {
+      clearTimeout(reactionFeedbackTimeout.current)
+    }
+    
+    setReactionFeedback({ text: randomReaction, category })
+    
+    // Auto-clear after 4 seconds
+    reactionFeedbackTimeout.current = setTimeout(() => {
+      setReactionFeedback(null)
+    }, 4000)
+    
+    // Sync to other players
+    if (partyClient && isHost) {
+      partyClient.syncState({ reactionFeedback: { text: randomReaction, category } })
     }
   }
   
@@ -366,6 +427,18 @@ function LiveDateScene() {
       // Sync sentiment categories (loves, likes, dislikes, dealbreakers)
       if (state.sentimentCategories) {
         setSentimentCategories(state.sentimentCategories)
+      }
+      
+      // Sync reaction feedback (non-host only)
+      if (state.reactionFeedback && !isHost) {
+        setReactionFeedback(state.reactionFeedback)
+        // Auto-clear after 4 seconds
+        if (reactionFeedbackTimeout.current) {
+          clearTimeout(reactionFeedbackTimeout.current)
+        }
+        reactionFeedbackTimeout.current = setTimeout(() => {
+          setReactionFeedback(null)
+        }, 4000)
       }
       
       // Sync exposed values (for showing which attributes have been revealed)
@@ -1084,6 +1157,8 @@ function LiveDateScene() {
             if (partyClient) {
               partyClient.syncState( { compatibility: newCompat })
             }
+            // Show reaction feedback
+            showReactionFeedback(matchResult.category, matchResult.shortLabel)
           }
         }
       }
@@ -1123,6 +1198,8 @@ function LiveDateScene() {
             if (partyClient) {
               partyClient.syncState( { compatibility: newCompat })
             }
+            // Show reaction feedback
+            showReactionFeedback(matchResult.category, matchResult.shortLabel)
           }
         }
       }
@@ -1508,6 +1585,9 @@ function LiveDateScene() {
             if (partyClient) {
               partyClient.syncState( { compatibility: newCompat })
             }
+            
+            // Show reaction feedback to players
+            showReactionFeedback(matchResult.category, matchResult.shortLabel)
             
             // Record this impact for end-of-game breakdown
             setCompatibilityHistory(prev => [...prev, {
@@ -3088,61 +3168,78 @@ This is a dramatic moment - react to what the avatar did!`
         </AnimatePresence>
       </div>
       
-      {/* Sentiment Categories */}
-      <div className="sentiment-bar">
-        <div className="sentiment-category loves">
-          <span className="category-label">✨ Loves</span>
-          <div className="category-items">
-            {(sentimentCategories?.loves || []).map((item, i) => (
-              <span 
-                key={i} 
-                className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-love' : ''}`}
-              >
-                {item}
-              </span>
-            ))}
+      {/* Reaction Feedback - Shows when date reacts to something */}
+      <AnimatePresence>
+        {reactionFeedback && (
+          <motion.div 
+            className={`reaction-feedback ${reactionFeedback.category}`}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            {reactionFeedback.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Sentiment Categories - Hidden by default, shown via debug toggle */}
+      {showCompatDebug && (
+        <div className="sentiment-bar">
+          <div className="sentiment-category loves">
+            <span className="category-label">✨ Loves</span>
+            <div className="category-items">
+              {(sentimentCategories?.loves || []).map((item, i) => (
+                <span 
+                  key={i} 
+                  className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-love' : ''}`}
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="sentiment-category likes">
+            <span className="category-label">💛 Likes</span>
+            <div className="category-items">
+              {(sentimentCategories?.likes || []).map((item, i) => (
+                <span 
+                  key={i} 
+                  className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-like' : ''}`}
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="sentiment-category dislikes">
+            <span className="category-label">😬 Dislikes</span>
+            <div className="category-items">
+              {(sentimentCategories?.dislikes || []).map((item, i) => (
+                <span 
+                  key={i} 
+                  className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-dislike' : ''}`}
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="sentiment-category dealbreakers">
+            <span className="category-label">💔 Nope</span>
+            <div className="category-items">
+              {(sentimentCategories?.dealbreakers || []).map((item, i) => (
+                <span 
+                  key={i} 
+                  className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-dealbreaker' : ''}`}
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-        <div className="sentiment-category likes">
-          <span className="category-label">💛 Likes</span>
-          <div className="category-items">
-            {(sentimentCategories?.likes || []).map((item, i) => (
-              <span 
-                key={i} 
-                className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-like' : ''}`}
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="sentiment-category dislikes">
-          <span className="category-label">😬 Dislikes</span>
-          <div className="category-items">
-            {(sentimentCategories?.dislikes || []).map((item, i) => (
-              <span 
-                key={i} 
-                className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-dislike' : ''}`}
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="sentiment-category dealbreakers">
-          <span className="category-label">💔 Nope</span>
-          <div className="category-items">
-            {(sentimentCategories?.dealbreakers || []).map((item, i) => (
-              <span 
-                key={i} 
-                className={`sentiment-item ${glowingValues?.includes(item) ? 'glowing glowing-dealbreaker' : ''}`}
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      )}
       
       {/* Date Screen - Characters with Speech Bubbles */}
       <div className="date-screen">

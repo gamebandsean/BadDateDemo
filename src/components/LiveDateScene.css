@@ -1231,6 +1231,47 @@
   color: var(--accent-gold);
 }
 
+/* Reaction Feedback - Shows when date reacts */
+.reaction-feedback {
+  padding: 12px 20px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(180deg, rgba(26, 18, 22, 0.95) 0%, rgba(36, 24, 32, 0.95) 100%);
+  border-bottom: 2px solid;
+  flex-shrink: 0;
+}
+
+.reaction-feedback.loves {
+  color: #ff4d6d;
+  border-color: #ff4d6d;
+  text-shadow: 0 0 20px rgba(255, 77, 109, 0.5);
+}
+
+.reaction-feedback.likes {
+  color: #a855f7;
+  border-color: #a855f7;
+  text-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+}
+
+.reaction-feedback.dislikes {
+  color: #fbbf24;
+  border-color: #fbbf24;
+  text-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+}
+
+.reaction-feedback.dealbreakers {
+  color: #ef4444;
+  border-color: #ef4444;
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+  animation: pulse-danger 0.5s ease-in-out 2;
+}
+
+@keyframes pulse-danger {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
 /* Sentiment Bar */
 .sentiment-bar {
   display: flex;
