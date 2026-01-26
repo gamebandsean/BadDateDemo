@@ -1598,13 +1598,34 @@ function LiveDateScene() {
     const isFinalRound = currentCycleForCheck >= maxCyclesForCheck - 1
     console.log(`🏁 Round ${currentCycleForCheck + 1}/${maxCyclesForCheck} - Final round: ${isFinalRound}`)
     
+    // Check if the current question is about PREFERENCES (what avatar wants in a partner)
+    // vs ATTRIBUTES (what avatar IS)
+    const preferenceQuestions = [
+      'looking for in a partner',
+      'looking for in a date',
+      'want in a partner',
+      'ideal partner',
+      'perfect date',
+      'type of person',
+    ]
+    const currentQuestion = daterBubble?.toLowerCase() || ''
+    const isPreferenceQuestion = preferenceQuestions.some(q => currentQuestion.includes(q))
+    
+    // Frame the answer appropriately based on question type
+    let framedAttribute = attrToUse
+    if (isPreferenceQuestion) {
+      // For preference questions, frame as what they're looking for
+      framedAttribute = `wants a partner who is ${attrToUse}`
+      console.log('💕 Preference question detected - framing as:', framedAttribute)
+    }
+    
     // IMPORTANT: Create avatar with the new attribute included
     // (React state might not have updated yet due to async nature)
     const avatarWithNewAttr = {
       ...avatar,
-      attributes: avatar.attributes.includes(attrToUse) 
+      attributes: avatar.attributes.includes(framedAttribute) 
         ? avatar.attributes 
-        : [...avatar.attributes, attrToUse]
+        : [...avatar.attributes, framedAttribute]
     }
     
     console.log('🎯 generateDateConversation called with:', {
@@ -1674,10 +1695,11 @@ function LiveDateScene() {
         .find(msg => msg.speaker === 'dater')?.message || ''
       
       // Run the full prompt chain: Avatar responds, then Dater reacts
+      // Use framedAttribute for preference questions so LLM understands context
       const { avatarResponse: avatarResponse1, daterResponse: daterReaction1, visibility, debugPrompts } = await runAttributePromptChain(
         avatarWithNewAttr,
         selectedDater,
-        attrToUse,
+        framedAttribute,
         getConversation().slice(-20) // Keep more history for better memory
       )
       
