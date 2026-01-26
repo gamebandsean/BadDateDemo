@@ -990,6 +990,26 @@
   border: 1px solid rgba(255, 77, 109, 0.4);
 }
 
+.tts-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.tts-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.tts-icon {
+  font-size: 1.2rem;
+}
+
 .cycle-count {
   font-size: 0.75rem;
   color: var(--text-secondary);

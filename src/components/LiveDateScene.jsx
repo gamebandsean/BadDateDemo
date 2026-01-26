@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import { getDaterDateResponse, getAvatarDateResponse, generateDaterValues, checkAttributeMatch, runAttributePromptChain, groupSimilarAnswers } from '../services/llmService'
+import { speak, stopAllAudio, setTTSEnabled, isTTSEnabled } from '../services/ttsService'
 import './LiveDateScene.css'
 
 // PartyKit replaces Firebase for real-time state sync
@@ -86,6 +87,11 @@ function LiveDateScene() {
   const setPlotTwist = useGameStore((state) => state.setPlotTwist)
   const resetPlotTwist = useGameStore((state) => state.resetPlotTwist)
   const [plotTwistInput, setPlotTwistInput] = useState('')
+  
+  // Text-to-Speech state
+  const [ttsEnabled, setTtsEnabledState] = useState(true)
+  const lastSpokenDater = useRef('')
+  const lastSpokenAvatar = useRef('')
   const [hasSubmittedPlotTwist, setHasSubmittedPlotTwist] = useState(false)
   const plotTwistTimerRef = useRef(null)
   const plotTwistAnimationRef = useRef(null)
@@ -479,6 +485,31 @@ function LiveDateScene() {
     console.log('💡 DEBUG suggestedAttributes changed:', suggestedAttributes?.length, 'items', suggestedAttributes)
     console.log('💡 Should display suggestions?', livePhase === 'phase1' && (suggestedAttributes?.length || 0) > 0)
   }, [suggestedAttributes, livePhase])
+  
+  // Text-to-Speech: Speak when dater bubble changes
+  useEffect(() => {
+    if (daterBubble && daterBubble !== lastSpokenDater.current && ttsEnabled) {
+      lastSpokenDater.current = daterBubble
+      speak(daterBubble, 'dater')
+    }
+  }, [daterBubble, ttsEnabled])
+  
+  // Text-to-Speech: Speak when avatar bubble changes
+  useEffect(() => {
+    if (avatarBubble && avatarBubble !== lastSpokenAvatar.current && ttsEnabled) {
+      lastSpokenAvatar.current = avatarBubble
+      speak(avatarBubble, 'avatar')
+    }
+  }, [avatarBubble, ttsEnabled])
+  
+  // Stop TTS when phase changes or game ends
+  useEffect(() => {
+    if (livePhase === 'ended' || livePhase === 'lobby') {
+      stopAllAudio()
+      lastSpokenDater.current = ''
+      lastSpokenAvatar.current = ''
+    }
+  }, [livePhase])
   
   // Phase timer countdown - only host runs the timer, others sync from PartyKit
   // Timer starts immediately when phase begins
@@ -2829,6 +2860,19 @@ This is a dramatic moment - react to what the avatar did!`
               {(livePhase === 'phase3' || livePhase === 'reaction') && <span className="timer-value">💬</span>}
               {livePhase === 'plot-twist' && <span className="timer-value">🎭</span>}
               {phaseTimer <= 0 && livePhase !== 'phase3' && livePhase !== 'reaction' && livePhase !== 'plot-twist' && <span className="timer-value">⏳</span>}
+            </div>
+            <div 
+              className="tts-toggle"
+              onClick={() => {
+                const newState = !ttsEnabled
+                setTtsEnabledState(newState)
+                setTTSEnabled(newState)
+                if (!newState) stopAllAudio()
+              }}
+              style={{ cursor: 'pointer' }}
+              title={ttsEnabled ? 'Mute voices' : 'Unmute voices'}
+            >
+              <span className="tts-icon">{ttsEnabled ? '🔊' : '🔇'}</span>
             </div>
           </div>
         </div>
