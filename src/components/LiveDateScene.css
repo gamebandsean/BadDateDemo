@@ -504,6 +504,16 @@
   text-align: left;
 }
 
+.breakdown-item.conversational {
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid rgba(255, 77, 109, 0.5);
+  padding: 14px 18px;
+}
+
+.breakdown-item.conversational:nth-child(even) {
+  border-left-color: rgba(168, 85, 247, 0.5);
+}
+
 .breakdown-item.loves {
   background: rgba(255, 77, 109, 0.2);
   border-left: 3px solid #ff4d6d;
@@ -531,9 +541,9 @@
 
 .breakdown-text {
   flex: 1;
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.4;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.5;
 }
 
 .breakdown-change {

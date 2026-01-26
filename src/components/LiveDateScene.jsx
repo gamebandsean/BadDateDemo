@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
-import { getDaterDateResponse, getAvatarDateResponse, generateDaterValues, checkAttributeMatch, runAttributePromptChain, groupSimilarAnswers } from '../services/llmService'
+import { getDaterDateResponse, getAvatarDateResponse, generateDaterValues, checkAttributeMatch, runAttributePromptChain, groupSimilarAnswers, generateBreakdownSentences } from '../services/llmService'
 import { speak, stopAllAudio, setTTSEnabled, isTTSEnabled } from '../services/ttsService'
 import './LiveDateScene.css'
 
@@ -75,6 +75,8 @@ function LiveDateScene() {
   
   // Track compatibility changes for end-of-game breakdown
   const [compatibilityHistory, setCompatibilityHistory] = useState([])
+  const [breakdownSentences, setBreakdownSentences] = useState([])
+  const [isGeneratingBreakdown, setIsGeneratingBreakdown] = useState(false)
   const [winnerText, setWinnerText] = useState('')
   // Timer starts immediately when phase begins (no waiting for submissions)
   const [showPhaseAnnouncement, setShowPhaseAnnouncement] = useState(false)
@@ -514,6 +516,25 @@ function LiveDateScene() {
       lastSpokenAvatar.current = ''
     }
   }, [livePhase])
+  
+  // Generate LLM breakdown sentences when game ends
+  useEffect(() => {
+    if (livePhase === 'ended' && compatibilityHistory.length > 0 && !isGeneratingBreakdown && breakdownSentences.length === 0) {
+      setIsGeneratingBreakdown(true)
+      const daterName = selectedDater?.name || 'Maya'
+      const avatarName = avatar?.name || 'your date'
+      
+      generateBreakdownSentences(daterName, avatarName, compatibilityHistory, compatibility)
+        .then(sentences => {
+          setBreakdownSentences(sentences)
+          setIsGeneratingBreakdown(false)
+        })
+        .catch(err => {
+          console.error('Failed to generate breakdown:', err)
+          setIsGeneratingBreakdown(false)
+        })
+    }
+  }, [livePhase, compatibilityHistory, compatibility, selectedDater, avatar, isGeneratingBreakdown, breakdownSentences.length])
   
   // Phase timer countdown - only host runs the timer, others sync from PartyKit
   // Timer starts immediately when phase begins
@@ -1001,6 +1022,8 @@ function LiveDateScene() {
     // This ensures the avatar doesn't "remember" previous games
     useGameStore.setState({ dateConversation: [] })
     setCompatibilityHistory([]) // Reset end-of-game breakdown tracking
+    setBreakdownSentences([]) // Reset LLM-generated breakdown
+    setIsGeneratingBreakdown(false)
     console.log('🧹 Cleared conversation history for fresh reaction round')
     
     const currentAvatar = useGameStore.getState().avatar
@@ -2850,66 +2873,29 @@ This is a dramatic moment - react to what the avatar did!`
                 <span className="compat-label">Compatibility</span>
               </div>
               
-              {/* Breakdown of top 5 impacts */}
+              {/* Breakdown of what happened */}
               <div className="end-game-breakdown">
                 <h2>What Happened:</h2>
                 <div className="breakdown-list">
-                  {(() => {
-                    // Sort by absolute change value and take top 5
-                    const sortedImpacts = [...compatibilityHistory]
-                      .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
-                      .slice(0, 5)
-                    
-                    if (sortedImpacts.length === 0) {
-                      return <p className="no-impacts">The date was uneventful...</p>
-                    }
-                    
-                    return sortedImpacts.map((impact, index) => {
-                      const daterName = selectedDater?.name || 'Maya'
-                      const avatarName = avatar?.name || 'your date'
-                      
-                      // Generate natural sentence based on category
-                      let sentence = ''
-                      const topic = impact.topic || impact.attribute
-                      
-                      switch (impact.category) {
-                        case 'loves':
-                          sentence = `${daterName} absolutely loved that ${avatarName} ${topic.toLowerCase()}.`
-                          break
-                        case 'likes':
-                          sentence = `${daterName} thought it was cute that ${avatarName} ${topic.toLowerCase()}.`
-                          break
-                        case 'dislikes':
-                          sentence = `${daterName} was put off by ${avatarName}'s ${topic.toLowerCase()}.`
-                          break
-                        case 'dealbreakers':
-                          sentence = `${daterName} was horrified by ${avatarName}'s ${topic.toLowerCase()}. Total dealbreaker!`
-                          break
-                        default:
-                          sentence = `${topic} came up in conversation.`
-                      }
-                      
-                      const emoji = impact.category === 'loves' ? '💕' : 
-                                   impact.category === 'likes' ? '😊' :
-                                   impact.category === 'dislikes' ? '😬' : '💀'
-                      
-                      return (
-                        <motion.div 
-                          key={index}
-                          className={`breakdown-item ${impact.category}`}
-                          initial={{ x: -20, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          transition={{ delay: 0.5 + (index * 0.2) }}
-                        >
-                          <span className="breakdown-emoji">{emoji}</span>
-                          <span className="breakdown-text">{sentence}</span>
-                          <span className={`breakdown-change ${impact.change > 0 ? 'positive' : 'negative'}`}>
-                            {impact.change > 0 ? '+' : ''}{impact.change}%
-                          </span>
-                        </motion.div>
-                      )
-                    })
-                  })()}
+                  {isGeneratingBreakdown ? (
+                    <p className="no-impacts">Recapping the date...</p>
+                  ) : breakdownSentences.length > 0 ? (
+                    breakdownSentences.map((sentence, index) => (
+                      <motion.div 
+                        key={index}
+                        className="breakdown-item conversational"
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: 0.5 + (index * 0.3) }}
+                      >
+                        <span className="breakdown-text">{sentence}</span>
+                      </motion.div>
+                    ))
+                  ) : compatibilityHistory.length === 0 ? (
+                    <p className="no-impacts">The date was uneventful...</p>
+                  ) : (
+                    <p className="no-impacts">Loading recap...</p>
+                  )}
                 </div>
               </div>
               

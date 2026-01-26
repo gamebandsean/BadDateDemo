@@ -1501,3 +1501,93 @@ RULES FOR JSON:
     }))
   }
 }
+
+/**
+ * Generate conversational end-of-game breakdown sentences
+ * Takes the compatibility history and generates natural, flowing sentences
+ * @param {string} daterName - The dater's name (e.g., "Maya")
+ * @param {string} avatarName - The avatar's name
+ * @param {Array} impacts - Array of {attribute, topic, category, change} objects
+ * @param {number} finalCompatibility - The final compatibility percentage
+ * @returns {Array} - Array of conversational sentences to display
+ */
+export async function generateBreakdownSentences(daterName, avatarName, impacts, finalCompatibility) {
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+  
+  if (!apiKey || impacts.length === 0) {
+    console.log('⚠️ No API key or no impacts - skipping breakdown generation')
+    return []
+  }
+  
+  // Sort by absolute change and take top impacts
+  const sortedImpacts = [...impacts]
+    .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+    .slice(0, 6) // Take a few extra for combining
+  
+  // Create a summary for the LLM
+  const impactSummary = sortedImpacts.map(i => 
+    `- ${i.topic || i.attribute}: ${i.category} (${i.change > 0 ? 'positive' : 'negative'})`
+  ).join('\n')
+  
+  const prompt = `You are writing a short, punchy end-of-date recap for a dating game.
+
+The dater's name is ${daterName}. The avatar's name is ${avatarName}.
+Final compatibility: ${finalCompatibility}%
+
+Here are the key moments that affected their chemistry:
+${impactSummary}
+
+Write 3-5 SHORT, conversational sentences summarizing what happened. Rules:
+- Be concise and punchy - each sentence should be 10-20 words max
+- You can combine positive and negative things in one sentence with "but" or "however"
+- Use varied sentence structures - don't start every sentence the same way
+- Match the tone to the outcome (playful if good, sympathetic if bad)
+- Reference ${daterName}'s reactions naturally
+- Don't use percentages or numbers
+- Make it sound like a friend recapping the date
+
+Example good outputs:
+- "${daterName} was totally into ${avatarName}'s sense of humor, but the murder confession was a dealbreaker."
+- "The skiing thing? ${daterName} loved that. The skinning people? Not so much."
+- "${daterName} thought ${avatarName} was cute, right up until things got weird."
+
+Return ONLY a JSON array of strings, like:
+["First sentence.", "Second sentence.", "Third sentence."]`
+
+  try {
+    const response = await fetch(ANTHROPIC_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    const content = data.content[0]?.text || ''
+    
+    // Parse JSON array from response
+    const jsonMatch = content.match(/\[[\s\S]*\]/)
+    if (jsonMatch) {
+      const sentences = JSON.parse(jsonMatch[0])
+      console.log('📝 Generated breakdown sentences:', sentences)
+      return sentences
+    }
+    
+    return []
+  } catch (error) {
+    console.error('Error generating breakdown:', error)
+    return []
+  }
+}
