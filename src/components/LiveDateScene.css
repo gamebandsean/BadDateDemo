@@ -1020,6 +1020,41 @@
   text-align: center;
 }
 
+.compatibility-display.compatibility-hidden {
+  width: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(255, 77, 109, 0.15);
+  transition: all 0.2s ease;
+}
+
+.compatibility-display.compatibility-hidden:hover {
+  background: rgba(255, 77, 109, 0.25);
+}
+
+.compat-heart {
+  font-size: 1.5rem;
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.compat-debug {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ff4d6d;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
 .compat-meter {
   height: 10px;
   background: rgba(255, 255, 255, 0.1);

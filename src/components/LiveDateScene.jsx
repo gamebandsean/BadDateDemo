@@ -69,6 +69,7 @@ function LiveDateScene() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [userVote, setUserVote] = useState(null)
   const [showDaterValuesPopup, setShowDaterValuesPopup] = useState(false)
+  const [showCompatDebug, setShowCompatDebug] = useState(false)
   const [usingFallback, setUsingFallback] = useState(false)
   const [showWinnerPopup, setShowWinnerPopup] = useState(false)
   const [winnerText, setWinnerText] = useState('')
@@ -2826,15 +2827,17 @@ This is a dramatic moment - react to what the avatar did!`
             <span className="cta-line3">{getPhaseTitle().line3}</span>
           </div>
           
-          {/* Center: Compatibility Meter */}
-          <div className="compatibility-display">
-            <div className="compat-meter">
-              <div 
-                className="compat-fill" 
-                style={{ width: `${compatibility}%` }}
-              />
-            </div>
-            <span className="compat-value">❤️ {compatibility}%</span>
+          {/* Center: Compatibility (hidden, click to reveal) */}
+          <div 
+            className="compatibility-display compatibility-hidden"
+            onClick={() => setShowCompatDebug(!showCompatDebug)}
+            style={{ cursor: 'pointer' }}
+            title="Tap to see compatibility"
+          >
+            <span className="compat-heart">❤️</span>
+            {showCompatDebug && (
+              <span className="compat-debug">{compatibility}%</span>
+            )}
           </div>
           
           {/* Right: Round + Timer */}
