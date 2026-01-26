@@ -305,12 +305,7 @@ export default class GameRoom implements Party.Server {
       }
       
       case 'SUBMIT_ATTRIBUTE': {
-        // Don't allow duplicates from same player
-        const alreadySubmitted = this.state.suggestedAttributes.some(
-          s => s.odId === action.odId
-        );
-        if (alreadySubmitted) return;
-        
+        // Players can submit multiple answers
         this.state.suggestedAttributes.push({
           id: `suggestion_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           text: action.text,
