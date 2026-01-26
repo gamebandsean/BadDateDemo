@@ -730,6 +730,11 @@ export const useGameStore = create((set, get) => ({
       } : initialLiveState.startingStats,
       phaseTimer: withStartingStats ? 15 : 30, // Starting stats uses 15s timer
       cycleCount: 0,
+      // IMPORTANT: Reset all game state for fresh start
+      avatar: { ...initialAvatar },
+      appliedAttributes: [],
+      submittedAttributes: [],
+      latestAttribute: null,
       dateConversation: [],
       suggestedAttributes: [],
       numberedAttributes: [],
