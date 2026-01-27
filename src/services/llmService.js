@@ -156,7 +156,7 @@ function isVisibleAttribute(attr) {
   return visibleKeywords.some(keyword => lowerAttr.includes(keyword))
 }
 
-export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null, sentimentHit = null, reactionStreak = { positive: 0, negative: 0 }, isFinalRound = false) {
+export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null, sentimentHit = null, reactionStreak = { positive: 0, negative: 0 }, isFinalRound = false, isFirstImpressions = false) {
   console.log('🔗 Using MODULAR PROMPT CHAIN for dater response')
   const systemPrompt = buildDaterAgentPrompt(dater, 'date')
   
@@ -176,6 +176,20 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
 - If it went BADLY: Make a polite excuse to leave, express relief it's over, or be blunt about incompatibility
 - If it was MIXED: Be honest about your confusion, express uncertainty
 - Your response should feel like a CONCLUSION, not a continuation`
+  }
+  
+  // FIRST IMPRESSIONS: React to what they look like and said, NO questions
+  let firstImpressionsInstruction = ''
+  if (isFirstImpressions) {
+    firstImpressionsInstruction = `\n\n👋 FIRST IMPRESSIONS - REACT, DON'T ASK:
+- This is the FIRST IMPRESSIONS phase - you're just meeting them!
+- Give a quick REACTION to how they look and what they just said
+- DO NOT ask any questions - just react and comment
+- Keep it short: 1-2 sentences max
+- Examples: "Wow, okay...", "Oh, interesting...", "Hmm, I see...", "Well that's... something."
+- React to their appearance and personality you've seen so far
+- Show your first gut feeling about them
+- End with a statement or observation, NOT a question`
   }
   
   // SENTIMENT-DRIVEN REACTION: Tell the Dater how to feel based on what category was hit
@@ -362,7 +376,7 @@ This is their ANSWER to YOUR question. React to what they revealed about themsel
     : sentimentHit === 'dealbreakers' ? 'horrified'
     : null
   const voicePrompt = getVoiceProfilePrompt('maya', emotionForVoice)
-  const fullPrompt = systemPrompt + voicePrompt + baselineMorality + avatarContext + knowledgeBoundary + latestAttrContext + sentimentInstruction + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + LLM_RESPONSE_CHECKLIST
+  const fullPrompt = systemPrompt + voicePrompt + baselineMorality + avatarContext + knowledgeBoundary + latestAttrContext + sentimentInstruction + firstImpressionsInstruction + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + LLM_RESPONSE_CHECKLIST
   
   // Convert conversation history to Claude format
   let messages = conversationHistory.map(msg => ({

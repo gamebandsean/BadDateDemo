@@ -1348,8 +1348,8 @@ function LiveDateScene() {
       
       await new Promise(resolve => setTimeout(resolve, 2000))
       
-      // === STEP 3: Dater responds to what the Avatar said ===
-      console.log('💬 Dater responding to avatar')
+      // === STEP 3: Dater responds to what the Avatar said (First Impressions - no questions!) ===
+      console.log('💬 Dater responding to avatar (first impressions - reaction only)')
       
       const daterReaction2 = await getDaterDateResponse(
         selectedDater,
@@ -1361,7 +1361,8 @@ function LiveDateScene() {
         null,
         null,
         reactionStreak,
-        false
+        false, // not final round
+        true   // isFirstImpressions - react, don't ask questions
       )
       
       if (daterReaction2) {
