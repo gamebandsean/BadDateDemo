@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import { getDaterDateResponse, getAvatarDateResponse, generateDaterValues, checkAttributeMatch, runAttributePromptChain, groupSimilarAnswers, generateBreakdownSentences } from '../services/llmService'
 import { speak, stopAllAudio, setTTSEnabled, isTTSEnabled } from '../services/ttsService'
+import { getMayaPortrait, getAvatarPortrait, preloadExpressions } from '../services/expressionService'
 import AnimatedText from './AnimatedText'
 import './LiveDateScene.css'
 
@@ -282,6 +283,12 @@ function LiveDateScene() {
       }
     }
   }
+  
+  // Preload character expressions on mount for faster switching
+  useEffect(() => {
+    preloadExpressions('maya')
+    preloadExpressions('avatar')
+  }, [])
   
   // Check if API key is available
   useEffect(() => {
@@ -3668,11 +3675,11 @@ This is a dramatic moment - react to what the avatar did!`
           </div>
         </div>
         
-        {/* Characters */}
+        {/* Characters - portraits change based on emotional state */}
         <div className="characters-container">
           <div className="character avatar-character">
             <img 
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=PlayerAvatar&backgroundColor=c0aede" 
+              src={getAvatarPortrait(avatarEmotion)}
               alt="You" 
               className="character-image"
             />
@@ -3680,8 +3687,8 @@ This is a dramatic moment - react to what the avatar did!`
           
           <div className="character dater-character">
             <img 
-              src={selectedDater?.photo} 
-              alt={selectedDater?.name} 
+              src={getMayaPortrait(daterEmotion)}
+              alt={selectedDater?.name || 'Maya'} 
               className="character-image"
             />
           </div>
