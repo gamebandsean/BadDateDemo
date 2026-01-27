@@ -9,8 +9,8 @@ const API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY
 // Voice IDs from ElevenLabs
 // You can change these to any voice from your ElevenLabs account
 const VOICES = {
-  // Dater (Maya) - sunny, enthusiastic female voice with quirky attitude
-  dater: 'FGY2WhTYpPnrIDTdsKH5', // Laura - "sunny enthusiasm with a quirky attitude"
+  // Dater (Maya) - upbeat, excited, energetic female voice
+  dater: 'ThT5KcBeYPX3keUQqHPh', // Dorothy - expressive, friendly, warm American female
   
   // Avatar - young, energetic male voice
   avatar: 'TX3LPaxmHKxFdv7VOQHJ', // Liam - "young adult with energy and warmth"
