@@ -599,19 +599,51 @@ function LiveDateScene() {
     console.log('💡 Should display suggestions?', livePhase === 'phase1' && (suggestedAttributes?.length || 0) > 0)
   }, [suggestedAttributes, livePhase])
   
-  // Text-to-Speech: Speak when dater bubble changes
+  // Track which bubbles are ready to show (audio has started or TTS disabled)
+  const [daterBubbleReady, setDaterBubbleReady] = useState(true)
+  const [avatarBubbleReady, setAvatarBubbleReady] = useState(true)
+  
+  // TTS: Handle dater bubble changes - wait for audio to start before showing
   useEffect(() => {
-    if (daterBubble && daterBubble !== lastSpokenDater.current && ttsEnabled) {
-      lastSpokenDater.current = daterBubble
-      speak(daterBubble, 'dater')
+    if (!daterBubble || daterBubble === lastSpokenDater.current) return
+    
+    lastSpokenDater.current = daterBubble
+    
+    if (ttsEnabled) {
+      // Hide bubble until audio starts
+      setDaterBubbleReady(false)
+      
+      // Start TTS
+      speak(daterBubble, 'dater').then(result => {
+        // Show bubble when audio starts (speak resolves when audio begins)
+        setDaterBubbleReady(true)
+        console.log('▶️ Dater bubble shown - audio started')
+      })
+    } else {
+      // TTS disabled - show immediately
+      setDaterBubbleReady(true)
     }
   }, [daterBubble, ttsEnabled])
   
-  // Text-to-Speech: Speak when avatar bubble changes
+  // TTS: Handle avatar bubble changes - wait for audio to start before showing
   useEffect(() => {
-    if (avatarBubble && avatarBubble !== lastSpokenAvatar.current && ttsEnabled) {
-      lastSpokenAvatar.current = avatarBubble
-      speak(avatarBubble, 'avatar')
+    if (!avatarBubble || avatarBubble === lastSpokenAvatar.current) return
+    
+    lastSpokenAvatar.current = avatarBubble
+    
+    if (ttsEnabled) {
+      // Hide bubble until audio starts
+      setAvatarBubbleReady(false)
+      
+      // Start TTS
+      speak(avatarBubble, 'avatar').then(result => {
+        // Show bubble when audio starts (speak resolves when audio begins)
+        setAvatarBubbleReady(true)
+        console.log('▶️ Avatar bubble shown - audio started')
+      })
+    } else {
+      // TTS disabled - show immediately
+      setAvatarBubbleReady(true)
     }
   }, [avatarBubble, ttsEnabled])
   
@@ -621,6 +653,8 @@ function LiveDateScene() {
       stopAllAudio()
       lastSpokenDater.current = ''
       lastSpokenAvatar.current = ''
+      setDaterBubbleReady(true)
+      setAvatarBubbleReady(true)
     }
   }, [livePhase])
   
@@ -3603,7 +3637,7 @@ This is a dramatic moment - react to what the avatar did!`
         <div className="conversation-bubbles">
           <div className="bubble-column avatar-column">
             <AnimatePresence mode="wait">
-              {avatarBubble && (
+              {avatarBubble && avatarBubbleReady && (
                 <motion.div 
                   key={avatarBubble}
                   className="speech-bubble avatar-bubble"
@@ -3619,7 +3653,7 @@ This is a dramatic moment - react to what the avatar did!`
           
           <div className="bubble-column dater-column">
             <AnimatePresence mode="wait">
-              {daterBubble && (
+              {daterBubble && daterBubbleReady && (
                 <motion.div 
                   key={daterBubble}
                   className="speech-bubble dater-bubble"

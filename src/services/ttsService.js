@@ -24,6 +24,33 @@ let currentAudio = null
 // TTS enabled state
 let ttsEnabled = true // Enabled by default
 
+// Callbacks for audio events
+let onAudioStartCallbacks = []
+
+/**
+ * Register a callback for when audio starts playing
+ * @param {function} callback - Called with (text, speaker) when audio starts
+ */
+export function onAudioStart(callback) {
+  onAudioStartCallbacks.push(callback)
+  return () => {
+    onAudioStartCallbacks = onAudioStartCallbacks.filter(cb => cb !== callback)
+  }
+}
+
+/**
+ * Notify all listeners that audio has started
+ */
+function notifyAudioStart(text, speaker) {
+  onAudioStartCallbacks.forEach(cb => {
+    try {
+      cb(text, speaker)
+    } catch (e) {
+      console.error('Error in audio start callback:', e)
+    }
+  })
+}
+
 /**
  * Enable or disable TTS
  */
@@ -55,23 +82,25 @@ export function stopAllAudio() {
 
 /**
  * Convert text to speech using ElevenLabs API
+ * Returns a promise that resolves when audio STARTS playing (not when it ends)
  * @param {string} text - The text to speak
  * @param {'dater' | 'avatar'} speaker - Which character is speaking
  * @param {object} options - Optional settings
+ * @returns {Promise<{started: boolean, immediate: boolean}>} - Whether audio started and if it was immediate (no TTS)
  */
 export async function speak(text, speaker = 'avatar', options = {}) {
   if (!ttsEnabled) {
     console.log('🔇 TTS disabled, skipping speech')
-    return
+    return { started: false, immediate: true }
   }
   
   if (!API_KEY) {
     console.warn('⚠️ ElevenLabs API key not configured')
-    return
+    return { started: false, immediate: true }
   }
   
   if (!text || text.trim().length === 0) {
-    return
+    return { started: false, immediate: true }
   }
   
   // Clean up the text - remove asterisks and actions like *smiles*
@@ -81,18 +110,26 @@ export async function speak(text, speaker = 'avatar', options = {}) {
     .trim()
   
   if (cleanText.length === 0) {
-    return
+    return { started: false, immediate: true }
   }
   
   const voiceId = VOICES[speaker] || VOICES.avatar
   
-  // Add to queue
-  audioQueue.push({ text: cleanText, voiceId, speaker })
-  
-  // Process queue if not already playing
-  if (!isPlaying) {
-    processQueue()
-  }
+  // Create a promise that resolves when THIS audio starts playing
+  return new Promise((resolve) => {
+    // Add to queue with callback
+    audioQueue.push({ 
+      text: cleanText, 
+      voiceId, 
+      speaker,
+      onStart: () => resolve({ started: true, immediate: false })
+    })
+    
+    // Process queue if not already playing
+    if (!isPlaying) {
+      processQueue()
+    }
+  })
 }
 
 /**
@@ -105,7 +142,7 @@ async function processQueue() {
   }
   
   isPlaying = true
-  const { text, voiceId, speaker } = audioQueue.shift()
+  const { text, voiceId, speaker, onStart } = audioQueue.shift()
   
   try {
     console.log(`🎙️ Speaking as ${speaker}:`, text.substring(0, 50) + '...')
@@ -134,6 +171,8 @@ async function processQueue() {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('❌ ElevenLabs API error:', response.status, errorText)
+      // Resolve the promise so caller knows it failed
+      if (onStart) onStart()
       // Continue to next item in queue
       processQueue()
       return
@@ -160,10 +199,19 @@ async function processQueue() {
       processQueue()
     }
     
+    // Notify when audio actually starts playing
+    currentAudio.onplay = () => {
+      console.log(`▶️ Audio started for ${speaker}`)
+      notifyAudioStart(text, speaker)
+      if (onStart) onStart()
+    }
+    
     await currentAudio.play()
     
   } catch (error) {
     console.error('❌ TTS error:', error)
+    // Resolve the promise so caller knows it failed
+    if (onStart) onStart()
     // Continue to next item in queue
     processQueue()
   }
