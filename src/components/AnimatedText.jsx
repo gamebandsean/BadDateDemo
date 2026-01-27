@@ -1,41 +1,45 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
 
 /**
  * Emotion-to-speed mapping
  * Maps emotional states to word animation delays (in ms)
  * Lower = faster speech, Higher = slower speech
+ * 
+ * Normal reading: ~200-250 words/min = ~240-300ms per word
+ * Fast speech: ~300-350 words/min = ~170-200ms per word
+ * Slow/dramatic: ~100-150 words/min = ~400-600ms per word
  */
 const EMOTION_SPEEDS = {
-  // Positive/energetic emotions - FAST
-  excited: 30,
-  happy: 35,
-  flirty: 40,
-  loves: 35,
-  attracted: 40,
+  // Positive/energetic emotions - FAST (but readable)
+  excited: 120,
+  happy: 140,
+  flirty: 160,
+  loves: 140,
+  attracted: 160,
   
   // Neutral/normal emotions - MEDIUM
-  neutral: 50,
-  interested: 45,
-  likes: 50,
-  curious: 45,
+  neutral: 180,
+  interested: 170,
+  likes: 180,
+  curious: 170,
   
   // Uncertain/processing emotions - SLOWER
-  confused: 80,
-  thinking: 70,
-  uncertain: 75,
-  uncomfortable: 65,
-  dislikes: 60,
+  confused: 280,
+  thinking: 250,
+  uncertain: 260,
+  uncomfortable: 220,
+  dislikes: 200,
   
   // Negative/intense emotions - VERY SLOW (dramatic effect)
-  scared: 100,
-  horrified: 110,
-  shocked: 90,
-  dealbreakers: 95,
-  angry: 55, // Angry is clipped and fast, actually
+  scared: 350,
+  horrified: 400,
+  shocked: 300,
+  dealbreakers: 380,
+  angry: 150, // Angry is clipped and fast
   
   // Default
-  default: 50,
+  default: 180,
 }
 
 /**
@@ -311,8 +315,9 @@ const getAnimationVariants = (animation, scale = 1, scaleX = 1, color = null) =>
  * @param {function} onComplete - Callback when animation completes
  */
 export default function AnimatedText({ text, emotion = 'neutral', wordDelay, onComplete }) {
-  const [visibleWords, setVisibleWords] = useState([])
+  const [visibleWordCount, setVisibleWordCount] = useState(0)
   const [isComplete, setIsComplete] = useState(false)
+  const intervalRef = useRef(null)
   
   // Get emotion effects
   const effects = useMemo(() => {
@@ -335,39 +340,62 @@ export default function AnimatedText({ text, emotion = 'neutral', wordDelay, onC
     )
   }, [effects])
   
-  // Split text into words, preserving punctuation
-  const words = text ? text.split(/(\s+)/).filter(word => word.trim() !== '') : []
+  // Split text into words - memoized to prevent recalculation
+  const words = useMemo(() => {
+    if (!text) return []
+    // Split by whitespace, filter out empty strings
+    return text.split(/\s+/).filter(word => word.length > 0)
+  }, [text])
   
+  // Animation effect - runs when text changes
   useEffect(() => {
-    // Reset when text changes
-    setVisibleWords([])
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+    
+    // Reset state
+    setVisibleWordCount(0)
     setIsComplete(false)
     
     if (!text || words.length === 0) return
     
-    let currentIndex = 0
+    // Start animating words one by one
+    let count = 0
     
-    const interval = setInterval(() => {
-      if (currentIndex < words.length) {
-        setVisibleWords(prev => [...prev, words[currentIndex]])
-        currentIndex++
+    intervalRef.current = setInterval(() => {
+      count++
+      if (count <= words.length) {
+        setVisibleWordCount(count)
       } else {
-        clearInterval(interval)
+        // All words shown
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
         setIsComplete(true)
         if (onComplete) onComplete()
       }
     }, calculatedDelay)
     
-    return () => clearInterval(interval)
-  }, [text, calculatedDelay]) // Re-run when text or delay changes
+    // Cleanup on unmount or text change
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [text, words.length, calculatedDelay, onComplete])
   
   if (!text) return null
   
+  // Get the words to display (up to visibleWordCount)
+  const displayWords = words.slice(0, visibleWordCount)
+  
   return (
     <span className="animated-text" style={{ display: 'inline' }}>
-      {visibleWords.map((word, index) => (
+      {displayWords.map((word, index) => (
         <motion.span
-          key={`${word}-${index}`}
+          key={`${text.substring(0, 20)}-${index}-${word}`}
           initial={variants.initial}
           animate={variants.animate}
           style={{ 
