@@ -67,6 +67,8 @@ function LiveDateScene() {
   const [chatInput, setChatInput] = useState('')
   const [avatarBubble, setAvatarBubble] = useState('')
   const [daterBubble, setDaterBubble] = useState('')
+  const [avatarEmotion, setAvatarEmotion] = useState('neutral') // Avatar's current emotional state
+  const [daterEmotion, setDaterEmotion] = useState('neutral') // Dater's current emotional state
   const [isGenerating, setIsGenerating] = useState(false)
   const [userVote, setUserVote] = useState(null)
   const [showDaterValuesPopup, setShowDaterValuesPopup] = useState(false)
@@ -172,6 +174,24 @@ function LiveDateScene() {
     }
   }
   
+  // Helper: Map avatar's emotional traits to animation emotion
+  const getAvatarEmotionFromTraits = () => {
+    const emotionalTrait = avatar?.attributes?.find(attr => 
+      /nervous|anxious|scared|shy|timid/i.test(attr)) ? 'nervous' :
+      avatar?.attributes?.find(attr => 
+      /excited|eager|enthusiastic|happy|thrilled/i.test(attr)) ? 'excited' :
+      avatar?.attributes?.find(attr => 
+      /confident|bold|assertive|cocky/i.test(attr)) ? 'confident' :
+      avatar?.attributes?.find(attr => 
+      /angry|furious|mad|irritated/i.test(attr)) ? 'angry' :
+      avatar?.attributes?.find(attr => 
+      /flirty|seductive|romantic|charming/i.test(attr)) ? 'flirty' :
+      avatar?.attributes?.find(attr => 
+      /confused|puzzled|uncertain|unsure/i.test(attr)) ? 'confused' :
+      'neutral'
+    return emotionalTrait
+  }
+  
   // Show reaction feedback temporarily (auto-clears after 4 seconds)
   const showReactionFeedback = (category, topic) => {
     const daterName = selectedDater?.name || 'Maya'
@@ -218,6 +238,9 @@ function LiveDateScene() {
     
     setReactionFeedback({ text: randomReaction, category })
     
+    // Set dater emotion based on reaction category for speech animation speed
+    setDaterEmotion(category)
+    
     // Auto-clear after 4 seconds
     reactionFeedbackTimeout.current = setTimeout(() => {
       setReactionFeedback(null)
@@ -225,7 +248,7 @@ function LiveDateScene() {
     
     // Sync to other players
     if (partyClient && isHost) {
-      partyClient.syncState({ reactionFeedback: { text: randomReaction, category } })
+      partyClient.syncState({ reactionFeedback: { text: randomReaction, category }, daterEmotion: category })
     }
   }
   
@@ -442,6 +465,14 @@ function LiveDateScene() {
         reactionFeedbackTimeout.current = setTimeout(() => {
           setReactionFeedback(null)
         }, 4000)
+      }
+      
+      // Sync character emotions for speech animation (non-host only)
+      if (state.daterEmotion && !isHost) {
+        setDaterEmotion(state.daterEmotion)
+      }
+      if (state.avatarEmotion && !isHost) {
+        setAvatarEmotion(state.avatarEmotion)
       }
       
       // Sync exposed values (for showing which attributes have been revealed)
@@ -1233,9 +1264,14 @@ function LiveDateScene() {
       )
       
       if (avatarIntro) {
+        const avatarMood = getAvatarEmotionFromTraits()
+        setAvatarEmotion(avatarMood)
         setAvatarBubble(avatarIntro)
         addDateMessage('avatar', avatarIntro)
         await syncConversationToPartyKit(avatarIntro, undefined, false)
+        if (partyClient && isHost) {
+          partyClient.syncState({ avatarEmotion: avatarMood })
+        }
       }
       
       // Score emotional attributes
@@ -1311,9 +1347,13 @@ function LiveDateScene() {
     
     setLivePhase('phase1')
     setPhaseTimer(30)
+    setDaterEmotion('curious') // Asking a question
     setDaterBubble(openingLine)
     setAvatarBubble('') // Clear avatar bubble
     addDateMessage('dater', openingLine)
+    if (partyClient && isHost) {
+      partyClient.syncState({ daterEmotion: 'curious' })
+    }
     
     if (partyClient) {
       const currentCycleCount = useGameStore.getState().cycleCount
@@ -1353,9 +1393,13 @@ function LiveDateScene() {
         // Only host generates the question
         if (isHost) {
           const openingLine = getOpeningLine()
+          setDaterEmotion('curious') // Asking a question
           setDaterBubble(openingLine)
           setAvatarBubble('') // Clear avatar bubble
           addDateMessage('dater', openingLine)
+          if (partyClient) {
+            partyClient.syncState({ daterEmotion: 'curious' })
+          }
           
           // Sync question and state to PartyKit for other players
           // IMPORTANT: Include compatibility and cycleCount to preserve them!
@@ -1714,9 +1758,14 @@ function LiveDateScene() {
       console.log('🔗 Prompt chain result:', { avatarResponse1, daterReaction1, visibility })
       
       if (avatarResponse1) {
+        const avatarMood = getAvatarEmotionFromTraits()
+        setAvatarEmotion(avatarMood)
         setAvatarBubble(avatarResponse1)
         addDateMessage('avatar', avatarResponse1)
         await syncConversationToPartyKit(avatarResponse1, undefined, undefined)
+        if (partyClient && isHost) {
+          partyClient.syncState({ avatarEmotion: avatarMood })
+        }
         
         await new Promise(resolve => setTimeout(resolve, 2500))
         
@@ -1751,9 +1800,14 @@ function LiveDateScene() {
         )
         
         if (avatarResponse2) {
+          const avatarMood = getAvatarEmotionFromTraits()
+          setAvatarEmotion(avatarMood)
           setAvatarBubble(avatarResponse2)
           addDateMessage('avatar', avatarResponse2)
           await syncConversationToPartyKit(avatarResponse2, undefined, undefined)
+          if (partyClient && isHost) {
+            partyClient.syncState({ avatarEmotion: avatarMood })
+          }
           
           await new Promise(resolve => setTimeout(resolve, 2500))
           
@@ -1797,9 +1851,14 @@ function LiveDateScene() {
           )
           
           if (avatarResponse3) {
+            const avatarMood = getAvatarEmotionFromTraits()
+            setAvatarEmotion(avatarMood)
             setAvatarBubble(avatarResponse3)
             addDateMessage('avatar', avatarResponse3)
             await syncConversationToPartyKit(avatarResponse3, undefined, undefined)
+            if (partyClient && isHost) {
+              partyClient.syncState({ avatarEmotion: avatarMood })
+            }
             
             await new Promise(resolve => setTimeout(resolve, 2500))
             
@@ -1891,9 +1950,13 @@ function LiveDateScene() {
       // Only host generates the next question
       if (isHost) {
         const nextQuestion = getOpeningLine()
+        setDaterEmotion('curious') // Asking a question
         setDaterBubble(nextQuestion)
         setAvatarBubble('')
         addDateMessage('dater', nextQuestion)
+        if (partyClient) {
+          partyClient.syncState({ daterEmotion: 'curious' })
+        }
         
         // Clear previous round's suggestions
         setSuggestedAttributes([])
@@ -2212,9 +2275,14 @@ This is a dramatic moment - react to what the avatar did!`
         avatar.attributes || []
       )
       
+      const avatarMood = getAvatarEmotionFromTraits()
+      setAvatarEmotion(avatarMood)
       setAvatarBubble(avatarFollowUp)
       addDateMessage('avatar', avatarFollowUp)
       syncConversationToPartyKit(avatarFollowUp, undefined)
+      if (partyClient && isHost) {
+        partyClient.syncState({ avatarEmotion: avatarMood })
+      }
       
       // Wait for reading, then finish plot twist
       await new Promise(resolve => setTimeout(resolve, 5000))
@@ -2250,9 +2318,13 @@ This is a dramatic moment - react to what the avatar did!`
     setPhaseTimer(30)
     
     const nextQuestion = getOpeningLine()
+    setDaterEmotion('curious') // Asking a question
     setDaterBubble(nextQuestion)
     setAvatarBubble('')
     addDateMessage('dater', nextQuestion)
+    if (partyClient && isHost) {
+      partyClient.syncState({ daterEmotion: 'curious' })
+    }
     
     setSuggestedAttributes([])
     setNumberedAttributes([])
@@ -3539,7 +3611,7 @@ This is a dramatic moment - react to what the avatar did!`
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   exit={{ scale: 0.9, opacity: 0, y: -10 }}
                 >
-                  <AnimatedText text={avatarBubble} wordDelay={50} />
+                  <AnimatedText text={avatarBubble} emotion={avatarEmotion} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -3555,7 +3627,7 @@ This is a dramatic moment - react to what the avatar did!`
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   exit={{ scale: 0.9, opacity: 0, y: -10 }}
                 >
-                  <AnimatedText text={daterBubble} wordDelay={50} />
+                  <AnimatedText text={daterBubble} emotion={daterEmotion} />
                 </motion.div>
               )}
             </AnimatePresence>
