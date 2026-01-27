@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import { getDaterDateResponse, getAvatarDateResponse, generateDaterValues, checkAttributeMatch, runAttributePromptChain, groupSimilarAnswers, generateBreakdownSentences } from '../services/llmService'
 import { speak, stopAllAudio, setTTSEnabled, isTTSEnabled, waitForAllAudio } from '../services/ttsService'
-import { getMayaPortrait, getAvatarPortrait, preloadExpressions } from '../services/expressionService'
+import { getMayaPortraitCached, getAvatarPortraitCached, preloadExpressions, waitForPreload } from '../services/expressionService'
 import AnimatedText from './AnimatedText'
 import './LiveDateScene.css'
 
@@ -284,10 +284,21 @@ function LiveDateScene() {
     }
   }
   
-  // Preload character expressions on mount for faster switching
+  // Track if portrait images are preloaded
+  const [portraitsReady, setPortraitsReady] = useState(false)
+  
+  // Preload character expressions on mount - wait for all to load
   useEffect(() => {
-    preloadExpressions('maya')
-    preloadExpressions('avatar')
+    const loadPortraits = async () => {
+      console.log('🖼️ Starting portrait preload...')
+      await Promise.all([
+        preloadExpressions('maya'),
+        preloadExpressions('avatar')
+      ])
+      console.log('✅ All portraits preloaded')
+      setPortraitsReady(true)
+    }
+    loadPortraits()
   }, [])
   
   // Check if API key is available
@@ -3695,19 +3706,27 @@ This is a dramatic moment - react to what the avatar did!`
         {/* Characters - portraits change based on emotional state */}
         <div className="characters-container">
           <div className="character avatar-character">
-            <img 
-              src={getAvatarPortrait(avatarEmotion)}
-              alt="You" 
-              className="character-image"
-            />
+            {portraitsReady ? (
+              <img 
+                src={getAvatarPortraitCached(avatarEmotion)}
+                alt="You" 
+                className="character-image"
+              />
+            ) : (
+              <div className="character-image character-loading">🎭</div>
+            )}
           </div>
           
           <div className="character dater-character">
-            <img 
-              src={getMayaPortrait(daterEmotion)}
-              alt={selectedDater?.name || 'Maya'} 
-              className="character-image"
-            />
+            {portraitsReady ? (
+              <img 
+                src={getMayaPortraitCached(daterEmotion)}
+                alt={selectedDater?.name || 'Maya'} 
+                className="character-image"
+              />
+            ) : (
+              <div className="character-image character-loading">💕</div>
+            )}
           </div>
         </div>
         

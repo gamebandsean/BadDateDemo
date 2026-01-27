@@ -2,6 +2,7 @@
  * Expression Service - Generates character portraits with dynamic expressions
  * 
  * Uses DiceBear avataaars style with emotion-based facial features
+ * Images are preloaded and cached to prevent blank images during emotion changes
  */
 
 // Base URLs for characters
@@ -17,6 +18,17 @@ const CHARACTER_BACKGROUNDS = {
   avatar: 'c0aede',
   leo: 'ffd5dc',
   kickflip: 'ffdfbf',
+}
+
+// Cache for preloaded images - stores loaded image URLs
+// Key format: "character-emotion" -> URL (only added when fully loaded)
+const imageCache = new Map()
+
+// Track loading state
+const loadingPromises = new Map()
+let preloadComplete = {
+  maya: false,
+  avatar: false,
 }
 
 /**
@@ -198,19 +210,128 @@ export function getAvatarPortrait(emotion = 'neutral', seed = null) {
 }
 
 /**
- * Preload all expression variants for a character (for faster switching)
+ * Load a single image and cache it
  * @param {string} character - Character identifier
+ * @param {string} emotion - Emotion name
+ * @returns {Promise<string>} - Resolves with URL when loaded
  */
-export function preloadExpressions(character) {
-  const emotions = Object.keys(EXPRESSION_MAP)
+function loadAndCacheImage(character, emotion) {
+  const cacheKey = `${character}-${emotion}`
   
-  emotions.forEach(emotion => {
-    const url = getExpressionPortrait(character, emotion)
+  // Already cached
+  if (imageCache.has(cacheKey)) {
+    return Promise.resolve(imageCache.get(cacheKey))
+  }
+  
+  // Already loading
+  if (loadingPromises.has(cacheKey)) {
+    return loadingPromises.get(cacheKey)
+  }
+  
+  const url = getExpressionPortrait(character, emotion)
+  
+  const loadPromise = new Promise((resolve, reject) => {
     const img = new Image()
+    
+    img.onload = () => {
+      imageCache.set(cacheKey, url)
+      loadingPromises.delete(cacheKey)
+      resolve(url)
+    }
+    
+    img.onerror = (err) => {
+      console.error(`❌ Failed to load ${character} ${emotion}:`, err)
+      loadingPromises.delete(cacheKey)
+      // Resolve with neutral as fallback
+      const fallbackUrl = getExpressionPortrait(character, 'neutral')
+      resolve(fallbackUrl)
+    }
+    
     img.src = url
   })
   
-  console.log(`🖼️ Preloaded ${emotions.length} expressions for ${character}`)
+  loadingPromises.set(cacheKey, loadPromise)
+  return loadPromise
+}
+
+/**
+ * Preload all expression variants for a character
+ * Returns a promise that resolves when ALL images are loaded
+ * @param {string} character - Character identifier
+ * @returns {Promise<void>}
+ */
+export async function preloadExpressions(character) {
+  const emotions = Object.keys(EXPRESSION_MAP)
+  
+  console.log(`🖼️ Starting preload of ${emotions.length} expressions for ${character}...`)
+  
+  const loadPromises = emotions.map(emotion => loadAndCacheImage(character, emotion))
+  
+  try {
+    await Promise.all(loadPromises)
+    preloadComplete[character] = true
+    console.log(`✅ Preloaded all ${emotions.length} expressions for ${character}`)
+  } catch (error) {
+    console.error(`❌ Error preloading expressions for ${character}:`, error)
+  }
+}
+
+/**
+ * Check if preloading is complete for a character
+ * @param {string} character - Character identifier
+ * @returns {boolean}
+ */
+export function isPreloadComplete(character) {
+  return preloadComplete[character] || false
+}
+
+/**
+ * Get a cached portrait URL, falling back to neutral if not loaded
+ * This ensures we never show a blank image
+ * @param {string} character - Character identifier
+ * @param {string} emotion - Emotional state
+ * @returns {string} - Cached URL or neutral fallback
+ */
+export function getCachedPortrait(character, emotion = 'neutral') {
+  const cacheKey = `${character}-${emotion}`
+  
+  // Return cached URL if available
+  if (imageCache.has(cacheKey)) {
+    return imageCache.get(cacheKey)
+  }
+  
+  // Try neutral fallback
+  const neutralKey = `${character}-neutral`
+  if (imageCache.has(neutralKey)) {
+    // Start loading the requested emotion in the background
+    loadAndCacheImage(character, emotion)
+    return imageCache.get(neutralKey)
+  }
+  
+  // Start loading both in background, return URL (may briefly show loading)
+  loadAndCacheImage(character, emotion)
+  loadAndCacheImage(character, 'neutral')
+  
+  // Return the URL anyway - it will load
+  return getExpressionPortrait(character, emotion)
+}
+
+/**
+ * Get Maya's portrait - uses cache to prevent blank images
+ * @param {string} emotion - Emotional state
+ * @returns {string} - Cached avatar URL
+ */
+export function getMayaPortraitCached(emotion = 'neutral') {
+  return getCachedPortrait('maya', emotion)
+}
+
+/**
+ * Get Avatar's portrait - uses cache to prevent blank images
+ * @param {string} emotion - Emotional state
+ * @returns {string} - Cached avatar URL
+ */
+export function getAvatarPortraitCached(emotion = 'neutral') {
+  return getCachedPortrait('avatar', emotion)
 }
 
 /**
@@ -219,6 +340,20 @@ export function preloadExpressions(character) {
  */
 export function getAvailableEmotions() {
   return Object.keys(EXPRESSION_MAP)
+}
+
+/**
+ * Wait for all preloading to complete
+ * @returns {Promise<void>}
+ */
+export async function waitForPreload() {
+  const characters = ['maya', 'avatar']
+  await Promise.all(characters.map(c => {
+    if (!preloadComplete[c]) {
+      return preloadExpressions(c)
+    }
+    return Promise.resolve()
+  }))
 }
 
 // Export the expression map for reference
