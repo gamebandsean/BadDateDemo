@@ -1,350 +1,121 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { motion } from 'framer-motion'
 
 /**
- * Emotion-to-speed mapping
- * Maps emotional states to word animation delays (in ms)
- * Lower = faster speech, Higher = slower speech
+ * Emotion-to-speed mapping for LETTER-BY-LETTER animation
+ * Maps emotional states to character delays (in ms)
  * 
- * Normal reading: ~200-250 words/min = ~240-300ms per word
- * Fast speech: ~300-350 words/min = ~170-200ms per word
- * Slow/dramatic: ~100-150 words/min = ~400-600ms per word
+ * Normal speaking: ~150 words/min, ~5 chars/word = ~750 chars/min = 80ms per char
+ * Fast speaking: ~200 words/min = ~60ms per char
+ * Slow/dramatic: ~100 words/min = ~120ms per char
  */
 const EMOTION_SPEEDS = {
-  // Positive/energetic emotions - FAST (but readable)
-  excited: 120,
-  happy: 140,
-  flirty: 160,
-  loves: 140,
-  attracted: 160,
+  // Positive/energetic emotions - FAST
+  excited: 25,
+  happy: 30,
+  flirty: 35,
+  loves: 30,
+  attracted: 35,
   
   // Neutral/normal emotions - MEDIUM
-  neutral: 180,
-  interested: 170,
-  likes: 180,
-  curious: 170,
+  neutral: 40,
+  interested: 38,
+  likes: 40,
+  curious: 38,
+  confident: 35,
   
   // Uncertain/processing emotions - SLOWER
-  confused: 280,
-  thinking: 250,
-  uncertain: 260,
-  uncomfortable: 220,
-  dislikes: 200,
+  confused: 60,
+  thinking: 55,
+  uncertain: 55,
+  uncomfortable: 50,
+  dislikes: 45,
   
-  // Negative/intense emotions - VERY SLOW (dramatic effect)
-  scared: 350,
-  horrified: 400,
-  shocked: 300,
-  dealbreakers: 380,
-  angry: 150, // Angry is clipped and fast
+  // Negative/intense emotions - SLOW (dramatic effect)
+  scared: 70,
+  horrified: 80,
+  shocked: 50,
+  dealbreakers: 75,
+  angry: 30, // Angry is clipped and fast
+  furious: 28,
   
-  // Default
-  default: 180,
-}
-
-/**
- * Emotion-to-visual-effects mapping
- * Each emotion has: scale, color, animation variant
- */
-const EMOTION_EFFECTS = {
-  // === EXCITED / HAPPY / JOYFUL ===
-  excited: {
-    scale: 1.15,
-    scaleX: 1.1, // Slight horizontal stretch
-    color: '#FFD700', // Gold
-    animation: 'bounce',
-  },
-  happy: {
-    scale: 1.1,
-    scaleX: 1.08,
-    color: '#FFC107', // Warm yellow
-    animation: 'bounce',
-  },
-  loves: {
-    scale: 1.12,
-    scaleX: 1.05,
-    color: '#FF69B4', // Hot pink
-    animation: 'pulse',
-  },
-  attracted: {
-    scale: 1.08,
-    color: '#FF6B9D', // Soft pink
-    animation: 'pulse',
-  },
-  
-  // === ANGRY / FURIOUS ===
-  angry: {
-    scale: 1.2,
-    color: '#FF4444', // Bright red
-    animation: 'shake',
-  },
-  furious: {
-    scale: 1.25,
-    color: '#CC0000', // Dark red
-    animation: 'shake',
-  },
-  
-  // === SCARED / HORRIFIED ===
-  scared: {
-    scale: 1.15,
-    color: '#9966FF', // Purple (fear)
-    animation: 'tremble',
-  },
-  horrified: {
-    scale: 1.2,
-    color: '#8B0000', // Dark red
-    animation: 'tremble',
-  },
-  dealbreakers: {
-    scale: 1.18,
-    color: '#DC143C', // Crimson
-    animation: 'tremble',
-  },
-  shocked: {
-    scale: 1.25,
-    color: '#FF6600', // Orange
-    animation: 'pop',
-  },
-  
-  // === NERVOUS / SAD / UNCERTAIN ===
-  nervous: {
-    scale: 0.92,
-    color: '#88AACC', // Muted blue
-    animation: 'wiggle',
-  },
-  sad: {
-    scale: 0.88,
-    color: '#6699AA', // Sad blue
-    animation: 'droop',
-  },
-  uncomfortable: {
-    scale: 0.94,
-    color: '#AA9988', // Muted brown
-    animation: 'wiggle',
-  },
-  uncertain: {
-    scale: 0.95,
-    animation: 'wiggle',
-  },
-  confused: {
-    scale: 0.96,
-    animation: 'tilt',
-  },
-  dislikes: {
-    scale: 0.95,
-    color: '#CC8866', // Muted orange
-    animation: 'none',
-  },
-  
-  // === NEUTRAL / CALM ===
-  neutral: {
-    scale: 1,
-    animation: 'none',
-  },
-  curious: {
-    scale: 1.02,
-    animation: 'none',
-  },
-  interested: {
-    scale: 1.03,
-    animation: 'none',
-  },
-  likes: {
-    scale: 1.04,
-    color: '#66BB66', // Soft green
-    animation: 'none',
-  },
-  flirty: {
-    scale: 1.05,
-    color: '#FF99AA', // Flirty pink
-    animation: 'pulse',
-  },
-  confident: {
-    scale: 1.06,
-    animation: 'none',
-  },
+  // Sad emotions - SLOW
+  sad: 65,
+  disappointed: 55,
+  nervous: 50,
   
   // Default
-  default: {
-    scale: 1,
-    animation: 'none',
-  },
+  default: 40,
 }
 
 /**
- * Animation variants for different emotional expressions
+ * Emotion-to-color mapping
+ * Colors only - NO SCALE CHANGES (font size stays consistent)
  */
-const getAnimationVariants = (animation, scale = 1, scaleX = 1, color = null) => {
-  const baseInitial = { opacity: 0, y: 8, scale: 0.8 }
-  const baseAnimate = { 
-    opacity: 1, 
-    y: 0, 
-    scale, 
-    scaleX,
-    ...(color && { color })
-  }
+const EMOTION_COLORS = {
+  // Positive
+  excited: '#FFD700', // Gold
+  happy: '#FFC107', // Warm yellow
+  loves: '#FF69B4', // Hot pink
+  attracted: '#FF6B9D', // Soft pink
+  flirty: '#FF99AA', // Flirty pink
+  likes: '#66BB66', // Soft green
   
-  switch (animation) {
-    case 'bounce':
-      return {
-        initial: baseInitial,
-        animate: {
-          ...baseAnimate,
-          y: [0, -4, 0],
-          transition: {
-            y: { duration: 0.3, times: [0, 0.5, 1] },
-            default: { duration: 0.2 }
-          }
-        }
-      }
-    
-    case 'shake':
-      return {
-        initial: baseInitial,
-        animate: {
-          ...baseAnimate,
-          x: [0, -3, 3, -2, 2, 0],
-          transition: {
-            x: { duration: 0.4, times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
-            default: { duration: 0.15 }
-          }
-        }
-      }
-    
-    case 'tremble':
-      return {
-        initial: baseInitial,
-        animate: {
-          ...baseAnimate,
-          x: [0, -1, 1, -1, 1, -0.5, 0.5, 0],
-          y: [0, -1, 0, 1, 0, -0.5, 0],
-          transition: {
-            x: { duration: 0.5, repeat: 1 },
-            y: { duration: 0.4, repeat: 1 },
-            default: { duration: 0.2 }
-          }
-        }
-      }
-    
-    case 'wiggle':
-      return {
-        initial: baseInitial,
-        animate: {
-          ...baseAnimate,
-          rotate: [0, -2, 2, -1, 1, 0],
-          transition: {
-            rotate: { duration: 0.4 },
-            default: { duration: 0.2 }
-          }
-        }
-      }
-    
-    case 'pulse':
-      return {
-        initial: baseInitial,
-        animate: {
-          ...baseAnimate,
-          scale: [scale * 0.95, scale * 1.05, scale],
-          transition: {
-            scale: { duration: 0.3, times: [0, 0.5, 1] },
-            default: { duration: 0.2 }
-          }
-        }
-      }
-    
-    case 'pop':
-      return {
-        initial: { ...baseInitial, scale: 0.5 },
-        animate: {
-          ...baseAnimate,
-          scale: [scale * 1.3, scale * 0.9, scale],
-          transition: {
-            scale: { duration: 0.35, times: [0, 0.6, 1] },
-            default: { duration: 0.15 }
-          }
-        }
-      }
-    
-    case 'droop':
-      return {
-        initial: baseInitial,
-        animate: {
-          ...baseAnimate,
-          y: [0, 2, 1],
-          rotate: [0, 1, 0],
-          transition: {
-            y: { duration: 0.4 },
-            rotate: { duration: 0.4 },
-            default: { duration: 0.25 }
-          }
-        }
-      }
-    
-    case 'tilt':
-      return {
-        initial: baseInitial,
-        animate: {
-          ...baseAnimate,
-          rotate: [0, 3, -2, 0],
-          transition: {
-            rotate: { duration: 0.5 },
-            default: { duration: 0.2 }
-          }
-        }
-      }
-    
-    case 'none':
-    default:
-      return {
-        initial: baseInitial,
-        animate: {
-          ...baseAnimate,
-          transition: { duration: 0.15 }
-        }
-      }
-  }
+  // Negative/intense
+  angry: '#FF4444', // Bright red
+  furious: '#CC0000', // Dark red
+  scared: '#9966FF', // Purple
+  horrified: '#8B0000', // Dark red
+  dealbreakers: '#DC143C', // Crimson
+  shocked: '#FF6600', // Orange
+  
+  // Uncertain
+  nervous: '#88AACC', // Muted blue
+  sad: '#6699AA', // Sad blue
+  uncomfortable: '#AA9988', // Muted brown
+  dislikes: '#CC8866', // Muted orange
+  
+  // Neutral - no color change
+  neutral: null,
+  curious: null,
+  interested: null,
+  confident: null,
+  confused: null,
+  uncertain: null,
+  thinking: null,
+  
+  default: null,
 }
 
 /**
- * AnimatedText - Animates text in word by word
- * Speed and visual effects adjust based on emotional state
+ * AnimatedText - Animates text LETTER BY LETTER
+ * Speed determined by emotional state
+ * Font size is ALWAYS consistent (no scaling)
  * 
- * @param {string} text - The text to animate
- * @param {string} emotion - Emotional state that affects speed and effects
- * @param {number} wordDelay - Override delay between words (optional)
+ * @param {string} text - The full text to animate
+ * @param {string} emotion - Emotional state that affects speed and color
+ * @param {number} charDelay - Override delay between characters (optional)
  * @param {function} onComplete - Callback when animation completes
  */
-export default function AnimatedText({ text, emotion = 'neutral', wordDelay, onComplete }) {
-  const [visibleWordCount, setVisibleWordCount] = useState(0)
+export default function AnimatedText({ text, emotion = 'neutral', charDelay, onComplete }) {
+  const [visibleCharCount, setVisibleCharCount] = useState(0)
   const [isComplete, setIsComplete] = useState(false)
   const intervalRef = useRef(null)
-  
-  // Get emotion effects
-  const effects = useMemo(() => {
-    return EMOTION_EFFECTS[emotion] || EMOTION_EFFECTS.default
-  }, [emotion])
+  const textRef = useRef(text)
   
   // Calculate delay based on emotion (or use override)
   const calculatedDelay = useMemo(() => {
-    if (wordDelay !== undefined) return wordDelay
+    if (charDelay !== undefined) return charDelay
     return EMOTION_SPEEDS[emotion] || EMOTION_SPEEDS.default
-  }, [emotion, wordDelay])
+  }, [emotion, charDelay])
   
-  // Get animation variants for this emotion
-  const variants = useMemo(() => {
-    return getAnimationVariants(
-      effects.animation,
-      effects.scale || 1,
-      effects.scaleX || 1,
-      effects.color || null
-    )
-  }, [effects])
+  // Get color for this emotion
+  const textColor = useMemo(() => {
+    return EMOTION_COLORS[emotion] || EMOTION_COLORS.default
+  }, [emotion])
   
-  // Split text into words - memoized to prevent recalculation
-  const words = useMemo(() => {
-    if (!text) return []
-    // Split by whitespace, filter out empty strings
-    return text.split(/\s+/).filter(word => word.length > 0)
+  // Store current text in ref for interval access
+  useEffect(() => {
+    textRef.current = text
   }, [text])
   
   // Animation effect - runs when text changes
@@ -356,20 +127,21 @@ export default function AnimatedText({ text, emotion = 'neutral', wordDelay, onC
     }
     
     // Reset state
-    setVisibleWordCount(0)
+    setVisibleCharCount(0)
     setIsComplete(false)
     
-    if (!text || words.length === 0) return
+    if (!text || text.length === 0) return
     
-    // Start animating words one by one
+    const totalChars = text.length
     let count = 0
     
+    // Start animating characters one by one
     intervalRef.current = setInterval(() => {
       count++
-      if (count <= words.length) {
-        setVisibleWordCount(count)
+      if (count <= totalChars) {
+        setVisibleCharCount(count)
       } else {
-        // All words shown
+        // All characters shown
         clearInterval(intervalRef.current)
         intervalRef.current = null
         setIsComplete(true)
@@ -384,36 +156,36 @@ export default function AnimatedText({ text, emotion = 'neutral', wordDelay, onC
         intervalRef.current = null
       }
     }
-  }, [text, words.length, calculatedDelay, onComplete])
+  }, [text, calculatedDelay, onComplete])
   
   if (!text) return null
   
-  // Get the words to display (up to visibleWordCount)
-  const displayWords = words.slice(0, visibleWordCount)
+  // Get the visible portion of text
+  const visibleText = text.substring(0, visibleCharCount)
+  // Get the remaining (hidden) text - this maintains the size
+  const hiddenText = text.substring(visibleCharCount)
   
   return (
-    <span className="animated-text" style={{ display: 'inline' }}>
-      {displayWords.map((word, index) => (
-        <motion.span
-          key={`${text.substring(0, 20)}-${index}-${word}`}
-          initial={variants.initial}
-          animate={variants.animate}
-          style={{ 
-            display: 'inline-block',
-            marginRight: '0.25em',
-            transformOrigin: 'center bottom',
-          }}
-        >
-          {word}
-        </motion.span>
-      ))}
-      {/* Invisible placeholder to maintain bubble size */}
-      <span style={{ visibility: 'hidden', position: 'absolute' }}>
-        {text}
+    <span className="animated-text" style={{ position: 'relative', display: 'inline' }}>
+      {/* Visible animated text */}
+      <span 
+        style={{ 
+          color: textColor || 'inherit',
+        }}
+      >
+        {visibleText}
+      </span>
+      {/* Hidden remaining text - maintains bubble size for FULL text */}
+      <span 
+        style={{ 
+          visibility: 'hidden',
+        }}
+      >
+        {hiddenText}
       </span>
     </span>
   )
 }
 
 // Export for use in other components
-export { EMOTION_SPEEDS, EMOTION_EFFECTS }
+export { EMOTION_SPEEDS, EMOTION_COLORS }
