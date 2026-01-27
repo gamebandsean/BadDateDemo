@@ -242,10 +242,10 @@ function LiveDateScene() {
     // Set dater emotion based on reaction category for speech animation speed
     setDaterEmotion(category)
     
-    // Auto-clear after 6 seconds (was 4)
+    // Auto-clear after 4 seconds
     reactionFeedbackTimeout.current = setTimeout(() => {
       setReactionFeedback(null)
-    }, 6000)
+    }, 4000)
     
     // Sync to other players
     if (partyClient && isHost) {
@@ -409,7 +409,7 @@ function LiveDateScene() {
         
         if (state.phase === 'ended' && !isHost) {
           console.log('🏁 Game ended - transitioning non-host to results')
-          setTimeout(() => setPhase('results'), 22500) // Match host timeout for breakdown reading (was 15000)
+          setTimeout(() => setPhase('results'), 15000) // Match host timeout for breakdown reading
         }
       }
       
@@ -482,7 +482,7 @@ function LiveDateScene() {
         }
         reactionFeedbackTimeout.current = setTimeout(() => {
           setReactionFeedback(null)
-        }, 6000) // was 4000
+        }, 4000)
       }
       
       // Sync character emotions for speech animation (non-host only)
@@ -572,7 +572,7 @@ function LiveDateScene() {
           // Small delay to ensure state is synced, then advance
           setTimeout(() => {
             advancePlotTwistToReveal()
-          }, 750) // was 500
+          }, 500)
         }
       }
       
@@ -1301,8 +1301,8 @@ function LiveDateScene() {
       }
       await syncConversationToPartyKit(undefined, undefined, true)
       
-      // SHORTER DELAY - quick back and forth (was 1500)
-      await new Promise(resolve => setTimeout(resolve, 2250))
+      // SHORTER DELAY - quick back and forth
+      await new Promise(resolve => setTimeout(resolve, 1500))
       
       // === STEP 2: Avatar responds, EMPHASIZING their EMOTIONAL state ===
       console.log('💭 Avatar responding with emotional state:', emotionalList)
@@ -1346,7 +1346,7 @@ function LiveDateScene() {
       }
       await syncConversationToPartyKit(undefined, undefined, true)
       
-      await new Promise(resolve => setTimeout(resolve, 3000)) // was 2000
+      await new Promise(resolve => setTimeout(resolve, 2000))
       
       // === STEP 3: Dater responds to what the Avatar said (First Impressions - no questions!) ===
       console.log('💬 Dater responding to avatar (first impressions - reaction only)')
@@ -1371,8 +1371,8 @@ function LiveDateScene() {
         await syncConversationToPartyKit(undefined, daterReaction2, false)
       }
       
-      // Brief pause before Phase 1 (was 3000)
-      await new Promise(resolve => setTimeout(resolve, 4500))
+      // Brief pause before Phase 1
+      await new Promise(resolve => setTimeout(resolve, 3000))
       
     } catch (error) {
       console.error('Error in reaction round:', error)
@@ -1390,9 +1390,8 @@ function LiveDateScene() {
     await waitForAllAudio()
     console.log('✅ Audio complete, waiting 5s before Phase 1...')
     
-    // Give players 7.5 seconds to read the conversation before starting Phase 1
-    // (was 5000, increased 50%)
-    await new Promise(resolve => setTimeout(resolve, 7500))
+    // Give players 5 seconds to read the conversation before starting Phase 1
+    await new Promise(resolve => setTimeout(resolve, 5000))
     
     console.log('⏰ Delay complete, starting Phase 1')
     
@@ -1435,10 +1434,10 @@ function LiveDateScene() {
   // Trigger reaction round when phase changes to 'reaction'
   useEffect(() => {
     if (livePhase === 'reaction' && isHost && !isGenerating) {
-      // Small delay to let the UI update (was 1000)
+      // Small delay to let the UI update
       const timer = setTimeout(() => {
         runReactionRound()
-      }, 1500)
+      }, 1000)
       return () => clearTimeout(timer)
     }
   }, [livePhase, isHost])
@@ -1495,10 +1494,10 @@ function LiveDateScene() {
       setAnnouncementPhase(livePhase)
       setShowPhaseAnnouncement(true)
       
-      // Hide after announcement (was 3000/2000, now 4500/3000)
+      // Hide after 2.5 seconds (longer for reaction to build anticipation)
       const timer = setTimeout(() => {
         setShowPhaseAnnouncement(false)
-      }, livePhase === 'reaction' ? 4500 : 3000)
+      }, livePhase === 'reaction' ? 3000 : 2000)
       
       return () => clearTimeout(timer)
     }
@@ -1825,7 +1824,7 @@ function LiveDateScene() {
           partyClient.syncState({ avatarEmotion: avatarMood })
         }
         
-        await new Promise(resolve => setTimeout(resolve, 3750)) // was 2500
+        await new Promise(resolve => setTimeout(resolve, 2500))
         
         // Use the dater reaction from the prompt chain FIRST
         if (daterReaction1) {
@@ -1844,7 +1843,7 @@ function LiveDateScene() {
           }
         }
         
-        await new Promise(resolve => setTimeout(resolve, 4500)) // was 3000
+        await new Promise(resolve => setTimeout(resolve, 3000))
         
         // ============ EXCHANGE 2: Avatar responds to Dater's reaction (0.25x scoring) ============
         console.log('--- Exchange 2: Avatar responds to Dater reaction ---')
@@ -1867,7 +1866,7 @@ function LiveDateScene() {
             partyClient.syncState({ avatarEmotion: avatarMood })
           }
           
-          await new Promise(resolve => setTimeout(resolve, 3750)) // was 2500
+          await new Promise(resolve => setTimeout(resolve, 2500))
           
           // Dater reacts FIRST (no sentiment hit yet - will score after)
           const daterReaction2 = await getDaterDateResponse(
@@ -1895,7 +1894,7 @@ function LiveDateScene() {
             }
           }
           
-          await new Promise(resolve => setTimeout(resolve, 4500)) // was 3000
+          await new Promise(resolve => setTimeout(resolve, 3000))
           
           // ============ EXCHANGE 3: Avatar connects all traits (0.10x scoring) ============
           console.log('--- Exchange 3: Avatar connects all previous traits ---')
@@ -1918,7 +1917,7 @@ function LiveDateScene() {
               partyClient.syncState({ avatarEmotion: avatarMood })
             }
             
-            await new Promise(resolve => setTimeout(resolve, 3750)) // was 2500
+            await new Promise(resolve => setTimeout(resolve, 2500))
             
             // Dater reacts FIRST (no sentiment hit yet - will score after)
             const daterReaction3 = await getDaterDateResponse(
@@ -1959,9 +1958,9 @@ function LiveDateScene() {
       console.log('✅ Audio complete')
       
       // After all 3 exchanges, give players 5 seconds to read the conversation before transitioning
-      // Reading pause before next phase (was 5000, now 7500)
-      console.log('💬 Conversation complete - 7.5 second reading pause before next phase')
-      await new Promise(resolve => setTimeout(resolve, 7500))
+      // Reading pause before next phase
+      console.log('💬 Conversation complete - 5 second reading pause before next phase')
+      await new Promise(resolve => setTimeout(resolve, 5000))
       handleRoundComplete()
       
     } catch (error) {
@@ -2003,8 +2002,8 @@ function LiveDateScene() {
       if (partyClient) {
         partyClient.syncState( { phase: 'ended', compatibility: currentCompatibility, cycleCount: newRoundCount })
       }
-      // Extend timeout to let players read the breakdown (was 15000)
-      setTimeout(() => setPhase('results'), 22500)
+      // Extend timeout to let players read the breakdown
+      setTimeout(() => setPhase('results'), 15000)
     } else {
       // Start new round - Dater asks another question (host only generates)
       setLivePhase('phase1')
@@ -2084,10 +2083,10 @@ function LiveDateScene() {
       })
     }
     
-    // Show interstitial for 4.5 seconds, then move to input phase (was 3000)
+    // Show interstitial for 3 seconds, then move to input phase
     setTimeout(() => {
       advancePlotTwistToInput()
-    }, 4500)
+    }, 3000)
   }
   
   // Move from interstitial to input phase
@@ -2179,10 +2178,10 @@ function LiveDateScene() {
       partyClient.syncState({ plotTwist: newPlotTwist })
     }
     
-    // Show answers for 3 seconds, then start animation (was 2000)
+    // Show answers for 2 seconds, then start animation
     setTimeout(() => {
       startPlotTwistAnimation()
-    }, 3000)
+    }, 2000)
   }
   
   // Start the winner selection animation
@@ -2205,12 +2204,12 @@ function LiveDateScene() {
     }
     
     // Animation: highlight each answer in sequence, speeding up
-    // Slow: 600ms -> Medium: 300ms -> Fast: 150ms -> then random final pick (increased 50%)
+    // Slow: 400ms -> Medium: 200ms -> Fast: 100ms -> then random final pick
     const animationCycles = [
-      { count: answers.length * 2, delay: 600 },   // Slow pass (was 400)
-      { count: answers.length * 2, delay: 300 },   // Medium pass (was 200)
-      { count: answers.length * 3, delay: 150 },   // Fast pass (was 100)
-      { count: answers.length * 4, delay: 75 },    // Faster pass (was 50)
+      { count: answers.length * 2, delay: 400 },   // Slow pass
+      { count: answers.length * 2, delay: 200 },   // Medium pass
+      { count: answers.length * 3, delay: 100 },   // Fast pass
+      { count: answers.length * 4, delay: 50 },    // Faster pass
     ]
     
     let currentIndex = 0
@@ -2277,10 +2276,10 @@ function LiveDateScene() {
       partyClient.syncState({ plotTwist: newPlotTwist })
     }
     
-    // Show winner for 4.5 seconds, then generate summary (was 3000)
+    // Show winner for 3 seconds, then generate summary
     setTimeout(() => {
       generatePlotTwistSummaryPhase(winner)
-    }, 4500)
+    }, 3000)
   }
   
   // Generate and show the plot twist summary before the dater's reaction
@@ -2308,10 +2307,10 @@ function LiveDateScene() {
       partyClient.syncState({ plotTwist: newPlotTwist })
     }
     
-    // Show summary for 7.5 seconds, then go to conversation for dater's reaction (was 5000)
+    // Show summary for 5 seconds, then go to conversation for dater's reaction
     setTimeout(() => {
       generatePlotTwistReaction(winner)
-    }, 7500)
+    }, 5000)
   }
   
   // Generate LLM reaction to the plot twist
@@ -2358,8 +2357,8 @@ This is a dramatic moment - react to what the avatar did!`
       addDateMessage('dater', daterReaction)
       syncConversationToPartyKit(undefined, daterReaction)
       
-      // Wait a moment, then get Avatar's response (was 3000)
-      await new Promise(resolve => setTimeout(resolve, 4500))
+      // Wait a moment, then get Avatar's response
+      await new Promise(resolve => setTimeout(resolve, 3000))
       
       const avatarFollowUp = await getAvatarDateResponse(
         avatar,
@@ -2383,14 +2382,14 @@ This is a dramatic moment - react to what the avatar did!`
       await waitForAllAudio()
       console.log('✅ Plot twist audio complete')
       
-      // Brief reading pause (was 3000)
-      await new Promise(resolve => setTimeout(resolve, 4500))
+      // Brief reading pause
+      await new Promise(resolve => setTimeout(resolve, 3000))
       
     } catch (error) {
       console.error('Error generating plot twist reaction:', error)
       setDaterBubble("Well, THAT was unexpected!")
       await waitForAllAudio()
-      await new Promise(resolve => setTimeout(resolve, 3000)) // was 2000
+      await new Promise(resolve => setTimeout(resolve, 2000))
     }
     
     setIsGenerating(false)
@@ -2564,10 +2563,10 @@ This is a dramatic moment - react to what the avatar did!`
         })
       }
       
-      // Start spinning almost immediately (brief pause for wheel to render) - was 500
+      // Start spinning almost immediately (brief pause for wheel to render)
       setTimeout(() => {
         startWheelSpin(slicesWithAngles)
-      }, 750)
+      }, 500)
     } catch (error) {
       console.error('❌ Error grouping answers:', error)
       // Fallback: create slices without grouping
@@ -2598,7 +2597,7 @@ This is a dramatic moment - react to what the avatar did!`
       
       setTimeout(() => {
         startWheelSpin(fallbackSlices)
-      }, 750) // was 500
+      }, 500)
     }
   }
   
@@ -2677,10 +2676,10 @@ This is a dramatic moment - react to what the avatar did!`
       if (progress < 1) {
         wheelSpinRef.current = requestAnimationFrame(animateSpin)
       } else {
-        // Spin complete - declare winner after a moment (was 800)
+        // Spin complete - declare winner after a moment
         setTimeout(() => {
           declareWheelWinner(winningSlice)
-        }, 1200)
+        }, 800)
       }
     }
     
@@ -2710,10 +2709,10 @@ This is a dramatic moment - react to what the avatar did!`
       })
     }
     
-    // Show winner for 3 seconds, then proceed to Phase 3 (was 2000)
+    // Show winner for 2 seconds, then proceed to Phase 3
     setTimeout(() => {
       completeAnswerSelection(winningSlice.label)
-    }, 3000)
+    }, 2000)
   }
   
   // Complete the answer selection and move to Phase 3
@@ -2766,14 +2765,14 @@ This is a dramatic moment - react to what the avatar did!`
       partyClient.clearVotes()
     }
     
-    // After 4.5 seconds, hide popup and start conversation (was 3000)
+    // After 3 seconds, hide popup and start conversation
     setTimeout(() => {
       setShowWinnerPopup(false)
       if (partyClient) {
         partyClient.syncState({ showWinnerPopup: false })
       }
-      setTimeout(() => generateDateConversation(winningText), 150) // was 100
-    }, 4500)
+      setTimeout(() => generateDateConversation(winningText), 100)
+    }, 3000)
   }
   
   // ============================================
