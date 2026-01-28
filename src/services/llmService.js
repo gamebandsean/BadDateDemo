@@ -421,18 +421,60 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
   const realAttributes = attributes.filter(attr => !genericStarters.includes(attr))
   const hasRealAttributes = realAttributes.length > 0
   
+  // Extract attribute text (handles both string and object with {answer, questionContext})
+  const getAttributeText = (attr) => {
+    if (!attr) return ''
+    if (typeof attr === 'string') return attr
+    if (attr.answer) return attr.answer
+    return ''
+  }
+  const attributeText = getAttributeText(latestAttribute)
+  
   // Fill in template variables for modular prompts
   const fillModularPrompt = (prompt) => {
     return prompt
       .replace(/\{\{avatarName\}\}/g, name || 'Your Date')
       .replace(/\{\{allAttributes\}\}/g, realAttributes.join(', ') || 'none yet')
-      .replace(/\{\{attribute\}\}/g, latestAttribute || '')
+      .replace(/\{\{attribute\}\}/g, attributeText)
   }
 
   // Build behavior instructions based on mode and attributes
   let behaviorInstructions
   
-  if (!hasRealAttributes) {
+  // Check for paraphrase mode FIRST (before other checks)
+  if (mode === 'paraphrase') {
+    // MODE: PARAPHRASE - Take the winning player answer and put it in Avatar's own words
+    const questionContext = latestAttribute?.questionContext || ''
+    const winningAnswer = latestAttribute?.answer || attributeText || ''
+    
+    behaviorInstructions = `🎯 PARAPHRASE THE WINNING ANSWER - Put it in your own words:
+
+THE QUESTION WAS: "${questionContext}"
+THE WINNING ANSWER WAS: "${winningAnswer}"
+
+YOUR JOB: Take this answer and say it naturally in YOUR voice, as if you're answering the question yourself.
+
+🔥 HOW TO PARAPHRASE:
+- Don't quote the answer word-for-word
+- Put it in your OWN personality and speaking style
+- Add a tiny bit of context or elaboration if it feels natural
+- Make it sound like YOUR honest answer to the question
+- Keep it SHORT - just 1-2 sentences
+
+✅ GOOD PARAPHRASING:
+- Answer: "I eat bugs" → "Yeah, so I'm really into eating insects. It started as a protein thing..."
+- Answer: "Murder" → "Honestly? Murder. I know that sounds bad, but..."
+- Answer: "My pet rock" → "My pet rock, actually. We've been through a lot together."
+
+❌ BAD PARAPHRASING:
+- Just repeating the answer exactly
+- Ignoring the answer and saying something unrelated
+- Being too long or elaborate
+
+Say the paraphrased answer naturally, as if someone asked you this question on a date.`
+    
+    console.log('🔗 Using PARAPHRASE mode for avatar response')
+  } else if (!hasRealAttributes) {
     behaviorInstructions = `YOU HAVE NO DEFINED PERSONALITY YET.
 - Be extremely generic but warm and friendly
 - Say things like "That's nice!", "I agree!", "Oh, how interesting!"
@@ -485,38 +527,6 @@ YOUR NEWEST TRAIT: "${newestAttribute}"
 - Being mysterious about your traits`
     
     console.log('🔗 Using MODULAR PROMPT CHAIN for avatar response (mode: react)')
-  } else if (mode === 'paraphrase') {
-    // MODE: PARAPHRASE - Take the winning player answer and put it in Avatar's own words
-    const questionContext = latestAttribute?.questionContext || ''
-    const winningAnswer = latestAttribute?.answer || latestAttribute || ''
-    
-    behaviorInstructions = `🎯 PARAPHRASE THE WINNING ANSWER - Put it in your own words:
-
-THE QUESTION WAS: "${questionContext}"
-THE WINNING ANSWER WAS: "${winningAnswer}"
-
-YOUR JOB: Take this answer and say it naturally in YOUR voice, as if you're answering the question yourself.
-
-🔥 HOW TO PARAPHRASE:
-- Don't quote the answer word-for-word
-- Put it in your OWN personality and speaking style
-- Add a tiny bit of context or elaboration if it feels natural
-- Make it sound like YOUR honest answer to the question
-- Keep it SHORT - just 1-2 sentences
-
-✅ GOOD PARAPHRASING:
-- Answer: "I eat bugs" → "Yeah, so I'm really into eating insects. It started as a protein thing..."
-- Answer: "Murder" → "Honestly? Murder. I know that sounds bad, but..."
-- Answer: "My pet rock" → "My pet rock, actually. We've been through a lot together."
-
-❌ BAD PARAPHRASING:
-- Just repeating the answer exactly
-- Ignoring the answer and saying something unrelated
-- Being too long or elaborate
-
-Say the paraphrased answer naturally, as if someone asked you this question on a date.`
-    
-    console.log('🔗 Using PARAPHRASE mode for avatar response')
   } else if (mode === 'connect') {
     // MODE: CONNECT - Draw connections between ALL previous attributes
     behaviorInstructions = `🎯 CONNECT ALL YOUR TRAITS - Find the bigger picture:
