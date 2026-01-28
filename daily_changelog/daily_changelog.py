@@ -16,6 +16,7 @@ import anthropic
 # Configuration
 REPO_PATH = "/Users/seankearney/BadDateDemo"
 DESKTOP_PATH = Path.home() / "Desktop"
+CHANGELOG_FOLDER = DESKTOP_PATH / "Daily Changelog"
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")  # Set this in your environment
 
 def get_yesterdays_commits():
@@ -102,9 +103,12 @@ def generate_changelog():
 Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 """
     
-    # Save to desktop
+    # Create Daily Changelog folder if it doesn't exist
+    CHANGELOG_FOLDER.mkdir(exist_ok=True)
+    
+    # Save to Daily Changelog folder
     filename = f"changelog_{date_str}.txt"
-    filepath = DESKTOP_PATH / filename
+    filepath = CHANGELOG_FOLDER / filename
     
     with open(filepath, "w") as f:
         f.write(output)
