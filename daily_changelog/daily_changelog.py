@@ -17,7 +17,24 @@ import anthropic
 REPO_PATH = "/Users/seankearney/BadDateDemo"
 DESKTOP_PATH = Path.home() / "Desktop"
 CHANGELOG_FOLDER = DESKTOP_PATH / "Daily Changelog"
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")  # Set this in your environment
+
+def get_api_key():
+    """Get API key from environment or .env file."""
+    # First try environment variable
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    if key:
+        return key
+    
+    # Fall back to reading from .env file
+    env_path = Path(REPO_PATH) / ".env"
+    if env_path.exists():
+        with open(env_path) as f:
+            for line in f:
+                if line.startswith("VITE_ANTHROPIC_API_KEY="):
+                    return line.split("=", 1)[1].strip()
+    return ""
+
+ANTHROPIC_API_KEY = get_api_key()
 
 def get_yesterdays_commits():
     """Get all commit messages from yesterday."""
