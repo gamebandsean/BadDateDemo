@@ -1,0 +1,28 @@
+Bad Date Demo - Changes Made January 23, 2026
+==============================================
+
+• Portrait Expressions: Added preloading and caching for all character 
+  emotion variants to prevent blank images during emotion changes
+
+• Character Name Tags: Added name labels below the avatar and dater portraits
+
+• First Impressions Phase: Changed the dater's final comment to be a 
+  reaction/statement instead of a question
+
+• Conversation Style: Updated the dater to ask fewer questions and instead 
+  react more, share opinions, and add their own "color" to the conversation
+
+• Interstitial Positioning: Moved phase announcements to top banners, while 
+  keeping the Wheel and Plot Twist as full-screen centered overlays
+
+• Plot Twist Summary: Added a new "What Happened" phase after the Plot Twist 
+  winner is selected, showing a dramatic 2-3 sentence narration of the action 
+  before the dater reacts
+
+• Player Input Timers: Increased timers for Starting Stats (15→22s), 
+  Phase 1 answers (30→45s), and Plot Twist input (15→22s)
+
+• Lobby Simplification: Removed the Starting Stats and Tutorial checkboxes; 
+  Starting Stats is now always on, Tutorial always off
+
+Current Version: v0.01.61
