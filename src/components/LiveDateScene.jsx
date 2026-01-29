@@ -197,43 +197,79 @@ function LiveDateScene() {
   }
   
   // Show reaction feedback temporarily (auto-clears after 4 seconds)
-  const showReactionFeedback = (category, topic) => {
+  // Now includes matchedValue and shortLabel to explain WHY the dater reacted this way
+  const showReactionFeedback = (category, matchedValue = null, shortLabel = null) => {
     const daterName = selectedDater?.name || 'Maya'
+    const topic = shortLabel || matchedValue || ''
     
-    // Generate varied emotional reactions based on category
-    const reactions = {
-      loves: [
-        `${daterName} is totally into this!`,
-        `This really excited ${daterName}!`,
-        `${daterName} loved hearing that!`,
-        `${daterName}'s heart skipped a beat!`,
-        `This turned ${daterName} on!`
-      ],
-      likes: [
-        `${daterName} thought that was sweet.`,
-        `This made ${daterName} smile.`,
-        `${daterName} liked that!`,
-        `${daterName} found that charming.`,
-        `That earned some points with ${daterName}.`
-      ],
-      dislikes: [
-        `${daterName} didn't love that...`,
-        `This made ${daterName} uncomfortable.`,
-        `${daterName} cringed a little.`,
-        `That was a bit off-putting for ${daterName}.`,
-        `${daterName} was not impressed.`
-      ],
-      dealbreakers: [
-        `This horrified ${daterName}!`,
-        `${daterName} is absolutely terrified!`,
-        `MAJOR red flag for ${daterName}!`,
-        `${daterName} wants to run away!`,
-        `This scared ${daterName} to death!`
-      ]
+    // Generate specific reactions that explain WHY based on the matched value
+    let reactionText = ''
+    
+    if (topic) {
+      // Topic-specific reactions that explain the WHY
+      const specificReactions = {
+        loves: [
+          `${daterName} LOVES ${topic}!`,
+          `${topic} is exactly what ${daterName} looks for!`,
+          `${daterName} is super into ${topic}!`,
+          `That ${topic} vibe? ${daterName} is HERE for it!`,
+          `${daterName}'s heart skipped a beat - she loves ${topic}!`
+        ],
+        likes: [
+          `${daterName} appreciates ${topic}.`,
+          `${topic}? ${daterName} can get behind that.`,
+          `${daterName} thinks ${topic} is pretty nice.`,
+          `${daterName} liked the ${topic} energy.`,
+          `Points for ${topic}!`
+        ],
+        dislikes: [
+          `${daterName} isn't a fan of ${topic}...`,
+          `${topic}? Not really ${daterName}'s thing.`,
+          `${daterName} dislikes ${topic}.`,
+          `${topic} is kind of a turn-off for ${daterName}.`,
+          `That ${topic} thing made ${daterName} uncomfortable.`
+        ],
+        dealbreakers: [
+          `${daterName} can't handle ${topic}!`,
+          `${topic} is a DEALBREAKER for ${daterName}!`,
+          `${daterName} is horrified by ${topic}!`,
+          `${topic}?! ${daterName} wants to RUN!`,
+          `NOPE! ${daterName} can't do ${topic}!`
+        ]
+      }
+      
+      const categoryReactions = specificReactions[category] || specificReactions.dislikes
+      reactionText = categoryReactions[Math.floor(Math.random() * categoryReactions.length)]
+    } else {
+      // Fallback generic reactions if no topic provided
+      const genericReactions = {
+        loves: [
+          `${daterName} is INTO this!`,
+          `This really got ${daterName} excited!`,
+          `${daterName} absolutely loved that!`
+        ],
+        likes: [
+          `${daterName} thought that was sweet.`,
+          `${daterName} liked that!`,
+          `${daterName} found that charming.`
+        ],
+        dislikes: [
+          `${daterName} didn't love that...`,
+          `${daterName} cringed a little.`,
+          `${daterName} was not impressed.`
+        ],
+        dealbreakers: [
+          `${daterName} is horrified!`,
+          `This is a HUGE red flag for ${daterName}!`,
+          `DEALBREAKER for ${daterName}!`
+        ]
+      }
+      
+      const categoryReactions = genericReactions[category] || genericReactions.dislikes
+      reactionText = categoryReactions[Math.floor(Math.random() * categoryReactions.length)]
     }
     
-    const categoryReactions = reactions[category] || reactions.dislikes
-    const randomReaction = categoryReactions[Math.floor(Math.random() * categoryReactions.length)]
+    const randomReaction = reactionText
     
     // Clear any existing timeout
     if (reactionFeedbackTimeout.current) {
@@ -1782,7 +1818,8 @@ function LiveDateScene() {
           }
           console.log(`🔥 Reaction streak updated:`, currentStreak)
         }
-        return matchResult.category // Return the category so we can show feedback when Dater responds
+        // Return the full matchResult so we can show WHY in the feedback
+        return matchResult
       }
       
       // Helper to get fresh conversation history (React state may be stale in async function)
@@ -1869,9 +1906,9 @@ function LiveDateScene() {
           }
           await syncConversationToPartyKit(undefined, undefined, true)
           
-          // Show reaction feedback
+          // Show reaction feedback with the reason WHY
           if (sentimentHit1) {
-            showReactionFeedback(sentimentHit1)
+            showReactionFeedback(sentimentHit1, matchResult1.matchedValue, matchResult1.shortLabel)
           }
         }
         
@@ -1917,12 +1954,12 @@ function LiveDateScene() {
             await syncConversationToPartyKit(undefined, daterReaction2, undefined)
             
             // THEN check match and score - attribute applies when dater responds
-            const sentimentHit2 = await checkAndScore(avatarResponse2, 0.25) // 25% scoring
+            const matchResult2 = await checkAndScore(avatarResponse2, 0.25) // 25% scoring
             await syncConversationToPartyKit(undefined, undefined, true)
             
-            // Show reaction feedback when Maya responds (if there was a sentiment hit)
-            if (sentimentHit2) {
-              showReactionFeedback(sentimentHit2)
+            // Show reaction feedback with WHY (matchedValue and shortLabel)
+            if (matchResult2?.category) {
+              showReactionFeedback(matchResult2.category, matchResult2.matchedValue, matchResult2.shortLabel)
             }
           }
           
@@ -1968,12 +2005,12 @@ function LiveDateScene() {
               await syncConversationToPartyKit(undefined, daterReaction3, undefined)
               
               // THEN check match and score - attribute applies when dater responds
-              const sentimentHit3 = await checkAndScore(avatarResponse3, 0.10) // 10% scoring
+              const matchResult3 = await checkAndScore(avatarResponse3, 0.10) // 10% scoring
               await syncConversationToPartyKit(undefined, undefined, true)
               
-              // Show reaction feedback when Maya responds (if there was a sentiment hit)
-              if (sentimentHit3) {
-                showReactionFeedback(sentimentHit3)
+              // Show reaction feedback with WHY (matchedValue and shortLabel)
+              if (matchResult3?.category) {
+                showReactionFeedback(matchResult3.category, matchResult3.matchedValue, matchResult3.shortLabel)
               }
             }
           }
