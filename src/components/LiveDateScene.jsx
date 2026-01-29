@@ -1498,7 +1498,7 @@ function LiveDateScene() {
     
     setRoundPromptAnimationComplete(false)
     setLivePhase('phase1')
-    setPhaseTimer(0) // Timer starts after animation completes
+    setPhaseTimer(45) // Start timer immediately
     // Don't set dater bubble - the prompt is shown as interstitial instead
     setDaterBubble('')
     setAvatarBubble('')
@@ -1549,27 +1549,7 @@ function LiveDateScene() {
     }
   }, [livePhase, isHost, currentRoundPrompt.title])
   
-  // FALLBACK: Start timer after banner animation should have completed
-  // This ensures timer starts even if onAnimationComplete doesn't fire
-  useEffect(() => {
-    if (livePhase === 'phase1' && isHost && currentRoundPrompt.title && !roundPromptAnimationComplete) {
-      console.log('⏱️ Phase1 timer fallback - waiting for animation...')
-      const fallbackTimer = setTimeout(() => {
-        // Check if timer was already started by animation callback
-        const currentTimer = useGameStore.getState().phaseTimer
-        if (currentTimer === 0) {
-          console.log('⏱️ Fallback: Starting timer (animation callback may have failed)')
-          setPhaseTimer(45)
-          setRoundPromptAnimationComplete(true)
-          if (partyClient) {
-            partyClient.syncState({ phaseTimer: 45, roundPromptAnimationComplete: true })
-          }
-        }
-      }, 1500) // 1.5 seconds - longer buffer to ensure we catch failures
-      
-      return () => clearTimeout(fallbackTimer)
-    }
-  }, [livePhase, isHost, currentRoundPrompt.title, roundPromptAnimationComplete])
+  // Timer is now started immediately when phase1 begins - no animation-based delay needed
   
   // Auto-scroll chat
   useEffect(() => {
@@ -2332,7 +2312,7 @@ Generate ${daterName}'s final closing statement:`
       // Start new round - show round prompt interstitial (not dater question)
       setRoundPromptAnimationComplete(false)
       setLivePhase('phase1')
-      setPhaseTimer(0) // Timer starts after animation completes
+      setPhaseTimer(45) // Start timer immediately
       
       // Only host sets up the next round
       if (isHost) {
@@ -2809,7 +2789,7 @@ Give your final thoughts on this dramatic moment.`
     
     setRoundPromptAnimationComplete(false)
     setLivePhase('phase1')
-    setPhaseTimer(0) // Timer starts after animation completes
+    setPhaseTimer(45) // Start timer immediately
     
     // Don't set dater bubble - the prompt is shown as interstitial
     setDaterBubble('')
@@ -3971,14 +3951,10 @@ Give your final thoughts on this dramatic moment.`
                 ease: [0.22, 1, 0.36, 1] // Custom ease for smooth entrance
               }}
               onAnimationComplete={() => {
-                // Start timer when banner animation completes
-                if (livePhase === 'phase1' && !roundPromptAnimationComplete && isHost) {
-                  console.log('🎬 Banner animation complete - starting timer')
+                // Mark animation as complete (timer already started)
+                if (livePhase === 'phase1' && !roundPromptAnimationComplete) {
+                  console.log('🎬 Banner animation complete')
                   setRoundPromptAnimationComplete(true)
-                  setPhaseTimer(45)
-                  if (partyClient) {
-                    partyClient.syncState({ phaseTimer: 45, roundPromptAnimationComplete: true })
-                  }
                 }
               }}
             >
