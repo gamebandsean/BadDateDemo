@@ -3714,70 +3714,29 @@ Give your final thoughts on this dramatic moment.`
         </div>
       )}
       
-      {/* Header Section - Compact horizontal layout */}
+      {/* Header Section - Centered layout */}
       <div className={`live-header ${showTutorial && getTutorialContent().highlight === 'compatibility' ? 'tutorial-highlight' : ''}`}>
-        <div className="header-row">
-          {/* Left: Call to Action - Click to toggle sentiment/attributes debug */}
+        <div className="header-row header-centered">
+          {/* Centered: Round indicator + Phase description */}
           <div 
-            className="header-cta"
-            onClick={() => setShowSentimentDebug(!showSentimentDebug)}
+            className="header-center-content"
+            onClick={() => {
+              if (isHost) setShowLLMDebug(!showLLMDebug)
+              setShowSentimentDebug(!showSentimentDebug)
+            }}
             style={{ cursor: 'pointer' }}
-            title="Tap to toggle attributes debug"
+            title="Tap to toggle debug info"
           >
-            <span className="cta-line1">{getPhaseTitle().line1}</span>
-            <span className="cta-line2">{getPhaseTitle().line2}</span>
-            <span className="cta-line3">{getPhaseTitle().line3}</span>
-          </div>
-          
-          {/* Center: Compatibility - Click heart to show percentage */}
-          <div 
-            className="compatibility-display compatibility-hidden"
-            onClick={() => setShowCompatPercent(!showCompatPercent)}
-            style={{ cursor: 'pointer' }}
-            title="Tap to see compatibility"
-          >
-            <span className="compat-heart">❤️</span>
-            {showCompatPercent && (
-              <span className="compat-debug">{compatibility}%</span>
-            )}
-          </div>
-          
-          {/* Right: Round + Timer */}
-          <div className="header-right">
-            <div 
-              className="round-indicator"
-              onClick={() => isHost && setShowLLMDebug(!showLLMDebug)}
-              style={{ cursor: isHost ? 'pointer' : 'default' }}
-              title={isHost ? 'Tap to show LLM prompt debug' : ''}
-            >
-              <span className="round-label">{livePhase === 'reaction' ? 'Intro' : livePhase === 'plot-twist' ? 'Plot' : 'Round'}</span>
+            <div className="round-indicator">
+              <span className="round-label">{livePhase === 'reaction' ? 'Intro' : livePhase === 'plot-twist' ? 'Plot Twist' : 'Round'}</span>
               <span className="round-value">
                 {livePhase === 'reaction' ? '👋' : livePhase === 'plot-twist' ? '🎭' : `${cycleCount + 1}/${maxCycles}`}
               </span>
             </div>
-            <div 
-              className="header-timer"
-              onClick={() => setShowDaterValuesPopup(!showDaterValuesPopup)}
-              style={{ cursor: 'pointer' }}
-              title="Tap to see hidden info"
-            >
-              {phaseTimer > 0 && <span className="timer-value">{formatTime(phaseTimer)}</span>}
-              {(livePhase === 'phase3' || livePhase === 'reaction') && <span className="timer-value">💬</span>}
-              {livePhase === 'plot-twist' && <span className="timer-value">🎭</span>}
-              {phaseTimer <= 0 && livePhase !== 'phase3' && livePhase !== 'reaction' && livePhase !== 'plot-twist' && <span className="timer-value">⏳</span>}
-            </div>
-            <div 
-              className="tts-toggle"
-              onClick={() => {
-                const newState = !ttsEnabled
-                setTtsEnabledState(newState)
-                setTTSEnabled(newState)
-                if (!newState) stopAllAudio()
-              }}
-              style={{ cursor: 'pointer' }}
-              title={ttsEnabled ? 'Mute voices' : 'Unmute voices'}
-            >
-              <span className="tts-icon">{ttsEnabled ? '🔊' : '🔇'}</span>
+            <div className="header-cta">
+              <span className="cta-line1">{getPhaseTitle().line1}</span>
+              <span className="cta-line2">{getPhaseTitle().line2}</span>
+              <span className="cta-line3">{getPhaseTitle().line3}</span>
             </div>
           </div>
         </div>

@@ -1179,14 +1179,23 @@
   justify-content: center;
 }
 
+.header-row.header-centered {
+  justify-content: center;
+}
+
+.header-center-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
 .header-cta {
-  position: absolute;
-  left: 12px;
-  text-align: left;
+  text-align: center;
   display: flex;
   flex-direction: column;
   gap: 1px;
-  max-width: 70px;
+  max-width: 300px;
   overflow: hidden;
 }
 
@@ -2211,12 +2220,7 @@
   }
   
   .header-cta {
-    left: 8px;
-  }
-  
-  .header-right {
-    right: 8px;
-    gap: 6px;
+    max-width: 250px;
   }
   
   .round-indicator {
