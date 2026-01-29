@@ -216,27 +216,77 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
     }
     
     const sentimentGuide = {
-      loves: `🥰💥 MANDATORY STRONG REACTION - YOU LOVE THIS!
-⚠️ YOU MUST DIRECTLY ADDRESS THIS IN YOUR RESPONSE - DO NOT IGNORE IT!
-This hit one of your LOVES - this is a BIG DEAL to you!
-- React with OBVIOUS excitement, attraction, or delight
-- EXPLICITLY mention what you love about this
-- Be enthusiastic, flirty, impressed, or smitten
-- This should be the MAIN FOCUS of your response
-- Make it CRYSTAL CLEAR you are into this`,
-      likes: `😊 YOU LIKE THIS! React positively - interested, pleased, intrigued. This hit one of your LIKES - it's a good sign. Be warm, engaged, and show you appreciate what they said. Moderate positive reaction.`,
-      dislikes: `😬 YOU DON'T LIKE THIS. React with discomfort, concern, or disappointment. This hit one of your DISLIKES - it bothers you. Be visibly put off, skeptical, or uneasy. Show clear negative reaction but stay polite.`,
-      dealbreakers: `😱💥 MANDATORY STRONG REACTION - THIS IS A DEALBREAKER!
-⚠️ YOU MUST DIRECTLY ADDRESS THIS IN YOUR RESPONSE - DO NOT IGNORE IT!
-This hit one of your DEALBREAKERS - this is a HUGE problem for you!
-- React with OBVIOUS horror, disgust, fear, or shock
+      loves: `🥰💥💥💥 YOU ABSOLUTELY LOVE THIS - GO BIG!
+⚠️ CRITICAL: YOUR RESPONSE MUST BE OVERWHELMINGLY POSITIVE!
+
+You just heard something that hits your LOVES - this is AMAZING to you!
+Your response MUST:
+- Start with an exclamation of delight ("Oh my god!", "Wait, really?!", "No way!")
+- EXPLICITLY say WHY you love this - name the specific thing!
+- Sound genuinely excited, attracted, impressed, or swooning
+- Be flirty, enthusiastic, or gushing
+- Show this is a BIG DEAL to you
+
+EXAMPLES of what your response should sound like:
+- "Oh my god, you [thing]?! That's literally my favorite thing ever!"
+- "Wait, seriously? That's SO hot. I love that about you."
+- "Okay you just became 10 times more attractive to me."
+
+DO NOT: Be lukewarm, casual, or understated. THIS IS A LOVE - SHOW IT!`,
+      
+      likes: `😊✨ YOU LIKE THIS - BE WARM AND POSITIVE!
+
+This hit one of your LIKES - it's a good sign and you should show it!
+Your response MUST:
+- React warmly and positively
+- Show genuine interest and appreciation  
+- Be encouraging and engaged
+- Make it clear you think this is good
+
+EXAMPLES:
+- "Oh that's really sweet, I like that."
+- "Aww, that's actually really nice to hear."
+- "Okay, that's definitely a point in your favor!"
+
+DO NOT: Be neutral or ignore it. Show you're pleased!`,
+      
+      dislikes: `😬💢 YOU DON'T LIKE THIS - BE VISIBLY BOTHERED!
+
+This hit one of your DISLIKES - it genuinely bothers you!
+Your response MUST:
+- Show clear discomfort, disappointment, or concern
+- React with sarcasm, skepticism, or visible displeasure
+- Make a slightly negative comment or face
+- NOT pretend everything is fine
+
+EXAMPLES:
+- "Uh... okay, that's... not great to hear."
+- "Hmm. Yeah, I'm not really into that, to be honest."
+- "Really? That's kind of a turn-off for me..."
+- "Yikes. I mean... okay then."
+
+DO NOT: Be polite and brush it off. Show your displeasure!`,
+      
+      dealbreakers: `😱🚨🚨🚨 DEALBREAKER - MAXIMUM NEGATIVE REACTION!
+⚠️ CRITICAL: THIS IS A HUGE PROBLEM AND YOU MUST REACT STRONGLY!
+
+This hit one of your DEALBREAKERS - you are HORRIFIED, DISGUSTED, or ALARMED!
+Your response MUST:
+- Start with a strong reaction ("What?!", "Excuse me?!", "Oh my god...")
+- Be DRAMATICALLY negative - shock, horror, disgust, fear
 - EXPLICITLY call out what's wrong
-- Be genuinely alarmed, disturbed, or repulsed
-- This should be the MAIN FOCUS of your response
-- You CANNOT pretend this is okay or brush it off
-- Make your distress CRYSTAL CLEAR`
+- Sound genuinely alarmed, disturbed, or repulsed
+- Make it UNMISTAKABLY clear this is a massive red flag
+
+EXAMPLES of what your response should sound like:
+- "I'm sorry, WHAT?! Did you just say [thing]?!"
+- "Oh my god... that's actually terrifying."
+- "Okay wow, that's... that's a lot. That's really concerning."
+- "Nope. Nope nope nope. That's a huge red flag."
+
+DO NOT: Be polite, understanding, or try to see their side. This is UNACCEPTABLE to you!`
     }
-    sentimentInstruction = `\n\n🎯 HOW YOU FEEL ABOUT THIS:\n${sentimentGuide[sentimentHit]}${escalationNote}${finalRoundInstruction}\n\n⚠️ CRITICAL: Your reaction MUST directly address what triggered this sentiment! Don't talk around it - confront it head-on. Show clear ${isPositive ? 'POSITIVE' : 'NEGATIVE'} emotion that is IMPOSSIBLE to miss.`
+    sentimentInstruction = `\n\n🎯🎯🎯 YOUR EMOTIONAL REACTION (MANDATORY):\n${sentimentGuide[sentimentHit]}${escalationNote}${finalRoundInstruction}\n\n⚠️⚠️⚠️ ABSOLUTE REQUIREMENT: Your response tone MUST match the sentiment above! A ${sentimentHit.toUpperCase()} reaction means ${isPositive ? 'POSITIVE and ENTHUSIASTIC' : 'NEGATIVE and CONCERNED'}. If you give a neutral response, you have FAILED. Make your ${isPositive ? 'excitement' : 'displeasure'} IMPOSSIBLE to miss!`
   } else if (isFinalRound) {
     // Even if no sentiment hit, still add finality instruction
     sentimentInstruction = finalRoundInstruction

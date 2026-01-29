@@ -1802,21 +1802,7 @@ function LiveDateScene() {
         'paraphrase' // Use paraphrase mode
       )
       
-      // Then get dater's reaction to the avatar's paraphrase
-      let daterReaction1 = null
-      if (avatarResponse1) {
-        daterReaction1 = await getDaterDateResponse(
-          selectedDater,
-          avatarWithNewAttr,
-          [...getConversation().slice(-20), { speaker: 'avatar', message: avatarResponse1 }],
-          attrToUse, // The original attribute for sentiment checking
-          null, // sentimentHit
-          reactionStreak,
-          isFinalRound
-        )
-      }
-      
-      console.log('🔗 Paraphrase result:', { avatarResponse1: avatarResponse1?.substring(0, 50), daterReaction1: daterReaction1?.substring(0, 50) })
+      console.log('🔗 Avatar paraphrase:', avatarResponse1?.substring(0, 50))
       
       if (avatarResponse1) {
         const avatarMood = getAvatarEmotionFromTraits()
@@ -1830,18 +1816,60 @@ function LiveDateScene() {
         
         await new Promise(resolve => setTimeout(resolve, 2500))
         
-        // Use the dater reaction from the prompt chain FIRST
+        // Check sentiment FIRST before generating dater's response
+        const matchResult1 = await checkAttributeMatch(avatarResponse1, daterValues, selectedDater, null)
+        const sentimentHit1 = matchResult1.category || null
+        console.log('🎯 Sentiment detected BEFORE dater response:', sentimentHit1)
+        
+        // Now generate dater's response WITH the sentiment knowledge
+        const daterReaction1 = await getDaterDateResponse(
+          selectedDater,
+          avatarWithNewAttr,
+          [...getConversation().slice(-20), { speaker: 'avatar', message: avatarResponse1 }],
+          attrToUse, // The original attribute
+          sentimentHit1, // Pass the sentiment so dater knows how to react!
+          reactionStreak,
+          isFinalRound
+        )
+        
         if (daterReaction1) {
           setDaterBubble(daterReaction1)
           addDateMessage('dater', daterReaction1)
           await syncConversationToPartyKit(undefined, daterReaction1, undefined)
           
-          // THEN check match and score - attribute applies when dater responds
-          const sentimentHit1 = await checkAndScore(avatarResponse1, 1) // Full scoring
-          // Sync sentiment categories after scoring
+          // Apply scoring now that dater has responded
+          if (sentimentHit1) {
+            const wasAlreadyExposed = exposeValue(matchResult1.category, matchResult1.matchedValue, matchResult1.shortLabel)
+            if (wasAlreadyExposed) {
+              triggerGlow(matchResult1.shortLabel)
+            }
+            const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
+            const change = Math.round(baseChanges[sentimentHit1] * 1) // Full scoring
+            if (change !== 0) {
+              const newCompat = adjustCompatibility(change)
+              if (partyClient) {
+                partyClient.syncState({ compatibility: newCompat })
+              }
+              setCompatibilityHistory(prev => [...prev, {
+                attribute: attrToUse,
+                topic: matchResult1.shortLabel || matchResult1.matchedValue,
+                category: sentimentHit1,
+                change: change,
+                daterValue: matchResult1.matchedValue,
+                reason: matchResult1.reason || ''
+              }])
+            }
+            // Update streak
+            const isPositive = sentimentHit1 === 'loves' || sentimentHit1 === 'likes'
+            if (isPositive) {
+              currentStreak = { positive: currentStreak.positive + 1, negative: 0 }
+            } else {
+              currentStreak = { positive: 0, negative: currentStreak.negative + 1 }
+            }
+          }
           await syncConversationToPartyKit(undefined, undefined, true)
           
-          // Show reaction feedback when Maya responds (if there was a sentiment hit)
+          // Show reaction feedback
           if (sentimentHit1) {
             showReactionFeedback(sentimentHit1)
           }
