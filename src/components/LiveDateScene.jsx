@@ -1874,8 +1874,15 @@ function LiveDateScene() {
           addDateMessage('dater', daterReaction1)
           await syncConversationToPartyKit(undefined, daterReaction1, undefined)
           
-          // Apply scoring now that dater has responded
+          // Wait for Maya's bubble to appear (TTS starts via useEffect, then bubble shows)
+          // Small delay to let the TTS useEffect trigger and audio to start
+          await new Promise(resolve => setTimeout(resolve, 800))
+          
+          // NOW show reaction feedback - after Maya has started speaking
           if (sentimentHit1) {
+            showReactionFeedback(sentimentHit1, matchResult1.matchedValue, matchResult1.shortLabel)
+            
+            // Apply scoring
             const wasAlreadyExposed = exposeValue(matchResult1.category, matchResult1.matchedValue, matchResult1.shortLabel)
             if (wasAlreadyExposed) {
               triggerGlow(matchResult1.shortLabel)
@@ -1905,11 +1912,6 @@ function LiveDateScene() {
             }
           }
           await syncConversationToPartyKit(undefined, undefined, true)
-          
-          // Show reaction feedback with the reason WHY
-          if (sentimentHit1) {
-            showReactionFeedback(sentimentHit1, matchResult1.matchedValue, matchResult1.shortLabel)
-          }
         }
         
         await new Promise(resolve => setTimeout(resolve, 3000))
@@ -1958,8 +1960,14 @@ function LiveDateScene() {
             addDateMessage('dater', daterReaction2)
             await syncConversationToPartyKit(undefined, daterReaction2, undefined)
             
-            // Apply scoring now that dater has responded
+            // Wait for Maya's bubble to appear (TTS starts via useEffect, then bubble shows)
+            await new Promise(resolve => setTimeout(resolve, 800))
+            
+            // NOW show reaction feedback - after Maya has started speaking
             if (sentimentHit2) {
+              showReactionFeedback(sentimentHit2, matchResult2.matchedValue, matchResult2.shortLabel)
+              
+              // Apply scoring
               const wasAlreadyExposed = exposeValue(matchResult2.category, matchResult2.matchedValue, matchResult2.shortLabel)
               if (wasAlreadyExposed) {
                 triggerGlow(matchResult2.shortLabel)
@@ -1989,11 +1997,6 @@ function LiveDateScene() {
               }
             }
             await syncConversationToPartyKit(undefined, undefined, true)
-            
-            // Show reaction feedback with WHY
-            if (sentimentHit2) {
-              showReactionFeedback(sentimentHit2, matchResult2.matchedValue, matchResult2.shortLabel)
-            }
           }
           
           await new Promise(resolve => setTimeout(resolve, 3000))
@@ -2042,8 +2045,14 @@ function LiveDateScene() {
               addDateMessage('dater', daterReaction3)
               await syncConversationToPartyKit(undefined, daterReaction3, undefined)
               
-              // Apply scoring now that dater has responded
+              // Wait for Maya's bubble to appear (TTS starts via useEffect, then bubble shows)
+              await new Promise(resolve => setTimeout(resolve, 800))
+              
+              // NOW show reaction feedback - after Maya has started speaking
               if (sentimentHit3) {
+                showReactionFeedback(sentimentHit3, matchResult3.matchedValue, matchResult3.shortLabel)
+                
+                // Apply scoring
                 const wasAlreadyExposed = exposeValue(matchResult3.category, matchResult3.matchedValue, matchResult3.shortLabel)
                 if (wasAlreadyExposed) {
                   triggerGlow(matchResult3.shortLabel)
@@ -2073,11 +2082,6 @@ function LiveDateScene() {
                 }
               }
               await syncConversationToPartyKit(undefined, undefined, true)
-              
-              // Show reaction feedback with WHY
-              if (sentimentHit3) {
-                showReactionFeedback(sentimentHit3, matchResult3.matchedValue, matchResult3.shortLabel)
-              }
             }
           }
         }
