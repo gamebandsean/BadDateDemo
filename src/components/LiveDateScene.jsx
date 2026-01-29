@@ -1520,6 +1520,27 @@ function LiveDateScene() {
     }
   }, [livePhase, isHost, currentRoundPrompt.title])
   
+  // FALLBACK: Start timer after banner animation should have completed
+  // This ensures timer starts even if onAnimationComplete doesn't fire
+  useEffect(() => {
+    if (livePhase === 'phase1' && isHost && phaseTimer === 0 && currentRoundPrompt.title) {
+      console.log('⏱️ Phase1 timer fallback - waiting for animation...')
+      const fallbackTimer = setTimeout(() => {
+        // Only set if still 0 (animation callback didn't work)
+        if (useGameStore.getState().phaseTimer === 0 || phaseTimer === 0) {
+          console.log('⏱️ Fallback: Starting timer (animation callback may have failed)')
+          setPhaseTimer(45)
+          setRoundPromptAnimationComplete(true)
+          if (partyClient) {
+            partyClient.syncState({ phaseTimer: 45 })
+          }
+        }
+      }, 1200) // 1.2 seconds - slightly longer than the 0.8s animation
+      
+      return () => clearTimeout(fallbackTimer)
+    }
+  }, [livePhase, isHost, currentRoundPrompt.title, phaseTimer])
+  
   // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -3906,9 +3927,10 @@ Give your final thoughts on this dramatic moment.`
         </AnimatePresence>
         
         {/* Round Prompt Banner - Starts centered, animates to top */}
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {['phase1', 'answer-selection', 'phase3'].includes(livePhase) && currentRoundPrompt.title && (
             <motion.div 
+              key={`round-prompt-${cycleCount}-${currentRoundPrompt.title}`}
               className="round-prompt-banner"
               initial={{ 
                 opacity: 0, 
@@ -3925,13 +3947,16 @@ Give your final thoughts on this dramatic moment.`
                 duration: 0.8, 
                 ease: [0.22, 1, 0.36, 1] // Custom ease for smooth entrance
               }}
-              onAnimationComplete={() => {
-                // Animation finished - start the timer
-                if (livePhase === 'phase1' && !roundPromptAnimationComplete) {
-                  setRoundPromptAnimationComplete(true)
-                  setPhaseTimer(45) // Start the timer now (45 seconds)
-                  if (partyClient && isHost) {
-                    partyClient.syncState({ phaseTimer: 45 })
+              onAnimationComplete={(definition) => {
+                // Only start timer when animate completes (not exit)
+                if (definition === 'animate' || (typeof definition === 'object' && definition.opacity === 1)) {
+                  if (livePhase === 'phase1' && !roundPromptAnimationComplete && isHost) {
+                    console.log('🎬 Banner animation complete - starting timer')
+                    setRoundPromptAnimationComplete(true)
+                    setPhaseTimer(45)
+                    if (partyClient) {
+                      partyClient.syncState({ phaseTimer: 45, roundPromptAnimationComplete: true })
+                    }
                   }
                 }
               }}
@@ -3939,7 +3964,7 @@ Give your final thoughts on this dramatic moment.`
               <div className="round-prompt-content">
                 <h2 className="round-prompt-title">{currentRoundPrompt.title}</h2>
                 <p className="round-prompt-subtitle">{currentRoundPrompt.subtitle}</p>
-                {livePhase === 'phase1' && roundPromptAnimationComplete && phaseTimer > 0 && (
+                {livePhase === 'phase1' && phaseTimer > 0 && (
                   <div className="round-prompt-timer">{formatTime(phaseTimer)}</div>
                 )}
               </div>
