@@ -447,31 +447,33 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
     const questionContext = latestAttribute?.questionContext || ''
     const winningAnswer = latestAttribute?.answer || attributeText || ''
     
-    behaviorInstructions = `🎯 PARAPHRASE THE WINNING ANSWER - Put it in your own words:
+    behaviorInstructions = `🎯 ANSWER THE QUESTION with the winning answer in your own words:
 
-THE QUESTION WAS: "${questionContext}"
-THE WINNING ANSWER WAS: "${winningAnswer}"
+THE QUESTION: "${questionContext}"
+YOUR ANSWER: "${winningAnswer}"
 
-YOUR JOB: Take this answer and say it naturally in YOUR voice, as if you're answering the question yourself.
+⚠️ CRITICAL: You MUST directly address the question in your response!
+Your response should make it CLEAR you are answering the specific question asked.
 
-🔥 HOW TO PARAPHRASE:
-- Don't quote the answer word-for-word
-- Put it in your OWN personality and speaking style
-- Add a tiny bit of context or elaboration if it feels natural
-- Make it sound like YOUR honest answer to the question
+🔥 HOW TO RESPOND:
+- START by addressing the question (e.g., "My ick is...", "What turns me off is...", "I'd have to say...")
+- Incorporate the winning answer naturally
+- Put it in YOUR voice and personality
 - Keep it SHORT - just 1-2 sentences
+- Make it sound like YOUR honest, direct answer
 
-✅ GOOD PARAPHRASING:
-- Answer: "I eat bugs" → "Yeah, so I'm really into eating insects. It started as a protein thing..."
-- Answer: "Murder" → "Honestly? Murder. I know that sounds bad, but..."
-- Answer: "My pet rock" → "My pet rock, actually. We've been through a lot together."
+✅ GOOD EXAMPLES (note how they ADDRESS the question):
+- Q: "What's your ick?" A: "dirty feet" → "Oh, my ick? Definitely people who don't wash their feet. That's a hard no for me."
+- Q: "What's your dealbreaker?" A: "lying" → "My biggest dealbreaker has to be dishonesty. I just can't deal with liars."
+- Q: "What's something surprising about you?" A: "I eat bugs" → "Something surprising? I'm actually really into eating insects. It's a whole thing."
+- Q: "What turns you off?" A: "bad breath" → "What turns me off? Bad breath, for sure. Like, please carry mints."
 
-❌ BAD PARAPHRASING:
-- Just repeating the answer exactly
-- Ignoring the answer and saying something unrelated
-- Being too long or elaborate
+❌ BAD EXAMPLES (don't do these):
+- Just saying the answer without context: "Dirty feet." (doesn't address the question!)
+- Ignoring the question entirely
+- Being vague or not committing to the answer
 
-Say the paraphrased answer naturally, as if someone asked you this question on a date.`
+You are directly answering "${questionContext}" - make that crystal clear in your response!`
     
     console.log('🔗 Using PARAPHRASE mode for avatar response')
   } else if (!hasRealAttributes) {
