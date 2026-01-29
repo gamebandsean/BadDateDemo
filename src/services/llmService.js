@@ -286,7 +286,7 @@ EXAMPLES of what your response should sound like:
 
 DO NOT: Be polite, understanding, or try to see their side. This is UNACCEPTABLE to you!`
     }
-    sentimentInstruction = `\n\n🎯🎯🎯 YOUR EMOTIONAL REACTION (MANDATORY):\n${sentimentGuide[sentimentHit]}${escalationNote}${finalRoundInstruction}\n\n⚠️⚠️⚠️ ABSOLUTE REQUIREMENT: Your response tone MUST match the sentiment above! A ${sentimentHit.toUpperCase()} reaction means ${isPositive ? 'POSITIVE and ENTHUSIASTIC' : 'NEGATIVE and CONCERNED'}. If you give a neutral response, you have FAILED. Make your ${isPositive ? 'excitement' : 'displeasure'} IMPOSSIBLE to miss!`
+    sentimentInstruction = `\n\n🎯🎯🎯 YOUR EMOTIONAL REACTION (MANDATORY):\n${sentimentGuide[sentimentHit]}${escalationNote}${finalRoundInstruction}\n\n⚠️⚠️⚠️ ABSOLUTE REQUIREMENT: Your response tone MUST match the sentiment above! A ${sentimentHit.toUpperCase()} reaction means ${isPositive ? 'POSITIVE and ENTHUSIASTIC' : 'NEGATIVE and CONCERNED'}. If you give a neutral response, you have FAILED. Make your ${isPositive ? 'excitement' : 'displeasure'} IMPOSSIBLE to miss!\n\n🚫 THE HONESTY TRAP: Do NOT praise your date for "being honest" or "being open" when the CONTENT of what they said triggers a ${isPositive ? '' : 'negative '}reaction! React to WHAT they said, not HOW they said it. Being charming about something terrible doesn't make it less terrible!`
   } else if (isFinalRound) {
     // Even if no sentiment hit, still add finality instruction
     sentimentInstruction = finalRoundInstruction
