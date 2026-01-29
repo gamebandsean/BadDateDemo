@@ -970,6 +970,24 @@
   margin-top: 16px;
 }
 
+.plot-twist-continue-btn {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #ff4d6d 0%, #c9184a 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255, 77, 109, 0.4);
+  transition: all 0.2s ease;
+}
+
+.plot-twist-continue-btn:hover {
+  box-shadow: 0 6px 30px rgba(255, 77, 109, 0.6);
+}
+
 /* Mobile adjustments for plot twist */
 @media (max-width: 480px) {
   .plot-twist-title {

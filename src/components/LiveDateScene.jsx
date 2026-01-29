@@ -2307,6 +2307,7 @@ function LiveDateScene() {
       ...currentPlotTwist,
       subPhase: 'summary',
       summary: summary,
+      winningAnswer: winner, // Store winner for when host advances
     }
     setPlotTwist(newPlotTwist)
     
@@ -2314,10 +2315,18 @@ function LiveDateScene() {
       partyClient.syncState({ plotTwist: newPlotTwist })
     }
     
-    // Show summary for 5 seconds, then go to conversation for dater's reaction
-    setTimeout(() => {
-      generatePlotTwistReaction(winner)
-    }, 5000)
+    // Host will manually advance by clicking a button
+    console.log('🎭 Plot twist summary ready - waiting for host to advance')
+  }
+  
+  // Host manually advances from plot twist summary to reaction
+  const advanceFromPlotTwistSummary = () => {
+    if (!isHost) return
+    
+    const currentPlotTwist = useGameStore.getState().plotTwist
+    if (currentPlotTwist.winningAnswer) {
+      generatePlotTwistReaction(currentPlotTwist.winningAnswer)
+    }
   }
   
   // Generate LLM reaction to the plot twist
@@ -3190,7 +3199,21 @@ This is a dramatic moment - react to what the avatar did!`
                   animate={{ opacity: 1 }}
                   transition={{ delay: 1 }}
                 >
-                  Now let's see how {selectedDater?.name || 'your date'} reacts...
+                  {isHost ? (
+                    <motion.button
+                      className="plot-twist-continue-btn"
+                      onClick={advanceFromPlotTwistSummary}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 1.5 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      See {selectedDater?.name || 'Maya'}'s Reaction →
+                    </motion.button>
+                  ) : (
+                    <span>Waiting for host to continue...</span>
+                  )}
                 </motion.div>
               </motion.div>
             )}
