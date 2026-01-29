@@ -129,6 +129,7 @@ function LiveDateScene() {
   
   // Current round prompt state (persists during Phase 1)
   const [currentRoundPrompt, setCurrentRoundPrompt] = useState({ title: '', subtitle: '' })
+  const [roundPromptAnimationComplete, setRoundPromptAnimationComplete] = useState(false)
   const startingStatsTimerRef = useRef(null)
   const lastActivePlayerRef = useRef(null)
   const lastAnswerCountRef = useRef(0)
@@ -307,6 +308,7 @@ function LiveDateScene() {
       // Tutorial complete - start the game
       setShowTutorial(false)
       setTutorialStep(0)
+      setRoundPromptAnimationComplete(false)
       setLivePhase('phase1')
       // Sync to PartyKit
       if (partyClient) {
@@ -869,6 +871,7 @@ function LiveDateScene() {
     if (assignments.length === 0) {
       console.error('🎲 No question assignments created! Players:', players)
       // Fallback: skip to phase1
+      setRoundPromptAnimationComplete(false)
       setLivePhase('phase1')
       setPhaseTimer(30)
       if (partyClient) {
@@ -1452,8 +1455,9 @@ function LiveDateScene() {
     const currentCompatibility = useGameStore.getState().compatibility
     console.log('💯 Preserving compatibility:', currentCompatibility)
     
+    setRoundPromptAnimationComplete(false)
     setLivePhase('phase1')
-    setPhaseTimer(30)
+    setPhaseTimer(0) // Timer starts after animation completes
     // Don't set dater bubble - the prompt is shown as interstitial instead
     setDaterBubble('')
     setAvatarBubble('')
@@ -2234,8 +2238,9 @@ Generate ${daterName}'s final closing statement:`
       setTimeout(() => setPhase('results'), 15000)
     } else {
       // Start new round - show round prompt interstitial (not dater question)
+      setRoundPromptAnimationComplete(false)
       setLivePhase('phase1')
-      setPhaseTimer(30)
+      setPhaseTimer(0) // Timer starts after animation completes
       
       // Only host sets up the next round
       if (isHost) {
@@ -2705,8 +2710,9 @@ Give your final thoughts on this dramatic moment.`
     const roundPrompt = getRoundPrompt(false)
     setCurrentRoundPrompt(roundPrompt)
     
+    setRoundPromptAnimationComplete(false)
     setLivePhase('phase1')
-    setPhaseTimer(30)
+    setPhaseTimer(0) // Timer starts after animation completes
     
     // Don't set dater bubble - the prompt is shown as interstitial
     setDaterBubble('')
@@ -3887,20 +3893,41 @@ Give your final thoughts on this dramatic moment.`
           )}
         </AnimatePresence>
         
-        {/* Round Prompt Banner - Persistent during entire round (Phase 1, Answer Selection, Phase 3) */}
+        {/* Round Prompt Banner - Starts centered, animates to top */}
         <AnimatePresence>
           {['phase1', 'answer-selection', 'phase3'].includes(livePhase) && currentRoundPrompt.title && (
             <motion.div 
               className="round-prompt-banner"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
+              initial={{ 
+                opacity: 0, 
+                y: '40vh', // Start in center of screen
+                scale: 1.1
+              }}
+              animate={{ 
+                opacity: 1, 
+                y: 0, // Animate to top position
+                scale: 1
+              }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ 
+                duration: 0.8, 
+                ease: [0.22, 1, 0.36, 1] // Custom ease for smooth entrance
+              }}
+              onAnimationComplete={() => {
+                // Animation finished - start the timer
+                if (livePhase === 'phase1' && !roundPromptAnimationComplete) {
+                  setRoundPromptAnimationComplete(true)
+                  setPhaseTimer(45) // Start the timer now (45 seconds)
+                  if (partyClient && isHost) {
+                    partyClient.syncState({ phaseTimer: 45 })
+                  }
+                }
+              }}
             >
               <div className="round-prompt-content">
                 <h2 className="round-prompt-title">{currentRoundPrompt.title}</h2>
                 <p className="round-prompt-subtitle">{currentRoundPrompt.subtitle}</p>
-                {livePhase === 'phase1' && phaseTimer > 0 && (
+                {livePhase === 'phase1' && roundPromptAnimationComplete && phaseTimer > 0 && (
                   <div className="round-prompt-timer">{formatTime(phaseTimer)}</div>
                 )}
               </div>
