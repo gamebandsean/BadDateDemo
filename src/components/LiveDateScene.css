@@ -2031,17 +2031,17 @@
   background-clip: text;
 }
 
-/* Suggestions Display (Phase 1) */
+/* Suggestions Display (Phase 1) - positioned below round prompt banner */
 .suggestions-display {
   position: absolute;
-  top: 12px;
+  top: 130px; /* Below the round prompt banner */
   left: 12px;
   right: 12px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   justify-content: center;
-  z-index: 2;
+  z-index: 80;
 }
 
 .suggestion-chip {
