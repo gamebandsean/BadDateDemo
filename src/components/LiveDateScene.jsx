@@ -851,37 +851,42 @@ function LiveDateScene() {
     
     console.log('🎲 Initializing Starting Stats phase with', players.length, 'players')
     
-    // Build question assignments based on available players
-    const availablePlayers = [...players]
+    // Build question assignments - spread questions evenly across all players
     const assignments = []
-    const playerQuestionCount = {} // Track how many of each type each player has answered
+    const playerAssignmentCount = {} // Track total questions assigned to each player
     
-    // Shuffle players for randomness
-    const shuffledPlayers = availablePlayers.sort(() => Math.random() - 0.5)
+    // Initialize counts for all players
+    players.forEach(p => {
+      playerAssignmentCount[p.id] = 0
+    })
     
-    // Assign questions - 3 physical, 2 emotional, 1 name
+    // Shuffle players for initial randomness
+    const shuffledPlayers = [...players].sort(() => Math.random() - 0.5)
+    
+    // Assign questions - try to give each player a unique question first
     for (let i = 0; i < STARTING_STATS_QUESTIONS.length; i++) {
       const questionDef = STARTING_STATS_QUESTIONS[i]
       
-      // Find a player who hasn't answered this type of question yet
-      let assignedPlayer = null
+      // Find the player with the fewest assignments
+      // This ensures we spread questions evenly before anyone gets a second question
+      let minAssignments = Infinity
+      let candidatePlayers = []
+      
       for (const player of shuffledPlayers) {
-        const key = `${player.id}-${questionDef.type}`
-        if (!playerQuestionCount[key]) {
-          assignedPlayer = player
-          playerQuestionCount[key] = true
-          break
+        const count = playerAssignmentCount[player.id]
+        if (count < minAssignments) {
+          minAssignments = count
+          candidatePlayers = [player]
+        } else if (count === minAssignments) {
+          candidatePlayers.push(player)
         }
       }
       
-      // If all players have answered this type, skip this question
-      if (!assignedPlayer && shuffledPlayers.length > 0) {
-        // If fewer than 6 players, just cycle through but skip duplicates
-        console.log(`⏭️ Skipping question ${i} (${questionDef.type}) - all players have answered this type`)
-        continue
-      }
+      // Pick randomly from players with minimum assignments
+      const assignedPlayer = candidatePlayers[Math.floor(Math.random() * candidatePlayers.length)]
       
       if (assignedPlayer) {
+        playerAssignmentCount[assignedPlayer.id]++
         assignments.push({
           questionIndex: i,
           playerId: assignedPlayer.id,
@@ -889,6 +894,7 @@ function LiveDateScene() {
           questionType: questionDef.type,
           question: questionDef.question,
         })
+        console.log(`🎲 Question ${i + 1} (${questionDef.type}) assigned to ${assignedPlayer.username} (now has ${playerAssignmentCount[assignedPlayer.id]} questions)`)
       }
     }
     
