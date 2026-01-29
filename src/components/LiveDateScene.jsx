@@ -1399,8 +1399,13 @@ function LiveDateScene() {
       
       await new Promise(resolve => setTimeout(resolve, 2000))
       
-      // === STEP 3: Dater responds to what the Avatar said (First Impressions - no questions!) ===
-      console.log('💬 Dater responding to avatar (first impressions - reaction only)')
+      // === STEP 3: Dater responds to what the Avatar said (First Impressions - REACT TO CONTENT!) ===
+      console.log('💬 Dater responding to avatar (first impressions - emotional reaction)')
+      
+      // Check sentiment FIRST - how does Maya feel about what the avatar said?
+      const emotionalMatchResult = await checkAttributeMatch(avatarIntro, daterValues, selectedDater, null)
+      const emotionalSentiment = emotionalMatchResult.category || null
+      console.log('🎯 First impressions - Maya\'s emotional reaction to avatar:', emotionalSentiment, emotionalMatchResult.shortLabel)
       
       const daterReaction2 = await getDaterDateResponse(
         selectedDater,
@@ -1409,8 +1414,8 @@ function LiveDateScene() {
           { speaker: 'dater', message: daterReaction1 },
           { speaker: 'avatar', message: avatarIntro }
         ],
-        null,
-        null,
+        avatarIntro, // Pass what the avatar said so Maya can react to it
+        emotionalSentiment, // Pass the sentiment so Maya knows how to react!
         reactionStreak,
         false, // not final round
         true   // isFirstImpressions - react, don't ask questions
@@ -1420,6 +1425,13 @@ function LiveDateScene() {
         setDaterBubble(daterReaction2)
         addDateMessage('dater', daterReaction2)
         await syncConversationToPartyKit(undefined, daterReaction2, false)
+        
+        // Show reaction feedback if there was a sentiment hit
+        if (emotionalSentiment) {
+          // Wait for bubble to appear
+          await new Promise(resolve => setTimeout(resolve, 800))
+          showReactionFeedback(emotionalSentiment, emotionalMatchResult.matchedValue, emotionalMatchResult.shortLabel)
+        }
       }
       
       // Brief pause before Phase 1

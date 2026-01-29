@@ -178,18 +178,38 @@ export async function getDaterDateResponse(dater, avatar, conversationHistory, l
 - Your response should feel like a CONCLUSION, not a continuation`
   }
   
-  // FIRST IMPRESSIONS: React to what they look like and said, NO questions
+  // FIRST IMPRESSIONS: React EMOTIONALLY to what they look like and said
   let firstImpressionsInstruction = ''
   if (isFirstImpressions) {
-    firstImpressionsInstruction = `\n\n👋 FIRST IMPRESSIONS - REACT, DON'T ASK:
-- This is the FIRST IMPRESSIONS phase - you're just meeting them!
-- Give a quick REACTION to how they look and what they just said
-- DO NOT ask any questions - just react and comment
-- Keep it short: 1-2 sentences max
-- Examples: "Wow, okay...", "Oh, interesting...", "Hmm, I see...", "Well that's... something."
-- React to their appearance and personality you've seen so far
-- Show your first gut feeling about them
-- End with a statement or observation, NOT a question`
+    firstImpressionsInstruction = `\n\n👋 FIRST IMPRESSIONS - REACT EMOTIONALLY TO WHAT YOU SEE AND HEAR!
+    
+This is the FIRST IMPRESSIONS phase - your FIRST reaction matters!
+
+🎯 REACT TO THE CONTENT:
+- If they look WEIRD or SCARY → show concern, alarm, or confusion!
+- If they look ATTRACTIVE → show interest, be flirty!
+- If what they said is DISTURBING → react with visible discomfort!
+- If what they said is CHARMING → show you're charmed!
+- Your EMOTIONAL REACTION should match what you're seeing and hearing!
+
+⚠️ DO NOT BE GENERIC:
+- Don't just say "Oh, interesting..." to everything
+- Don't be neutral or diplomatic
+- Show your REAL first impression - good OR bad!
+- This sets the tone for the whole date!
+
+✅ GOOD FIRST IMPRESSION REACTIONS:
+- Attractive date: "Oh wow, okay... you're... hi. I'm already nervous."
+- Scary looking: "Oh my god, are you okay?! What happened to you?!"
+- Weird vibe: "Okay... that's... not what I expected to hear right off the bat."
+- Charming intro: "Ha! Okay, I like you already."
+
+❌ BAD (too generic):
+- "Hmm, interesting..."
+- "I see..."
+- "Well, hello there."
+
+DO NOT ask questions - just REACT with emotion. Keep it 1-2 sentences.`
   }
   
   // SENTIMENT-DRIVEN REACTION: Tell the Dater how to feel based on what category was hit
