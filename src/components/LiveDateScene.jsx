@@ -1552,23 +1552,24 @@ function LiveDateScene() {
   // FALLBACK: Start timer after banner animation should have completed
   // This ensures timer starts even if onAnimationComplete doesn't fire
   useEffect(() => {
-    if (livePhase === 'phase1' && isHost && phaseTimer === 0 && currentRoundPrompt.title) {
+    if (livePhase === 'phase1' && isHost && currentRoundPrompt.title && !roundPromptAnimationComplete) {
       console.log('⏱️ Phase1 timer fallback - waiting for animation...')
       const fallbackTimer = setTimeout(() => {
-        // Only set if still 0 (animation callback didn't work)
-        if (useGameStore.getState().phaseTimer === 0 || phaseTimer === 0) {
+        // Check if timer was already started by animation callback
+        const currentTimer = useGameStore.getState().phaseTimer
+        if (currentTimer === 0) {
           console.log('⏱️ Fallback: Starting timer (animation callback may have failed)')
           setPhaseTimer(45)
           setRoundPromptAnimationComplete(true)
           if (partyClient) {
-            partyClient.syncState({ phaseTimer: 45 })
+            partyClient.syncState({ phaseTimer: 45, roundPromptAnimationComplete: true })
           }
         }
-      }, 1200) // 1.2 seconds - slightly longer than the 0.8s animation
+      }, 1500) // 1.5 seconds - longer buffer to ensure we catch failures
       
       return () => clearTimeout(fallbackTimer)
     }
-  }, [livePhase, isHost, currentRoundPrompt.title, phaseTimer])
+  }, [livePhase, isHost, currentRoundPrompt.title, roundPromptAnimationComplete])
   
   // Auto-scroll chat
   useEffect(() => {
@@ -3969,16 +3970,14 @@ Give your final thoughts on this dramatic moment.`
                 duration: 0.8, 
                 ease: [0.22, 1, 0.36, 1] // Custom ease for smooth entrance
               }}
-              onAnimationComplete={(definition) => {
-                // Only start timer when animate completes (not exit)
-                if (definition === 'animate' || (typeof definition === 'object' && definition.opacity === 1)) {
-                  if (livePhase === 'phase1' && !roundPromptAnimationComplete && isHost) {
-                    console.log('🎬 Banner animation complete - starting timer')
-                    setRoundPromptAnimationComplete(true)
-                    setPhaseTimer(45)
-                    if (partyClient) {
-                      partyClient.syncState({ phaseTimer: 45, roundPromptAnimationComplete: true })
-                    }
+              onAnimationComplete={() => {
+                // Start timer when banner animation completes
+                if (livePhase === 'phase1' && !roundPromptAnimationComplete && isHost) {
+                  console.log('🎬 Banner animation complete - starting timer')
+                  setRoundPromptAnimationComplete(true)
+                  setPhaseTimer(45)
+                  if (partyClient) {
+                    partyClient.syncState({ phaseTimer: 45, roundPromptAnimationComplete: true })
                   }
                 }
               }}
