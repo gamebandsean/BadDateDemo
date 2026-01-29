@@ -3546,9 +3546,9 @@ This is a dramatic moment - react to what the avatar did!`
           )}
         </AnimatePresence>
         
-        {/* Round Prompt Banner - Persistent during Phase 1 */}
+        {/* Round Prompt Banner - Persistent during entire round (Phase 1, Answer Selection, Phase 3) */}
         <AnimatePresence>
-          {livePhase === 'phase1' && currentRoundPrompt.title && (
+          {['phase1', 'answer-selection', 'phase3'].includes(livePhase) && currentRoundPrompt.title && (
             <motion.div 
               className="round-prompt-banner"
               initial={{ opacity: 0, y: -20 }}
@@ -3559,7 +3559,7 @@ This is a dramatic moment - react to what the avatar did!`
               <div className="round-prompt-content">
                 <h2 className="round-prompt-title">{currentRoundPrompt.title}</h2>
                 <p className="round-prompt-subtitle">{currentRoundPrompt.subtitle}</p>
-                {phaseTimer > 0 && (
+                {livePhase === 'phase1' && phaseTimer > 0 && (
                   <div className="round-prompt-timer">{formatTime(phaseTimer)}</div>
                 )}
               </div>
