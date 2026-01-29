@@ -2567,7 +2567,8 @@ Generate ${daterName}'s final closing statement:`
     }
   }
   
-  // Generate LLM reaction to the plot twist
+  // Generate LLM reaction to the plot twist - THIS IS A KEY MOMENT!
+  // Maya should really express herself here - multiple exchanges, more emotional
   const generatePlotTwistReaction = async (winner) => {
     if (!isHost) return
     
@@ -2593,57 +2594,89 @@ Generate ${daterName}'s final closing statement:`
     setIsGenerating(true)
     
     try {
-      // Create context for the plot twist scenario
+      // Create context for the plot twist scenario - emphasize this is IMPORTANT
       const plotTwistContext = `PLOT TWIST SCENARIO: Someone else just started hitting on ${selectedDater?.name || 'your date'}! 
 The avatar's response to this situation: "${winner.answer}"
-This is a dramatic moment - react to what the avatar did!`
+This is a DRAMATIC, PIVOTAL moment - react with FULL emotion to what the avatar did!`
       
-      // Get Dater's reaction first
-      const daterReaction = await getDaterDateResponse(
+      // ============ EXCHANGE 1: Maya's FIRST big reaction ============
+      console.log('🎭 Plot Twist Exchange 1: Maya reacts to what happened')
+      const daterReaction1 = await getDaterDateResponse(
         selectedDater,
         avatar,
         useGameStore.getState().dateConversation || [],
         plotTwistContext,
-        avatar.attributes || []
+        null, // no sentiment hit for plot twist
+        { positive: 0, negative: 0 },
+        false
       )
       
-      setDaterBubble(daterReaction)
-      addDateMessage('dater', daterReaction)
-      syncConversationToPartyKit(undefined, daterReaction)
+      setDaterBubble(daterReaction1)
+      addDateMessage('dater', daterReaction1)
+      syncConversationToPartyKit(undefined, daterReaction1)
       
-      // Wait a moment, then get Avatar's response
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      // Wait for Maya to finish speaking - this is important!
+      await waitForAllAudio()
+      await new Promise(resolve => setTimeout(resolve, 2000))
       
-      const avatarFollowUp = await getAvatarDateResponse(
+      // ============ EXCHANGE 2: Avatar responds to Maya's reaction ============
+      console.log('🎭 Plot Twist Exchange 2: Avatar responds')
+      const avatarResponse = await getAvatarDateResponse(
         avatar,
         selectedDater,
         useGameStore.getState().dateConversation || [],
-        daterReaction,
-        avatar.attributes || []
+        daterReaction1,
+        'react'
       )
       
       const avatarMood = getAvatarEmotionFromTraits()
       setAvatarEmotion(avatarMood)
-      setAvatarBubble(avatarFollowUp)
-      addDateMessage('avatar', avatarFollowUp)
-      syncConversationToPartyKit(avatarFollowUp, undefined)
+      setAvatarBubble(avatarResponse)
+      addDateMessage('avatar', avatarResponse)
+      syncConversationToPartyKit(avatarResponse, undefined)
       if (partyClient && isHost) {
         partyClient.syncState({ avatarEmotion: avatarMood })
       }
+      
+      // Wait for Avatar to finish
+      await waitForAllAudio()
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // ============ EXCHANGE 3: Maya continues processing - final thoughts ============
+      console.log('🎭 Plot Twist Exchange 3: Maya continues her emotional processing')
+      const continueContext = `Continue reacting to the PLOT TWIST. 
+The avatar just ${winner.answer}. You already said: "${daterReaction1}"
+Now continue processing your emotions - what does this mean for you and this date?
+Are you more or less interested? Has this changed everything?
+Give your final thoughts on this dramatic moment.`
+      
+      const daterReaction2 = await getDaterDateResponse(
+        selectedDater,
+        avatar,
+        useGameStore.getState().dateConversation || [],
+        continueContext,
+        null,
+        { positive: 0, negative: 0 },
+        false
+      )
+      
+      setDaterBubble(daterReaction2)
+      addDateMessage('dater', daterReaction2)
+      syncConversationToPartyKit(undefined, daterReaction2)
       
       // Wait for all audio to complete before transitioning
       console.log('⏳ Waiting for plot twist audio to complete...')
       await waitForAllAudio()
       console.log('✅ Plot twist audio complete')
       
-      // Brief reading pause
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      // Longer pause to let the moment sink in - this is important!
+      await new Promise(resolve => setTimeout(resolve, 4000))
       
     } catch (error) {
       console.error('Error generating plot twist reaction:', error)
-      setDaterBubble("Well, THAT was unexpected!")
+      setDaterBubble("Well, THAT was unexpected! I... I don't even know what to say right now.")
       await waitForAllAudio()
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      await new Promise(resolve => setTimeout(resolve, 3000))
     }
     
     setIsGenerating(false)

@@ -354,31 +354,39 @@ A normal person + scary thing = scared reaction (even if they try to be polite a
     const isPlotTwist = latestAttribute.includes('PLOT TWIST SCENARIO')
     
     if (isPlotTwist) {
-      // PLOT TWIST: Strong, focused reaction to this single dramatic event
-      latestAttrContext = `\n\n🚨🚨🚨 PLOT TWIST - DRAMATIC MOMENT! 🚨🚨🚨
+      // PLOT TWIST: Strong, EXTENDED reaction to this dramatic event
+      // This is a KEY MOMENT - Maya should really express herself!
+      latestAttrContext = `\n\n🚨🚨🚨 PLOT TWIST - THIS IS A MAJOR DRAMATIC MOMENT! 🚨🚨🚨
 
 ${latestAttribute}
 
-⚠️ CRITICAL INSTRUCTIONS FOR YOUR REACTION:
-1. REACT STRONGLY AND DRAMATICALLY to what just happened
-2. Focus ONLY on this single event - ignore everything else from the date
-3. This is the ONLY thing you should talk about right now
-4. Show clear, intense emotion:
-   - If they defended you → Be touched, grateful, swooning, impressed
-   - If they did something romantic → Be flattered, excited, flustered
-   - If they did something weird → Be confused, alarmed, weirded out
-   - If they ignored you/were passive → Be disappointed, annoyed, hurt
-   - If they joined in flirting with the other person → Be FURIOUS, betrayed, hurt
-   - If they were aggressive/violent → Be shocked, scared, maybe impressed or horrified
-5. Your reaction should be SHORT but INTENSE (1-2 sentences max)
-6. Do NOT ask questions or change the subject
-7. Do NOT reference anything else from the date - ONLY react to THIS moment
+⚠️ THIS IS THE MOST IMPORTANT REACTION OF THE DATE! REALLY GO FOR IT!
 
-Examples of good reactions:
-- "Oh my GOD, you just punched that guy for me?!"
-- "Wait... did you seriously just give them YOUR number instead of defending me?!"
-- "That was... actually really sweet. No one's ever stood up for me like that."
-- "I can't believe you just stood there and did NOTHING!"
+YOUR RESPONSE SHOULD BE LONGER AND MORE EMOTIONAL THAN USUAL:
+- Give 2-4 sentences - this moment MATTERS
+- POUR your emotions into this response
+- Express what you're feeling AND what this means to you
+- This is a turning point - let the audience feel your reaction!
+
+HOW TO REACT based on what happened:
+- If they DEFENDED you → Be deeply touched, swooning, falling for them. "I can't believe you did that for me... No one's ever... wow."
+- If they did something ROMANTIC → Be flustered, giddy, heart racing. Share how it made you feel inside.
+- If they did something WEIRD → Be confused and alarmed, but process it out loud. Express your disbelief.
+- If they were PASSIVE/did nothing → Be hurt and disappointed. Let them know how that made you feel abandoned.
+- If they FLIRTED with the other person → Be FURIOUS. This is a betrayal. Let them have it.
+- If they were VIOLENT → Be shocked. Process whether you're scared or impressed (or both).
+
+TONE:
+- This is heightened emotion - lean INTO it
+- Let your vulnerability or anger show
+- Don't hold back - this is the climax of the scene
+- You're allowed to ramble, stammer, get emotional
+
+EXAMPLES (notice they're longer and more emotional):
+- "Oh my god... did you just... I can't even... No one has EVER done something like that for me. I'm literally shaking right now. That was the most romantic thing anyone's ever done."
+- "Excuse me?! You just gave them your NUMBER?! While I'm sitting RIGHT HERE?! I cannot believe this is happening. I am so done with this date."
+- "That was... honestly terrifying. Like, you just HIT that person. I don't even know what to say. Part of me is impressed but also... are you okay? Am I okay? What just happened?"
+- "You literally just stood there. Like a statue. While someone was hitting on YOUR date. I feel like I don't even exist to you right now."
 `
     } else {
       const isVisible = isVisibleAttribute(latestAttribute)
