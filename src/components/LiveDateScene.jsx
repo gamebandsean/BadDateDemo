@@ -179,7 +179,7 @@ function LiveDateScene() {
     }
   }
   
-  // Helper: Map avatar's emotional traits to animation emotion
+  // Helper: Map avatar's emotional traits to animation emotion (baseline)
   const getAvatarEmotionFromTraits = () => {
     const emotionalTrait = avatar?.attributes?.find(attr => 
       /nervous|anxious|scared|shy|timid/i.test(attr)) ? 'nervous' :
@@ -195,6 +195,31 @@ function LiveDateScene() {
       /confused|puzzled|uncertain|unsure/i.test(attr)) ? 'confused' :
       'neutral'
     return emotionalTrait
+  }
+  
+  // Helper: Get avatar emotion based on how the dater reacted
+  const getAvatarEmotionFromContext = (daterSentiment) => {
+    if (!daterSentiment) return getAvatarEmotionFromTraits()
+    
+    // Avatar reacts to how the dater responded
+    const emotionMap = {
+      loves: 'happy',      // Date loved it → Avatar happy/relieved
+      likes: 'confident',   // Date liked it → Avatar confident
+      dislikes: 'nervous',  // Date didn't like it → Avatar nervous
+      dealbreakers: 'worried' // Major red flag → Avatar worried/scared
+    }
+    return emotionMap[daterSentiment] || getAvatarEmotionFromTraits()
+  }
+  
+  // Helper: Get dater emotion based on sentiment
+  const getDaterEmotionFromSentiment = (sentiment) => {
+    const emotionMap = {
+      loves: 'attracted',
+      likes: 'happy',
+      dislikes: 'uncomfortable',
+      dealbreakers: 'horrified'
+    }
+    return emotionMap[sentiment] || 'neutral'
   }
   
   // Show reaction feedback temporarily (auto-clears after 4 seconds)
@@ -1907,12 +1932,17 @@ function LiveDateScene() {
         )
         
         if (daterReaction1) {
+          // Set dater's emotion based on sentiment
+          const daterMood = getDaterEmotionFromSentiment(sentimentHit1)
+          setDaterEmotion(daterMood)
           setDaterBubble(daterReaction1)
           addDateMessage('dater', daterReaction1)
           await syncConversationToPartyKit(undefined, daterReaction1, undefined)
+          if (partyClient && isHost) {
+            partyClient.syncState({ daterEmotion: daterMood })
+          }
           
-          // Wait for Maya's bubble to appear (TTS starts via useEffect, then bubble shows)
-          // Small delay to let the TTS useEffect trigger and audio to start
+          // Wait for Maya's bubble to appear
           await new Promise(resolve => setTimeout(resolve, 800))
           
           // NOW show reaction feedback - after Maya has started speaking
@@ -1965,13 +1995,14 @@ function LiveDateScene() {
         )
         
         if (avatarResponse2) {
-          const avatarMood = getAvatarEmotionFromTraits()
-          setAvatarEmotion(avatarMood)
+          // Avatar reacts based on how dater responded to previous exchange
+          const avatarMood2 = getAvatarEmotionFromContext(sentimentHit1)
+          setAvatarEmotion(avatarMood2)
           setAvatarBubble(avatarResponse2)
           addDateMessage('avatar', avatarResponse2)
           await syncConversationToPartyKit(avatarResponse2, undefined, undefined)
           if (partyClient && isHost) {
-            partyClient.syncState({ avatarEmotion: avatarMood })
+            partyClient.syncState({ avatarEmotion: avatarMood2 })
           }
           
           await new Promise(resolve => setTimeout(resolve, 2500))
@@ -1993,11 +2024,17 @@ function LiveDateScene() {
           )
           
           if (daterReaction2) {
+            // Set dater's emotion based on sentiment
+            const daterMood2 = getDaterEmotionFromSentiment(sentimentHit2)
+            setDaterEmotion(daterMood2)
             setDaterBubble(daterReaction2)
             addDateMessage('dater', daterReaction2)
             await syncConversationToPartyKit(undefined, daterReaction2, undefined)
+            if (partyClient && isHost) {
+              partyClient.syncState({ daterEmotion: daterMood2 })
+            }
             
-            // Wait for Maya's bubble to appear (TTS starts via useEffect, then bubble shows)
+            // Wait for Maya's bubble to appear
             await new Promise(resolve => setTimeout(resolve, 800))
             
             // NOW show reaction feedback - after Maya has started speaking
@@ -2050,13 +2087,14 @@ function LiveDateScene() {
           )
           
           if (avatarResponse3) {
-            const avatarMood = getAvatarEmotionFromTraits()
-            setAvatarEmotion(avatarMood)
+            // Avatar reacts based on how dater responded to previous exchange
+            const avatarMood3 = getAvatarEmotionFromContext(sentimentHit2)
+            setAvatarEmotion(avatarMood3)
             setAvatarBubble(avatarResponse3)
             addDateMessage('avatar', avatarResponse3)
             await syncConversationToPartyKit(avatarResponse3, undefined, undefined)
             if (partyClient && isHost) {
-              partyClient.syncState({ avatarEmotion: avatarMood })
+              partyClient.syncState({ avatarEmotion: avatarMood3 })
             }
             
             await new Promise(resolve => setTimeout(resolve, 2500))
@@ -2078,11 +2116,17 @@ function LiveDateScene() {
             )
             
             if (daterReaction3) {
+              // Set dater's emotion based on sentiment
+              const daterMood3 = getDaterEmotionFromSentiment(sentimentHit3)
+              setDaterEmotion(daterMood3)
               setDaterBubble(daterReaction3)
               addDateMessage('dater', daterReaction3)
               await syncConversationToPartyKit(undefined, daterReaction3, undefined)
+              if (partyClient && isHost) {
+                partyClient.syncState({ daterEmotion: daterMood3 })
+              }
               
-              // Wait for Maya's bubble to appear (TTS starts via useEffect, then bubble shows)
+              // Wait for Maya's bubble to appear
               await new Promise(resolve => setTimeout(resolve, 800))
               
               // NOW show reaction feedback - after Maya has started speaking
