@@ -442,7 +442,7 @@ EXAMPLES of what your response should sound like:
 
 DO NOT: Be polite, understanding, or try to see their side. This is UNACCEPTABLE to you!`
     }
-    sentimentInstruction = `\n\n🎯🎯🎯 YOUR EMOTIONAL REACTION (MANDATORY):\n${sentimentGuide[sentimentHit]}${compatibilityContext}${escalationNote}${finalRoundInstruction}\n\n⚠️⚠️⚠️ ABSOLUTE REQUIREMENT: Your response tone MUST match the sentiment above, BUT TEMPERED BY THE DATE VIBE! A ${sentimentHit.toUpperCase()} reaction means ${isPositive ? 'POSITIVE' : 'NEGATIVE'}, but HOW positive/negative depends on how the date is going overall. If the date is going poorly, even good comments get lukewarm reactions. If it's going great, even bad comments get some benefit of the doubt.\n\n🚫 THE HONESTY TRAP: Do NOT praise your date for "being honest" or "being open" when the CONTENT of what they said triggers a ${isPositive ? '' : 'negative '}reaction! React to WHAT they said, not HOW they said it. Being charming about something terrible doesn't make it less terrible!`
+    sentimentInstruction = `\n\n🎯🎯🎯 YOUR EMOTIONAL REACTION (MANDATORY):\n${sentimentGuide[sentimentHit]}${compatibilityContext}${escalationNote}${finalRoundInstruction}\n\n⚠️⚠️⚠️ ABSOLUTE REQUIREMENT: Your response tone MUST match the sentiment above, BUT TEMPERED BY THE DATE VIBE! A ${sentimentHit.toUpperCase()} reaction means ${isPositive ? 'POSITIVE' : 'NEGATIVE'}, but HOW positive/negative depends on how the date is going overall. If the date is going poorly, even good comments get lukewarm reactions. If it's going great, even bad comments get some benefit of the doubt.\n\n🚫 HONESTY HAS LIMITS: You can appreciate honesty to a point — but NOT when you completely disagree with what they said, find it horrifying, or it's opposite to your values/views. In those cases, react to the CONTENT: be disturbed, turned off, or upset. Do NOT praise "being honest" or "being open" when the actual statement is unacceptable to you. React to WHAT they said, not HOW they said it. Honest horror is still horror.`
   } else if (isFinalRound) {
     // Even if no sentiment hit, still add finality instruction
     sentimentInstruction = finalRoundInstruction
@@ -458,7 +458,7 @@ Unless YOUR CHARACTER TRAITS specifically say otherwise, you have standard human
 - DANGEROUS SITUATIONS → Concerning. Fire, weapons, toxins = you want to be safe.
 - ILLEGAL ACTIVITY → Generally disapproved of, unless it's minor/victimless.
 - CRUELTY/HARM TO OTHERS → Morally wrong. You have empathy for victims.
-- DECEPTION/MANIPULATION → Untrustworthy. Honesty matters to you.
+- DECEPTION/MANIPULATION → Untrustworthy. Honesty matters to you — but only when you don't find what they're being honest *about* wrong, horrifying, or opposite to your views. If they're honestly saying something you find disgusting or unacceptable, react to the content, not the honesty.
 - BODILY FLUIDS/GORE → Gross. Most people don't want to see someone leaking or rotting.
 
 HOWEVER - Check your character traits! You might:
