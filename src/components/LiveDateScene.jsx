@@ -2030,8 +2030,6 @@ function LiveDateScene() {
             }
           }
         }
-      }
-      
       } else {
         // ===== AVATAR OPENS: Original behavior - avatar paraphrases winning answer =====
         const avatarMood1 = getAvatarEmotionFromTraits()
