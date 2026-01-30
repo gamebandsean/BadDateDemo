@@ -500,21 +500,30 @@ A normal person + scary thing = scared reaction (even if they try to be polite a
   // Get the last thing the Avatar said (for inference)
   const lastAvatarMessage = [...conversationHistory].reverse().find(msg => msg.speaker === 'avatar')?.message || ''
   
-  // Get the question that was asked (look for earlier dater message)
-  const lastDaterQuestion = [...conversationHistory].reverse().find(msg => msg.speaker === 'dater')?.message || ''
+  // Normalize latestAttribute: can be string (answer) or object { answer, questionContext }
+  const answerRevealed = typeof latestAttribute === 'object' && latestAttribute !== null
+    ? (latestAttribute.answer ?? latestAttribute.questionContext ?? '')
+    : (latestAttribute || '')
+  const roundQuestion = typeof latestAttribute === 'object' && latestAttribute !== null
+    ? (latestAttribute.questionContext || '')
+    : ''
+  
+  // Get the question that was asked (use round question when provided, else last dater message)
+  const questionForContext = roundQuestion || [...conversationHistory].reverse().find(msg => msg.speaker === 'dater')?.message || ''
   
   // Special instruction if a new attribute was just added - USING MODULAR PROMPT CHAIN
   let latestAttrContext = ''
   if (latestAttribute) {
     // Check if this is a PLOT TWIST scenario (special handling)
-    const isPlotTwist = latestAttribute.includes('PLOT TWIST SCENARIO')
+    const isPlotTwist = (typeof latestAttribute === 'string' ? latestAttribute : latestAttribute?.answer || '').includes('PLOT TWIST SCENARIO')
     
     if (isPlotTwist) {
+      const plotTwistContent = typeof latestAttribute === 'string' ? latestAttribute : (latestAttribute?.answer || String(latestAttribute))
       // PLOT TWIST: Strong, EXTENDED reaction to this dramatic event
       // This is a KEY MOMENT - Maya should really express herself!
       latestAttrContext = `\n\n🚨🚨🚨 PLOT TWIST - THIS IS A MAJOR DRAMATIC MOMENT! 🚨🚨🚨
 
-${latestAttribute}
+${plotTwistContent}
 
 ⚠️ THIS IS THE MOST IMPORTANT REACTION OF THE DATE! REALLY GO FOR IT!
 
@@ -545,33 +554,35 @@ EXAMPLES (notice they're longer and more emotional):
 - "You literally just stood there. Like a statue. While someone was hitting on YOUR date. I feel like I don't even exist to you right now."
 `
     } else {
-      const isVisible = isVisibleAttribute(latestAttribute)
+      const isVisible = isVisibleAttribute(answerRevealed)
       
-      // Context about the question-answer dynamic
-      const questionContext = `
-🎯 CONTEXT: YOU ASKED A QUESTION, THEY GAVE AN ANSWER
-
-YOUR QUESTION WAS: "${lastDaterQuestion}"
-THEIR ANSWER REVEALED: "${latestAttribute}"
+      // Context about the question-answer dynamic — include the actual question when we have it
+      const questionContextBlock = questionForContext
+        ? `📋 THE QUESTION FOR THIS ROUND: "${questionForContext}"
+THEIR ANSWER (what they revealed): "${answerRevealed}"
 THEIR FULL RESPONSE: "${lastAvatarMessage}"
 
-This is their ANSWER to YOUR question. React to what they revealed about themselves!`
+Use the question above as context. React to what they revealed about themselves in answer to that question!`
+        : `🎯 CONTEXT: They gave an answer. React to what they revealed.
+
+THEIR ANSWER REVEALED: "${answerRevealed}"
+THEIR FULL RESPONSE: "${lastAvatarMessage}"
+
+React to what they revealed about themselves!`
       
       if (isVisible) {
-        // USE MODULAR PROMPT 04: Dater reacts to VISIBLE attribute
         const modularVisiblePrompt = PROMPT_04_DATER_VISIBLE
-          .replace(/\{\{attribute\}\}/g, latestAttribute)
+          .replace(/\{\{attribute\}\}/g, answerRevealed)
           .replace(/\{\{avatarLastMessage\}\}/g, lastAvatarMessage)
           .replace(/\{\{allVisibleAttributes\}\}/g, visibleAttributes.map(a => `- ${a}`).join('\n'))
         
-        latestAttrContext = `\n\n${questionContext}\n\n${modularVisiblePrompt}`
+        latestAttrContext = `\n\n${questionContextBlock}\n\n${modularVisiblePrompt}`
       } else {
-        // USE MODULAR PROMPT 05: Dater INFERS from NON-VISIBLE attribute  
         const modularInferPrompt = PROMPT_05_DATER_INFER
-          .replace(/\{\{attribute\}\}/g, latestAttribute)
+          .replace(/\{\{attribute\}\}/g, answerRevealed)
           .replace(/\{\{avatarLastMessage\}\}/g, lastAvatarMessage)
         
-        latestAttrContext = `\n\n${questionContext}\n\n${modularInferPrompt}`
+        latestAttrContext = `\n\n${questionContextBlock}\n\n${modularInferPrompt}`
       }
     }
   } else {
@@ -786,10 +797,12 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
     
     behaviorInstructions = `🚨🚨🚨 CRITICAL: ONLY TALK ABOUT "${winningAnswer}" 🚨🚨🚨
 
-🎯 TOPIC: "${questionContext}"
-🎯 YOUR ANSWER: "${winningAnswer}"
+📋 THE QUESTION THAT WAS ASKED: "${questionContext}"
+🎯 YOUR ANSWER (your response to that question): "${winningAnswer}"
 🎯 YOUR PERSONALITY / OTHER TRAITS (use these to make your REASON feel consistent): ${realAttributes.join(', ') || 'none yet'}
 ${preferenceContext}
+
+Use the question above as context — your answer and reason should make sense as a response TO that question.`
 
 ⚠️ YOUR RESPONSE MUST DO TWO THINGS:
 1. State your answer "${winningAnswer}" in the first sentence (no intro, no hello).
@@ -828,10 +841,12 @@ ${emotionalInstructions}`
 
 Your date just said: "${daterOpener}"
 
-🎯 TOPIC: "${questionContext}"
-🎯 YOUR ANSWER: "${winningAnswer}"
+📋 THE QUESTION THAT WAS ASKED: "${questionContext}"
+🎯 YOUR ANSWER (your response to that question): "${winningAnswer}"
 🎯 YOUR PERSONALITY / OTHER TRAITS (use these to make your REASON feel consistent): ${realAttributes.join(', ') || 'none yet'}
 ${preferenceContext}
+
+Use the question above as context — your answer and reason should make sense as a response TO that question.`
 
 ⚠️ YOUR RESPONSE MUST DO TWO THINGS:
 1. Brief reaction to what they said (2-4 words), then state your answer "${winningAnswer}" in the same or next sentence.
@@ -890,8 +905,7 @@ ${emotionalInstructions}`
 
 Your date just said: "${lastDaterMessage}"
 
-${currentTopic ? `🎯 CURRENT TOPIC/QUESTION: "${currentTopic}"` : ''}
-YOUR ANSWER TO THIS TOPIC: "${newestAttribute}"
+${currentTopic ? `📋 THE QUESTION FOR THIS ROUND: "${currentTopic}"\nYOUR ANSWER TO THAT QUESTION: "${newestAttribute}"` : `YOUR ANSWER: "${newestAttribute}"`}
 ${preferenceContext}
 YOUR OTHER TRAITS: ${realAttributes.join(', ')}
 
@@ -934,8 +948,7 @@ ${emotionalInstructions}
     
     behaviorInstructions = `🎯 WRAP UP THIS TOPIC - Final thought on your answer:
 
-${currentTopic ? `🎯 CURRENT TOPIC/QUESTION: "${currentTopic}"` : ''}
-YOUR ANSWER TO THIS TOPIC: "${newestAttribute}"
+${currentTopic ? `📋 THE QUESTION FOR THIS ROUND: "${currentTopic}"\nYOUR ANSWER TO THAT QUESTION: "${newestAttribute}"` : `YOUR ANSWER: "${newestAttribute}"`}
 ${preferenceContext}
 YOUR OTHER TRAITS: ${realAttributes.join(', ')}
 

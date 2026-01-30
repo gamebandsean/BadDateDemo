@@ -1983,7 +1983,7 @@ function LiveDateScene() {
         const currentCompat1 = useGameStore.getState().compatibility
         exchange1.daterReaction = await getDaterDateResponse(
           selectedDater, avatarWithNewAttr, convoWithExchange1,
-          attrToUse, sentimentHit1, currentStreak, isFinalRound, false, currentCompat1
+          framedAttribute, sentimentHit1, currentStreak, isFinalRound, false, currentCompat1
         )
         exchange1.daterMood = getDaterEmotionFromSentiment(sentimentHit1, currentCompat1)
         exchange1.sentimentHit = sentimentHit1
@@ -2022,7 +2022,7 @@ function LiveDateScene() {
         const currentCompat2 = useGameStore.getState().compatibility
         exchange2.daterReaction = await getDaterDateResponse(
           selectedDater, avatarWithNewAttr, convoWithEx2,
-          exchange2.matchResult.matchedValue, sentimentHit2, currentStreak, isFinalRound, false, currentCompat2
+          { answer: exchange2.matchResult.matchedValue, questionContext }, sentimentHit2, currentStreak, isFinalRound, false, currentCompat2
         )
         exchange2.daterMood = getDaterEmotionFromSentiment(sentimentHit2, currentCompat2)
         exchange2.sentimentHit = sentimentHit2
@@ -2059,7 +2059,7 @@ function LiveDateScene() {
         const currentCompat3 = useGameStore.getState().compatibility
         exchange3.daterReaction = await getDaterDateResponse(
           selectedDater, avatarWithNewAttr, convoWithEx3,
-          exchange3.matchResult.matchedValue, sentimentHit3, currentStreak, isFinalRound, false, currentCompat3
+          { answer: exchange3.matchResult.matchedValue, questionContext }, sentimentHit3, currentStreak, isFinalRound, false, currentCompat3
         )
         exchange3.daterMood = getDaterEmotionFromSentiment(sentimentHit3, currentCompat3)
         exchange3.sentimentHit = sentimentHit3
