@@ -2522,19 +2522,12 @@ Generate ${daterName}'s final verdict:`
       return
     }
     
-    if (newRoundCount >= currentMaxCycles) {
-      // Game over! Show results
-      setLivePhase('ended')
-      if (partyClient) {
-        partyClient.syncState( { phase: 'ended', compatibility: currentCompatibility, cycleCount: newRoundCount })
-      }
-      // Extend timeout to let players read the breakdown
-      setTimeout(() => setPhase('results'), 15000)
-    } else if (newRoundCount === currentMaxCycles - 1) {
+    // With maxCycles=6: Rounds 1-5 are question rounds; Round 6 is wrap-up. Date ends ONLY after wrap-up.
+    if (newRoundCount === currentMaxCycles - 1) {
       // ROUND 6: WRAP-UP ROUND (no questions, just final conversation)
+      // Date must run this before ending — we never skip to "ended" before wrap-up
       console.log('🎬 Starting Round 6: Wrap-Up Round')
       
-      // Set to phase3 but with a special "wrap-up" indicator
       setLivePhase('phase3')
       setCurrentRoundPrompt({ title: 'WRAP UP', subtitle: 'The date is ending...' })
       setDaterBubble('')
@@ -2551,15 +2544,23 @@ Generate ${daterName}'s final verdict:`
         })
       }
       
-      // Run the wrap-up conversation
       await generateWrapUpRound(currentCompatibility)
       
-      // After wrap-up, end the game
+      // Date ends ONLY after wrap-up conversation finishes
+      const finalCycleCount = newRoundCount + 1
+      useGameStore.setState({ cycleCount: finalCycleCount })
       setLivePhase('ended')
       if (partyClient) {
-        partyClient.syncState({ phase: 'ended', compatibility: currentCompatibility, cycleCount: newRoundCount + 1 })
+        partyClient.syncState({ phase: 'ended', compatibility: currentCompatibility, cycleCount: finalCycleCount })
       }
       setTimeout(() => setPhase('results'), 10000)
+    } else if (newRoundCount >= currentMaxCycles) {
+      // Only reachable if maxCycles changed or wrap-up was already run; end game
+      setLivePhase('ended')
+      if (partyClient) {
+        partyClient.syncState({ phase: 'ended', compatibility: currentCompatibility, cycleCount: newRoundCount })
+      }
+      setTimeout(() => setPhase('results'), 15000)
     } else {
       // Start new round - show round prompt interstitial (not dater question)
       setRoundPromptAnimationComplete(false)
