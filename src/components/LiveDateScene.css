@@ -2401,3 +2401,36 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Pre-generating conversation indicator */
+.pre-generating-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 32px;
+  background: linear-gradient(145deg, rgba(61, 34, 51, 0.95), rgba(45, 31, 38, 0.95));
+  border: 2px solid rgba(255, 77, 109, 0.4);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  margin: 16px auto;
+  max-width: 280px;
+}
+
+.pre-generating-indicator .loading-heart {
+  font-size: 2rem;
+  animation: heartbeat 1s ease-in-out infinite;
+}
+
+.pre-generating-indicator .loading-text {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  text-align: center;
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}

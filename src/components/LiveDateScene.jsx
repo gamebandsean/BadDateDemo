@@ -564,6 +564,11 @@ function LiveDateScene() {
         setAvatarEmotion(state.avatarEmotion)
       }
       
+      // Sync pre-generating state (non-host only)
+      if (state.isPreGenerating !== undefined && !isHost) {
+        setIsPreGenerating(state.isPreGenerating)
+      }
+      
       // Sync exposed values (for showing which attributes have been revealed)
       if (state.exposedValues && Array.isArray(state.exposedValues)) {
         useGameStore.setState({ exposedValues: state.exposedValues })
@@ -1804,44 +1809,35 @@ function LiveDateScene() {
     return sorted[0]?.text || null
   }
   
-  // Generate the full Phase 3 conversation flow
-  // Exchange 1: Avatar paraphrases winning answer (1x scoring)
-  // Exchange 2: Avatar continues conversation (0.25x scoring)
-  // Exchange 3: Avatar continues again (0.10x scoring)
-  // ONLY HOST should run this - non-hosts receive updates via PartyKit
-  const generateDateConversation = async (currentAttribute) => {
-    if (!isHost) {
-      console.log('Non-host skipping generateDateConversation')
-      return
-    }
-    if (isGenerating || !selectedDater) return
+  // State for pre-generated conversation
+  const [preGeneratedConvo, setPreGeneratedConvo] = useState(null)
+  const [isPreGenerating, setIsPreGenerating] = useState(false)
+  
+  // ============================================
+  // PHASE 1: PRE-GENERATE ALL CONVERSATION
+  // Front-load all LLM calls, store results
+  // ============================================
+  const preGenerateRoundConversation = async (currentAttribute) => {
+    if (!isHost || !selectedDater) return null
     
     const attrToUse = currentAttribute || latestAttribute
-    if (!attrToUse) {
-      console.log('No attribute to respond to')
-      return
+    if (!attrToUse) return null
+    
+    console.log('🎬 PRE-GENERATING round conversation...')
+    setIsPreGenerating(true)
+    
+    // Sync loading state to clients
+    if (partyClient) {
+      partyClient.syncState({ isPreGenerating: true })
     }
     
-    setIsGenerating(true)
-    
-    // Check if this is the final round - get FRESH values from store (not closures!)
     const currentCycleForCheck = useGameStore.getState().cycleCount
     const maxCyclesForCheck = useGameStore.getState().maxCycles
     const isFinalRound = currentCycleForCheck >= maxCyclesForCheck - 1
-    console.log(`🏁 Round ${currentCycleForCheck + 1}/${maxCyclesForCheck} - Final round: ${isFinalRound}`)
     
-    // Use the round prompt's question as context for the paraphrase
     const questionContext = currentRoundPrompt.subtitle || 'Tell me about yourself'
-    console.log('🎯 Round prompt question:', questionContext)
+    const framedAttribute = { answer: attrToUse, questionContext }
     
-    // Frame the attribute with question context for paraphrase mode
-    const framedAttribute = {
-      answer: attrToUse,
-      questionContext: questionContext
-    }
-    
-    // IMPORTANT: Create avatar with the new attribute included
-    // (React state might not have updated yet due to async nature)
     const avatarWithNewAttr = {
       ...avatar,
       attributes: avatar.attributes.includes(attrToUse) 
@@ -1849,492 +1845,281 @@ function LiveDateScene() {
         : [...avatar.attributes, attrToUse]
     }
     
-    console.log('🎯 generateDateConversation called with:', {
-      attrToUse,
-      avatarAttributes: avatarWithNewAttr.attributes,
-      hasNewAttr: avatarWithNewAttr.attributes.includes(attrToUse)
-    })
+    const getConversation = () => useGameStore.getState().dateConversation
+    let currentStreak = { ...reactionStreak }
+    
+    // Store all exchanges here
+    const exchanges = []
     
     try {
-      // Track current streak for escalation
-      let currentStreak = { ...reactionStreak }
-      
-      // Helper to check match, apply scoring, and update streak
-      // Returns the category so we can show feedback when Dater actually responds
-      const checkAndScore = async (avatarMessage, multiplier) => {
-        const matchResult = await checkAttributeMatch(avatarMessage, daterValues, selectedDater, null)
-        if (matchResult.category) {
-          console.log(`Attribute matched (${multiplier}x):`, matchResult)
-          const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
-          if (wasAlreadyExposed) {
-            triggerGlow(matchResult.shortLabel)
-          }
-          const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-          const change = Math.round(baseChanges[matchResult.category] * multiplier)
-          if (change !== 0) {
-            const newCompat = adjustCompatibility(change)
-            console.log(`Compatibility ${change > 0 ? '+' : ''}${change}% (${matchResult.category}: ${matchResult.shortLabel}, ${multiplier}x)`)
-            // Sync compatibility to PartyKit
-            if (partyClient) {
-              partyClient.syncState( { compatibility: newCompat })
-            }
-            
-            // Record this impact for end-of-game breakdown
-            setCompatibilityHistory(prev => [...prev, {
-              attribute: attrToUse,
-              topic: matchResult.shortLabel || matchResult.matchedValue,
-              category: matchResult.category,
-              change: change,
-              daterValue: matchResult.matchedValue,
-              reason: matchResult.reason || ''
-            }])
-          }
-          
-          // Update streak for escalating reactions
-          const isPositive = matchResult.category === 'loves' || matchResult.category === 'likes'
-          if (isPositive) {
-            currentStreak = { positive: currentStreak.positive + 1, negative: 0 }
-          } else {
-            currentStreak = { positive: 0, negative: currentStreak.negative + 1 }
-          }
-          console.log(`🔥 Reaction streak updated:`, currentStreak)
-        }
-        // Return the full matchResult so we can show WHY in the feedback
-        return matchResult
-      }
-      
-      // Helper to get fresh conversation history (React state may be stale in async function)
-      const getConversation = () => useGameStore.getState().dateConversation
-      
-      // ============ EXCHANGE 1: RANDOM - Either dater or avatar opens! ============
-      // 50% chance dater opens with her perspective, 50% avatar opens with the answer
+      // Decide who opens (50/50)
       const daterOpensFirst = Math.random() < 0.5
-      console.log('--- Exchange 1:', daterOpensFirst ? 'DATER opens the topic' : 'AVATAR opens with answer ---')
-      console.log('🎯 Winning answer:', attrToUse)
-      console.log('🎯 Question context:', questionContext)
+      console.log('📝 Pre-generating:', daterOpensFirst ? 'DATER opens' : 'AVATAR opens')
       
-      let avatarResponse1 = null
-      let sentimentHit1 = null
-      let matchResult1 = null
+      // ===== EXCHANGE 1 =====
+      let exchange1 = { daterOpener: null, avatarResponse: null, daterReaction: null, matchResult: null }
       
       if (daterOpensFirst) {
-        // ===== DATER OPENS: She shares her perspective first =====
-        console.log('🗣️ Dater opening the conversation...')
-        
-        // Dater shares her perspective on the topic
-        const daterOpener = await getDaterConversationOpener(
-          selectedDater,
-          avatarWithNewAttr,
-          getConversation().slice(-20),
-          currentRoundPrompt.title, // e.g., "ICK"
-          questionContext // e.g., "What's a small thing that turns you off?"
+        // Dater opens
+        exchange1.daterOpener = await getDaterConversationOpener(
+          selectedDater, avatarWithNewAttr, getConversation().slice(-20),
+          currentRoundPrompt.title, questionContext
         )
+        exchange1.daterOpenerMood = 'happy'
         
-        if (daterOpener) {
-          // Set dater emotion - she's sharing, so neutral/engaged
-          const daterOpenerMood = 'happy'
-          setDaterEmotion(daterOpenerMood)
-          setDaterBubble(daterOpener)
-          addDateMessage('dater', daterOpener)
-          await syncConversationToPartyKit(undefined, daterOpener, undefined)
-          if (partyClient && isHost) {
-            partyClient.syncState({ daterEmotion: daterOpenerMood })
-          }
-          
-          await new Promise(resolve => setTimeout(resolve, 2500))
-          
-          // Now avatar responds to the dater's opener AND shares their answer
+        if (exchange1.daterOpener) {
+          // Avatar responds to opener
           const avatarMood1 = getAvatarEmotionFromTraits()
-          
-          avatarResponse1 = await getAvatarDateResponse(
-            avatarWithNewAttr,
-            selectedDater,
-            [...getConversation().slice(-20), { speaker: 'dater', message: daterOpener }],
-            { answer: attrToUse, questionContext: questionContext, daterOpener: daterOpener },
-            'respond-to-opener', // New mode: respond to dater then share answer
-            avatarMood1
+          exchange1.avatarResponse = await getAvatarDateResponse(
+            avatarWithNewAttr, selectedDater,
+            [...getConversation().slice(-20), { speaker: 'dater', message: exchange1.daterOpener }],
+            { answer: attrToUse, questionContext, daterOpener: exchange1.daterOpener },
+            'respond-to-opener', avatarMood1
           )
-          
-          if (avatarResponse1) {
-            setAvatarEmotion(avatarMood1)
-            setAvatarBubble(avatarResponse1)
-            addDateMessage('avatar', avatarResponse1)
-            await syncConversationToPartyKit(avatarResponse1, undefined, undefined)
-            if (partyClient && isHost) {
-              partyClient.syncState({ avatarEmotion: avatarMood1 })
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 2500))
-            
-            // Check sentiment for avatar's response
-            matchResult1 = await checkAttributeMatch(avatarResponse1, daterValues, selectedDater, null)
-            sentimentHit1 = matchResult1.category || null
-            console.log('🎯 Sentiment detected from avatar response:', sentimentHit1)
-            
-            // Dater reacts to avatar's response
-            const daterReaction1 = await getDaterDateResponse(
-              selectedDater,
-              avatarWithNewAttr,
-              getConversation().slice(-20),
-              attrToUse,
-              sentimentHit1,
-              reactionStreak,
-              isFinalRound
-            )
-            
-            if (daterReaction1) {
-              const daterMood = getDaterEmotionFromSentiment(sentimentHit1)
-              setDaterEmotion(daterMood)
-              setDaterBubble(daterReaction1)
-              addDateMessage('dater', daterReaction1)
-              await syncConversationToPartyKit(undefined, daterReaction1, undefined)
-              if (partyClient && isHost) {
-                partyClient.syncState({ daterEmotion: daterMood })
-              }
-              
-              await new Promise(resolve => setTimeout(resolve, 800))
-              
-              if (sentimentHit1) {
-                showReactionFeedback(sentimentHit1, matchResult1.matchedValue, matchResult1.shortLabel)
-                
-                // Apply scoring for dater-opens path
-                const wasAlreadyExposed = exposeValue(matchResult1.category, matchResult1.matchedValue, matchResult1.shortLabel)
-                if (wasAlreadyExposed) {
-                  triggerGlow(matchResult1.shortLabel)
-                }
-                const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-                const change = Math.round(baseChanges[sentimentHit1] * 1) // Full scoring
-                if (change !== 0) {
-                  const newCompat = adjustCompatibility(change)
-                  if (partyClient) {
-                    partyClient.syncState({ compatibility: newCompat })
-                  }
-                  setCompatibilityHistory(prev => [...prev, {
-                    attribute: attrToUse,
-                    topic: matchResult1.shortLabel || matchResult1.matchedValue,
-                    category: sentimentHit1,
-                    change: change,
-                    daterValue: matchResult1.matchedValue,
-                    reason: matchResult1.reason || ''
-                  }])
-                }
-                // Update streak
-                const isPositive = sentimentHit1 === 'loves' || sentimentHit1 === 'likes'
-                if (isPositive) {
-                  currentStreak = { positive: currentStreak.positive + 1, negative: 0 }
-                } else {
-                  currentStreak = { positive: 0, negative: currentStreak.negative + 1 }
-                }
-              }
-              await syncConversationToPartyKit(undefined, undefined, true)
-            }
-          }
+          exchange1.avatarMood = avatarMood1
         }
       } else {
-        // ===== AVATAR OPENS: Original behavior - avatar paraphrases winning answer =====
+        // Avatar opens
         const avatarMood1 = getAvatarEmotionFromTraits()
-        
-        avatarResponse1 = await getAvatarDateResponse(
-          avatarWithNewAttr,
-          selectedDater,
-          getConversation().slice(-20),
-          framedAttribute, // Contains answer + questionContext
-          'paraphrase', // Use paraphrase mode
-          avatarMood1 // Pass current emotional state
+        exchange1.avatarResponse = await getAvatarDateResponse(
+          avatarWithNewAttr, selectedDater, getConversation().slice(-20),
+          framedAttribute, 'paraphrase', avatarMood1
         )
-        
-        console.log('🔗 Avatar paraphrase:', avatarResponse1?.substring(0, 50))
-        
-        if (avatarResponse1) {
-          const avatarMood = getAvatarEmotionFromTraits()
-          setAvatarEmotion(avatarMood)
-          setAvatarBubble(avatarResponse1)
-          addDateMessage('avatar', avatarResponse1)
-          await syncConversationToPartyKit(avatarResponse1, undefined, undefined)
-          if (partyClient && isHost) {
-            partyClient.syncState({ avatarEmotion: avatarMood })
-          }
-          
-          await new Promise(resolve => setTimeout(resolve, 2500))
-          
-          // Check sentiment FIRST before generating dater's response
-          matchResult1 = await checkAttributeMatch(avatarResponse1, daterValues, selectedDater, null)
-          sentimentHit1 = matchResult1.category || null
-          console.log('🎯 Sentiment detected BEFORE dater response:', sentimentHit1)
-          
-          // Now generate dater's response WITH the sentiment knowledge
-          const daterReaction1 = await getDaterDateResponse(
-            selectedDater,
-            avatarWithNewAttr,
-            [...getConversation().slice(-20), { speaker: 'avatar', message: avatarResponse1 }],
-            attrToUse, // The original attribute
-            sentimentHit1, // Pass the sentiment so dater knows how to react!
-            reactionStreak,
-            isFinalRound
-          )
-          
-          if (daterReaction1) {
-            // Set dater's emotion based on sentiment
-            const daterMood = getDaterEmotionFromSentiment(sentimentHit1)
-            setDaterEmotion(daterMood)
-            setDaterBubble(daterReaction1)
-            addDateMessage('dater', daterReaction1)
-            await syncConversationToPartyKit(undefined, daterReaction1, undefined)
-            if (partyClient && isHost) {
-              partyClient.syncState({ daterEmotion: daterMood })
-            }
-            
-            // Wait for Maya's bubble to appear
-            await new Promise(resolve => setTimeout(resolve, 800))
-            
-            // NOW show reaction feedback - after Maya has started speaking
-            if (sentimentHit1) {
-              showReactionFeedback(sentimentHit1, matchResult1.matchedValue, matchResult1.shortLabel)
-            
-            // Apply scoring
-            const wasAlreadyExposed = exposeValue(matchResult1.category, matchResult1.matchedValue, matchResult1.shortLabel)
-            if (wasAlreadyExposed) {
-              triggerGlow(matchResult1.shortLabel)
-            }
-            const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-            const change = Math.round(baseChanges[sentimentHit1] * 1) // Full scoring
-            if (change !== 0) {
-              const newCompat = adjustCompatibility(change)
-              if (partyClient) {
-                partyClient.syncState({ compatibility: newCompat })
-              }
-              setCompatibilityHistory(prev => [...prev, {
-                attribute: attrToUse,
-                topic: matchResult1.shortLabel || matchResult1.matchedValue,
-                category: sentimentHit1,
-                change: change,
-                daterValue: matchResult1.matchedValue,
-                reason: matchResult1.reason || ''
-              }])
-            }
-            // Update streak
-            const isPositive = sentimentHit1 === 'loves' || sentimentHit1 === 'likes'
-            if (isPositive) {
-              currentStreak = { positive: currentStreak.positive + 1, negative: 0 }
-            } else {
-              currentStreak = { positive: 0, negative: currentStreak.negative + 1 }
-            }
-          }
-          await syncConversationToPartyKit(undefined, undefined, true)
-        }
-      } // End of avatar-opens else block
-      
-      // ============ EXCHANGE 2 AND 3 RUN FOR BOTH PATHS ============
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      
-      // ============ EXCHANGE 2: Avatar responds to Dater's reaction (0.25x scoring) ============
-        console.log('--- Exchange 2: Avatar responds to Dater reaction ---')
-        
-        // Avatar's mood is affected by how dater reacted in exchange 1
-        const avatarMood2 = getAvatarEmotionFromContext(sentimentHit1)
-        
-        const avatarResponse2 = await getAvatarDateResponse(
-          avatarWithNewAttr,
-          selectedDater,
-          getConversation().slice(-20), // Keep more history for better memory
-          attrToUse, // Pass the latest attribute for context
-          'react', // Mode: responding to what the Dater just said
-          avatarMood2 // Pass current emotional state
-        )
-        
-        if (avatarResponse2) {
-          // Set avatar emotion for display
-          setAvatarEmotion(avatarMood2)
-          setAvatarBubble(avatarResponse2)
-          addDateMessage('avatar', avatarResponse2)
-          await syncConversationToPartyKit(avatarResponse2, undefined, undefined)
-          if (partyClient && isHost) {
-            partyClient.syncState({ avatarEmotion: avatarMood2 })
-          }
-          
-          await new Promise(resolve => setTimeout(resolve, 2500))
-          
-          // Check sentiment FIRST before generating dater's response
-          const matchResult2 = await checkAttributeMatch(avatarResponse2, daterValues, selectedDater, null)
-          const sentimentHit2 = matchResult2.category || null
-          console.log('🎯 Exchange 2 - Sentiment detected BEFORE dater response:', sentimentHit2, matchResult2.shortLabel)
-          
-          // Now generate dater's response WITH sentiment knowledge
-          const daterReaction2 = await getDaterDateResponse(
-            selectedDater,
-            avatarWithNewAttr,
-            getConversation().slice(-20),
-            matchResult2.matchedValue, // Pass what triggered the reaction
-            sentimentHit2, // Pass the sentiment so dater knows how to react!
-            currentStreak,
-            isFinalRound
-          )
-          
-          if (daterReaction2) {
-            // Set dater's emotion based on sentiment
-            const daterMood2 = getDaterEmotionFromSentiment(sentimentHit2)
-            setDaterEmotion(daterMood2)
-            setDaterBubble(daterReaction2)
-            addDateMessage('dater', daterReaction2)
-            await syncConversationToPartyKit(undefined, daterReaction2, undefined)
-            if (partyClient && isHost) {
-              partyClient.syncState({ daterEmotion: daterMood2 })
-            }
-            
-            // Wait for Maya's bubble to appear
-            await new Promise(resolve => setTimeout(resolve, 800))
-            
-            // NOW show reaction feedback - after Maya has started speaking
-            if (sentimentHit2) {
-              showReactionFeedback(sentimentHit2, matchResult2.matchedValue, matchResult2.shortLabel)
-              
-              // Apply scoring
-              const wasAlreadyExposed = exposeValue(matchResult2.category, matchResult2.matchedValue, matchResult2.shortLabel)
-              if (wasAlreadyExposed) {
-                triggerGlow(matchResult2.shortLabel)
-              }
-              const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-              const change = Math.round(baseChanges[sentimentHit2] * 0.25) // 25% scoring
-              if (change !== 0) {
-                const newCompat = adjustCompatibility(change)
-                if (partyClient) {
-                  partyClient.syncState({ compatibility: newCompat })
-                }
-                setCompatibilityHistory(prev => [...prev, {
-                  attribute: avatarResponse2,
-                  topic: matchResult2.shortLabel || matchResult2.matchedValue,
-                  category: sentimentHit2,
-                  change: change,
-                  daterValue: matchResult2.matchedValue,
-                  reason: matchResult2.reason || ''
-                }])
-              }
-              // Update streak
-              const isPositive = sentimentHit2 === 'loves' || sentimentHit2 === 'likes'
-              if (isPositive) {
-                currentStreak = { positive: currentStreak.positive + 1, negative: 0 }
-              } else {
-                currentStreak = { positive: 0, negative: currentStreak.negative + 1 }
-              }
-            }
-            await syncConversationToPartyKit(undefined, undefined, true)
-          }
-          
-          await new Promise(resolve => setTimeout(resolve, 3000))
-          
-          // ============ EXCHANGE 3: Avatar connects all traits (0.10x scoring) ============
-          console.log('--- Exchange 3: Avatar connects all previous traits ---')
-          
-          // Avatar's mood is affected by how dater reacted in exchange 2
-          const avatarMood3 = getAvatarEmotionFromContext(sentimentHit2)
-          
-          const avatarResponse3 = await getAvatarDateResponse(
-            avatarWithNewAttr,
-            selectedDater,
-            getConversation().slice(-20), // Keep more history for better memory
-            attrToUse, // Pass latest attribute for context
-            'connect', // Mode: draw connections between ALL traits
-            avatarMood3 // Pass current emotional state
-          )
-          
-          if (avatarResponse3) {
-            // Set avatar emotion for display
-            setAvatarEmotion(avatarMood3)
-            setAvatarBubble(avatarResponse3)
-            addDateMessage('avatar', avatarResponse3)
-            await syncConversationToPartyKit(avatarResponse3, undefined, undefined)
-            if (partyClient && isHost) {
-              partyClient.syncState({ avatarEmotion: avatarMood3 })
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 2500))
-            
-            // Check sentiment FIRST before generating dater's response
-            const matchResult3 = await checkAttributeMatch(avatarResponse3, daterValues, selectedDater, null)
-            const sentimentHit3 = matchResult3.category || null
-            console.log('🎯 Exchange 3 - Sentiment detected BEFORE dater response:', sentimentHit3, matchResult3.shortLabel)
-            
-            // Now generate dater's response WITH sentiment knowledge
-            const daterReaction3 = await getDaterDateResponse(
-              selectedDater,
-              avatarWithNewAttr,
-              getConversation().slice(-20),
-              matchResult3.matchedValue, // Pass what triggered the reaction
-              sentimentHit3, // Pass the sentiment so dater knows how to react!
-              currentStreak,
-              isFinalRound
-            )
-            
-            if (daterReaction3) {
-              // Set dater's emotion based on sentiment
-              const daterMood3 = getDaterEmotionFromSentiment(sentimentHit3)
-              setDaterEmotion(daterMood3)
-              setDaterBubble(daterReaction3)
-              addDateMessage('dater', daterReaction3)
-              await syncConversationToPartyKit(undefined, daterReaction3, undefined)
-              if (partyClient && isHost) {
-                partyClient.syncState({ daterEmotion: daterMood3 })
-              }
-              
-              // Wait for Maya's bubble to appear
-              await new Promise(resolve => setTimeout(resolve, 800))
-              
-              // NOW show reaction feedback - after Maya has started speaking
-              if (sentimentHit3) {
-                showReactionFeedback(sentimentHit3, matchResult3.matchedValue, matchResult3.shortLabel)
-                
-                // Apply scoring
-                const wasAlreadyExposed = exposeValue(matchResult3.category, matchResult3.matchedValue, matchResult3.shortLabel)
-                if (wasAlreadyExposed) {
-                  triggerGlow(matchResult3.shortLabel)
-                }
-                const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-                const change = Math.round(baseChanges[sentimentHit3] * 0.10) // 10% scoring
-                if (change !== 0) {
-                  const newCompat = adjustCompatibility(change)
-                  if (partyClient) {
-                    partyClient.syncState({ compatibility: newCompat })
-                  }
-                  setCompatibilityHistory(prev => [...prev, {
-                    attribute: avatarResponse3,
-                    topic: matchResult3.shortLabel || matchResult3.matchedValue,
-                    category: sentimentHit3,
-                    change: change,
-                    daterValue: matchResult3.matchedValue,
-                    reason: matchResult3.reason || ''
-                  }])
-                }
-                // Update streak
-                const isPositive = sentimentHit3 === 'loves' || sentimentHit3 === 'likes'
-                if (isPositive) {
-                  currentStreak = { positive: currentStreak.positive + 1, negative: 0 }
-                } else {
-                  currentStreak = { positive: 0, negative: currentStreak.negative + 1 }
-                }
-              }
-              await syncConversationToPartyKit(undefined, undefined, true)
-            }
-          }
-        }
+        exchange1.avatarMood = avatarMood1
       }
       
-      // Save the updated streak for next round
-      setReactionStreak(currentStreak)
-      console.log('🔥 Final streak for this round:', currentStreak)
+      // Check sentiment for avatar's response
+      if (exchange1.avatarResponse) {
+        exchange1.matchResult = await checkAttributeMatch(exchange1.avatarResponse, daterValues, selectedDater, null)
+        const sentimentHit1 = exchange1.matchResult.category || null
+        
+        // Build conversation history for next call
+        const convoWithExchange1 = [...getConversation().slice(-20)]
+        if (exchange1.daterOpener) convoWithExchange1.push({ speaker: 'dater', message: exchange1.daterOpener })
+        if (exchange1.avatarResponse) convoWithExchange1.push({ speaker: 'avatar', message: exchange1.avatarResponse })
+        
+        // Dater reacts to avatar
+        exchange1.daterReaction = await getDaterDateResponse(
+          selectedDater, avatarWithNewAttr, convoWithExchange1,
+          attrToUse, sentimentHit1, currentStreak, isFinalRound
+        )
+        exchange1.daterMood = getDaterEmotionFromSentiment(sentimentHit1)
+        exchange1.sentimentHit = sentimentHit1
+        exchange1.scoringMultiplier = 1.0
+        
+        // Update streak for next exchange
+        if (sentimentHit1) {
+          const isPositive = sentimentHit1 === 'loves' || sentimentHit1 === 'likes'
+          if (isPositive) currentStreak = { positive: currentStreak.positive + 1, negative: 0 }
+          else currentStreak = { positive: 0, negative: currentStreak.negative + 1 }
+        }
+      }
+      exchanges.push(exchange1)
       
-      // Wait for all audio to finish before transitioning
-      console.log('⏳ Waiting for audio to complete...')
-      await waitForAllAudio()
-      console.log('✅ Audio complete')
+      // ===== EXCHANGE 2 =====
+      const convoAfterEx1 = [...getConversation().slice(-20)]
+      if (exchange1.daterOpener) convoAfterEx1.push({ speaker: 'dater', message: exchange1.daterOpener })
+      if (exchange1.avatarResponse) convoAfterEx1.push({ speaker: 'avatar', message: exchange1.avatarResponse })
+      if (exchange1.daterReaction) convoAfterEx1.push({ speaker: 'dater', message: exchange1.daterReaction })
       
-      // After all 3 exchanges, give players 5 seconds to read the conversation before transitioning
-      // Reading pause before next phase
-      console.log('💬 Conversation complete - 5 second reading pause before next phase')
-      await new Promise(resolve => setTimeout(resolve, 5000))
-      handleRoundComplete()
+      const avatarMood2 = getAvatarEmotionFromContext(exchange1.sentimentHit)
+      const avatarResponse2 = await getAvatarDateResponse(
+        avatarWithNewAttr, selectedDater, convoAfterEx1,
+        attrToUse, 'react', avatarMood2
+      )
+      
+      let exchange2 = { avatarResponse: avatarResponse2, avatarMood: avatarMood2, daterReaction: null, matchResult: null }
+      
+      if (avatarResponse2) {
+        exchange2.matchResult = await checkAttributeMatch(avatarResponse2, daterValues, selectedDater, null)
+        const sentimentHit2 = exchange2.matchResult.category || null
+        
+        const convoWithEx2 = [...convoAfterEx1, { speaker: 'avatar', message: avatarResponse2 }]
+        exchange2.daterReaction = await getDaterDateResponse(
+          selectedDater, avatarWithNewAttr, convoWithEx2,
+          exchange2.matchResult.matchedValue, sentimentHit2, currentStreak, isFinalRound
+        )
+        exchange2.daterMood = getDaterEmotionFromSentiment(sentimentHit2)
+        exchange2.sentimentHit = sentimentHit2
+        exchange2.scoringMultiplier = 0.25
+        
+        if (sentimentHit2) {
+          const isPositive = sentimentHit2 === 'loves' || sentimentHit2 === 'likes'
+          if (isPositive) currentStreak = { positive: currentStreak.positive + 1, negative: 0 }
+          else currentStreak = { positive: 0, negative: currentStreak.negative + 1 }
+        }
+      }
+      exchanges.push(exchange2)
+      
+      // ===== EXCHANGE 3 =====
+      const convoAfterEx2 = [...convoAfterEx1]
+      if (exchange2.avatarResponse) convoAfterEx2.push({ speaker: 'avatar', message: exchange2.avatarResponse })
+      if (exchange2.daterReaction) convoAfterEx2.push({ speaker: 'dater', message: exchange2.daterReaction })
+      
+      const avatarMood3 = getAvatarEmotionFromContext(exchange2.sentimentHit)
+      const avatarResponse3 = await getAvatarDateResponse(
+        avatarWithNewAttr, selectedDater, convoAfterEx2,
+        attrToUse, 'connect', avatarMood3
+      )
+      
+      let exchange3 = { avatarResponse: avatarResponse3, avatarMood: avatarMood3, daterReaction: null, matchResult: null }
+      
+      if (avatarResponse3) {
+        exchange3.matchResult = await checkAttributeMatch(avatarResponse3, daterValues, selectedDater, null)
+        const sentimentHit3 = exchange3.matchResult.category || null
+        
+        const convoWithEx3 = [...convoAfterEx2, { speaker: 'avatar', message: avatarResponse3 }]
+        exchange3.daterReaction = await getDaterDateResponse(
+          selectedDater, avatarWithNewAttr, convoWithEx3,
+          exchange3.matchResult.matchedValue, sentimentHit3, currentStreak, isFinalRound
+        )
+        exchange3.daterMood = getDaterEmotionFromSentiment(sentimentHit3)
+        exchange3.sentimentHit = sentimentHit3
+        exchange3.scoringMultiplier = 0.10
+      }
+      exchanges.push(exchange3)
+      
+      console.log('✅ Pre-generation complete! Exchanges:', exchanges.length)
+      
+      const preGenData = {
+        attribute: attrToUse,
+        isFinalRound,
+        exchanges,
+        avatarWithNewAttr
+      }
+      
+      setIsPreGenerating(false)
+      if (partyClient) {
+        partyClient.syncState({ isPreGenerating: false, preGeneratedConvo: preGenData })
+      }
+      
+      return preGenData
       
     } catch (error) {
-      console.error('Error generating conversation:', error)
+      console.error('Pre-generation error:', error)
+      setIsPreGenerating(false)
+      if (partyClient) partyClient.syncState({ isPreGenerating: false })
+      return null
+    }
+  }
+  
+  // ============================================
+  // PHASE 2: PLAYBACK PRE-GENERATED CONVERSATION
+  // Smooth, natural timing - no LLM waits
+  // ============================================
+  const playbackConversation = async (preGenData) => {
+    if (!preGenData || !isHost) return
+    
+    console.log('▶️ PLAYING BACK pre-generated conversation...')
+    const { attribute, exchanges, avatarWithNewAttr } = preGenData
+    
+    for (let i = 0; i < exchanges.length; i++) {
+      const exchange = exchanges[i]
+      console.log(`▶️ Playing exchange ${i + 1}/${exchanges.length}`)
+      
+      // Play dater opener (only exchange 1 might have this)
+      if (exchange.daterOpener) {
+        setDaterEmotion(exchange.daterOpenerMood || 'happy')
+        setDaterBubble(exchange.daterOpener)
+        addDateMessage('dater', exchange.daterOpener)
+        await syncConversationToPartyKit(undefined, exchange.daterOpener, undefined)
+        if (partyClient) partyClient.syncState({ daterEmotion: exchange.daterOpenerMood || 'happy' })
+        await new Promise(r => setTimeout(r, 2500))
+      }
+      
+      // Play avatar response
+      if (exchange.avatarResponse) {
+        setAvatarEmotion(exchange.avatarMood || 'neutral')
+        setAvatarBubble(exchange.avatarResponse)
+        addDateMessage('avatar', exchange.avatarResponse)
+        await syncConversationToPartyKit(exchange.avatarResponse, undefined, undefined)
+        if (partyClient) partyClient.syncState({ avatarEmotion: exchange.avatarMood || 'neutral' })
+        await new Promise(r => setTimeout(r, 2500))
+      }
+      
+      // Play dater reaction
+      if (exchange.daterReaction) {
+        setDaterEmotion(exchange.daterMood || 'neutral')
+        setDaterBubble(exchange.daterReaction)
+        addDateMessage('dater', exchange.daterReaction)
+        await syncConversationToPartyKit(undefined, exchange.daterReaction, undefined)
+        if (partyClient) partyClient.syncState({ daterEmotion: exchange.daterMood || 'neutral' })
+        
+        // Show reaction feedback and apply scoring
+        if (exchange.sentimentHit && exchange.matchResult) {
+          await new Promise(r => setTimeout(r, 800))
+          showReactionFeedback(exchange.sentimentHit, exchange.matchResult.matchedValue, exchange.matchResult.shortLabel)
+          
+          // Apply scoring
+          const wasAlreadyExposed = exposeValue(exchange.matchResult.category, exchange.matchResult.matchedValue, exchange.matchResult.shortLabel)
+          if (wasAlreadyExposed) triggerGlow(exchange.matchResult.shortLabel)
+          
+          const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
+          const change = Math.round(baseChanges[exchange.sentimentHit] * (exchange.scoringMultiplier || 1))
+          if (change !== 0) {
+            const newCompat = adjustCompatibility(change)
+            if (partyClient) partyClient.syncState({ compatibility: newCompat })
+            setCompatibilityHistory(prev => [...prev, {
+              attribute,
+              topic: exchange.matchResult.shortLabel || exchange.matchResult.matchedValue,
+              category: exchange.sentimentHit,
+              change,
+              daterValue: exchange.matchResult.matchedValue,
+              reason: exchange.matchResult.reason || ''
+            }])
+          }
+        }
+        
+        await syncConversationToPartyKit(undefined, undefined, true)
+        
+        // Pause between exchanges
+        if (i < exchanges.length - 1) {
+          await new Promise(r => setTimeout(r, 2000))
+        }
+      }
+    }
+    
+    console.log('✅ Playback complete!')
+  }
+  
+  // ============================================
+  // MAIN CONVERSATION FUNCTION
+  // Pre-generates then plays back
+  // ============================================
+  const generateDateConversation = async (currentAttribute) => {
+    if (!isHost) {
+      console.log('Non-host skipping generateDateConversation')
+      return
+    }
+    if (isGenerating || !selectedDater) return
+    
+    setIsGenerating(true)
+    
+    try {
+      // PHASE 1: Pre-generate all conversation (front-load LLM calls)
+      const preGenData = await preGenerateRoundConversation(currentAttribute)
+      
+      if (preGenData) {
+        // PHASE 2: Playback smoothly
+        await playbackConversation(preGenData)
+      }
+      
+      // Handle round completion
+      const currentCycleForCheck = useGameStore.getState().cycleCount
+      const maxCyclesForCheck = useGameStore.getState().maxCycles
+      const isFinalRound = currentCycleForCheck >= maxCyclesForCheck - 1
+      
+      if (isFinalRound) {
+        await new Promise(r => setTimeout(r, 2000))
+        const currentCompatibility = useGameStore.getState().compatibility
+        await generateFinalSummary(currentCompatibility)
+      }
+      
+      await handleRoundComplete()
+      
+    } catch (error) {
+      console.error('Conversation error:', error)
+      setDaterBubble("Well, that was... something.")
     }
     
     setIsGenerating(false)
@@ -4341,6 +4126,21 @@ Give your final thoughts on this dramatic moment.`
                 <span className="winner-label">Winner!</span>
                 <span className="winner-text">{winnerText}</span>
               </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* Pre-generation Loading Indicator */}
+        <AnimatePresence>
+          {isPreGenerating && (
+            <motion.div
+              className="pre-generating-indicator"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <span className="loading-heart">💕</span>
+              <span className="loading-text">The conversation is heating up...</span>
             </motion.div>
           )}
         </AnimatePresence>
