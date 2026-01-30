@@ -2238,11 +2238,7 @@ function LiveDateScene() {
       const maxCyclesForCheck = useGameStore.getState().maxCycles
       const isFinalRound = currentCycleForCheck >= maxCyclesForCheck - 1
       
-      if (isFinalRound) {
-        await new Promise(r => setTimeout(r, 2000))
-        const currentCompatibility = useGameStore.getState().compatibility
-        await generateFinalSummary(currentCompatibility)
-      }
+      // Note: Wrap-up round is handled separately after Round 5 completes
       
       await handleRoundComplete()
       
@@ -2254,55 +2250,68 @@ function LiveDateScene() {
     setIsGenerating(false)
   }
   
-  // Generate Maya's final summary statement based on compatibility
-  const generateFinalSummary = async (compatibilityScore) => {
+  // ============================================
+  // ROUND 6: WRAP-UP ROUND
+  // No questions - just final conversation
+  // ============================================
+  const generateWrapUpRound = async (compatibilityScore) => {
     const daterName = selectedDater?.name || 'Maya'
     const avatarName = avatar?.name || 'you'
+    const conversationHistory = getConversation()
+    const avatarAttributes = avatar?.attributes || []
     
-    // Determine sentiment based on compatibility
-    let sentiment, instruction
+    console.log('🎬 Starting Wrap-Up Round (Round 6)')
+    
+    // Determine sentiment tier based on compatibility
+    let sentimentTier, avatarMood, daterMood
     if (compatibilityScore >= 80) {
-      sentiment = 'very positive'
-      instruction = `You had an AMAZING time! You're totally smitten. Hint that you want to see them again, maybe even tonight. Be flirty and enthusiastic.`
+      sentimentTier = 'falling_in_love'
+      avatarMood = 'excited'
+      daterMood = 'excited'
     } else if (compatibilityScore >= 60) {
-      sentiment = 'positive'
-      instruction = `You had a good time overall. You'd be open to another date. Be warm but not over-the-top.`
+      sentimentTier = 'want_another_date'
+      avatarMood = 'happy'
+      daterMood = 'happy'
     } else if (compatibilityScore >= 40) {
-      sentiment = 'mixed'
-      instruction = `You're on the fence. There were some good moments but also some concerns. Be polite but noncommittal about future plans.`
+      sentimentTier = 'uncertain'
+      avatarMood = 'neutral'
+      daterMood = 'neutral'
     } else if (compatibilityScore >= 20) {
-      sentiment = 'negative'  
-      instruction = `This date was rough. You're trying to be polite but you're definitely not feeling it. Make a polite excuse to wrap things up.`
+      sentimentTier = 'no_second_date'
+      avatarMood = 'uncomfortable'
+      daterMood = 'uncomfortable'
     } else {
-      sentiment = 'very negative'
-      instruction = `This was a DISASTER. You can barely hide how ready you are to leave. Be clearly done with this date while maintaining basic politeness.`
+      sentimentTier = 'deleting_number'
+      avatarMood = 'worried'
+      daterMood = 'horrified'
     }
     
-    const prompt = `You are ${daterName} wrapping up a first date with ${avatarName}.
+    try {
+      // ===== EXCHANGE 1: Avatar wraps up and asks for another date =====
+      console.log('🎭 Wrap-Up Exchange 1: Avatar summarizes and asks for another date')
+      
+      const avatarWrapUpPrompt = `You are ${avatarName} wrapping up a first date with ${daterName}.
 
-COMPATIBILITY LEVEL: ${compatibilityScore}% (${sentiment})
+YOUR TRAITS REVEALED DURING THE DATE: ${avatarAttributes.join(', ')}
 
-${instruction}
+🎯 YOUR TASK: Give a casual wrap-up of how you think the date went and ask if they'd want to do this again.
 
 RULES:
-- This is your FINAL statement to close out the date
-- Summarize how you felt WITHOUT mentioning percentages or scores
-- Reference 1-2 specific things from the date if possible (from the conversation)
-- Keep it SHORT - 1-2 sentences MAX
+- Reference 1-2 specific things you said or that happened during the date
+- Be genuine about how you think it went (you can sense the vibe)
+- Casually ask about seeing them again - not too formal, not too desperate
+- Keep it to 2-3 sentences MAX
 - NO action descriptors (*smiles*, etc) - dialogue only
-- End on a note that matches the sentiment: hopeful, neutral, or relieved it's over
+- Sound natural, like you're actually on a date
 
-Examples for different sentiments:
-- Very Positive: "Honestly? This was the best date I've had in forever. When can I see you again?"
-- Positive: "Well, this was really nice. We should definitely do this again sometime."
-- Mixed: "So... this was interesting. I'll, um, think about it."
-- Negative: "Okay well, I should probably get going. It was... nice meeting you."
-- Very Negative: "Yeah, I'm gonna call it here. Good luck with... everything."
+EXAMPLES:
+- "So... I feel like this went pretty well? I mean, you didn't run away when I mentioned [trait]. Would you maybe want to grab coffee sometime?"
+- "This was fun! Even if I did probably overshare about [trait]. So... any chance I could see you again?"
+- "I had a really good time tonight. What do you think - should we do this again?"
 
-Generate ${daterName}'s final closing statement:`
+Generate ${avatarName}'s wrap-up statement:`
 
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const avatarResponse = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2312,32 +2321,178 @@ Generate ${daterName}'s final closing statement:`
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 150,
-          messages: [{ role: 'user', content: prompt }]
+          max_tokens: 200,
+          messages: [{ role: 'user', content: avatarWrapUpPrompt }]
         })
       })
       
-      const data = await response.json()
-      const finalStatement = data.content?.[0]?.text?.trim() || ''
+      const avatarData = await avatarResponse.json()
+      const avatarWrapUp = avatarData.content?.[0]?.text?.trim() || "So... would you want to do this again sometime?"
       
-      if (finalStatement) {
-        console.log(`🎬 Maya's final summary (${compatibilityScore}%):`, finalStatement)
-        
-        // Show Maya's final statement
-        const daterMood = compatibilityScore >= 60 ? 'happy' : compatibilityScore >= 40 ? 'neutral' : 'uncomfortable'
-        setDaterEmotion(daterMood)
-        setDaterBubble(finalStatement)
-        addDateMessage('dater', finalStatement)
-        await syncConversationToPartyKit(undefined, finalStatement, undefined)
-        
-        // Speak the final statement
-        await speak(finalStatement, 'dater')
-        
-        // Give players time to read/hear it
-        await new Promise(resolve => setTimeout(resolve, 3000))
+      // Show avatar wrap-up
+      if (ttsEnabled) setAvatarBubbleReady(false)
+      setAvatarEmotion(avatarMood)
+      setAvatarBubble(avatarWrapUp)
+      addDateMessage('avatar', avatarWrapUp)
+      await syncConversationToPartyKit(avatarWrapUp, undefined, undefined)
+      if (partyClient) partyClient.syncState({ avatarEmotion: avatarMood })
+      
+      console.log(`💬 Avatar wrap-up: "${avatarWrapUp}"`)
+      await waitForAllAudio()
+      await new Promise(r => setTimeout(r, 1000))
+      
+      // ===== EXCHANGE 2: Dater gives honest assessment =====
+      console.log('🎭 Wrap-Up Exchange 2: Dater gives honest assessment')
+      
+      // Build summary of what avatar said for dater to reference
+      const recentConvo = conversationHistory.slice(-10).map(m => `${m.speaker}: ${m.message}`).join('\n')
+      
+      const daterAssessmentPrompt = `You are ${daterName} giving your honest assessment after a first date with ${avatarName}.
+
+COMPATIBILITY: ${compatibilityScore}%
+OVERALL FEELING: ${sentimentTier.replace(/_/g, ' ')}
+
+THINGS ${avatarName.toUpperCase()} REVEALED ABOUT THEMSELVES:
+${avatarAttributes.map(a => `- ${a}`).join('\n')}
+
+RECENT CONVERSATION:
+${recentConvo}
+
+🎯 YOUR TASK: Give an honest 2-3 sentence assessment of what you thought about ${avatarName} based on everything they said.
+
+RULES:
+- Be HONEST about how you feel - this matches your ${compatibilityScore}% compatibility
+- Reference specific things they said or traits they revealed
+- Show your genuine reaction - good or bad
+- Keep it to 2-3 sentences exactly
+- NO action descriptors (*smiles*, etc) - dialogue only
+- Don't mention percentages or scores
+
+${sentimentTier === 'falling_in_love' ? 'You are TOTALLY SMITTEN. You loved everything about them!' :
+  sentimentTier === 'want_another_date' ? 'You had a great time and would definitely see them again.' :
+  sentimentTier === 'uncertain' ? 'You have mixed feelings - some good, some concerning.' :
+  sentimentTier === 'no_second_date' ? 'You are NOT feeling it. Be polite but honest.' :
+  'This was a DISASTER. You are ready to RUN.'}
+
+EXAMPLES BY SENTIMENT:
+- Falling in love: "Honestly? I haven't connected with someone like this in... I don't even know how long. The way you talked about [trait] - I just get you."
+- Want another date: "You know what? I really enjoyed this. You're funny, you're honest about [trait], and I actually want to know more."
+- Uncertain: "So... there were definitely moments I was into. But then you mentioned [trait] and I'm just... not sure."
+- No second date: "Look, you seem nice, but I don't think we're really compatible. The [trait] thing kind of sealed it for me."
+- Deleting number: "I'm gonna be honest - that was a lot. Like, [trait]? I don't even know what to say to that."
+
+Generate ${daterName}'s honest assessment:`
+
+      const daterAssessResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 200,
+          messages: [{ role: 'user', content: daterAssessmentPrompt }]
+        })
+      })
+      
+      const daterAssessData = await daterAssessResponse.json()
+      const daterAssessment = daterAssessData.content?.[0]?.text?.trim() || "Well... that was certainly something."
+      
+      // Show dater assessment
+      if (ttsEnabled) setDaterBubbleReady(false)
+      setDaterEmotion(daterMood)
+      setDaterBubble(daterAssessment)
+      addDateMessage('dater', daterAssessment)
+      await syncConversationToPartyKit(undefined, daterAssessment, undefined)
+      if (partyClient) partyClient.syncState({ daterEmotion: daterMood })
+      
+      console.log(`💬 Dater assessment: "${daterAssessment}"`)
+      await waitForAllAudio()
+      await new Promise(r => setTimeout(r, 1000))
+      
+      // ===== EXCHANGE 3: Dater gives final verdict =====
+      console.log('🎭 Wrap-Up Exchange 3: Dater gives final verdict')
+      
+      const verdictInstructions = {
+        falling_in_love: `You are TOTALLY falling for them! Say something enthusiastic about wanting to see them again SOON. Maybe even tonight. Be flirty and excited!`,
+        want_another_date: `You definitely want another date! Be warm and clear that you'd like to see them again. Leave it open-ended but positive.`,
+        uncertain: `You're on the fence. Be politely noncommittal - "I'll think about it" energy. Don't commit but don't slam the door.`,
+        no_second_date: `You do NOT want another date. Be polite but clear - make an excuse or just be honest that you don't see it working.`,
+        deleting_number: `You are DONE. You're being polite but you're definitely deleting their number after this. Make it clear this is goodbye forever.`
       }
+      
+      const verdictExamples = {
+        falling_in_love: '"YES. Absolutely yes. When are you free? Tomorrow? Tonight? I\'m not even joking."',
+        want_another_date: '"I\'d really like that. Text me - let\'s figure something out."',
+        uncertain: '"I\'ll... think about it. It was nice meeting you though."',
+        no_second_date: '"I think I\'m good, actually. Take care of yourself though."',
+        deleting_number: '"Yeah... I\'m gonna go. Good luck with everything. Don\'t call me."'
+      }
+      
+      const daterVerdictPrompt = `You are ${daterName} giving your FINAL answer about whether you want to see ${avatarName} again.
+
+COMPATIBILITY: ${compatibilityScore}%
+YOUR DECISION: ${sentimentTier.replace(/_/g, ' ').toUpperCase()}
+
+${verdictInstructions[sentimentTier]}
+
+🎯 YOUR TASK: Give your final verdict in ONE sentence. This is your closing line.
+
+RULES:
+- ONE sentence only - this is the final word
+- Be clear about your decision
+- Match the energy of your verdict: ${sentimentTier.replace(/_/g, ' ')}
+- NO action descriptors (*smiles*, etc) - dialogue only
+
+EXAMPLE FOR YOUR SENTIMENT:
+${verdictExamples[sentimentTier]}
+
+Generate ${daterName}'s final verdict:`
+
+      const daterVerdictResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 100,
+          messages: [{ role: 'user', content: daterVerdictPrompt }]
+        })
+      })
+      
+      const daterVerdictData = await daterVerdictResponse.json()
+      const daterVerdict = daterVerdictData.content?.[0]?.text?.trim() || "We'll see."
+      
+      // Show dater verdict with appropriate emotion
+      const verdictMood = sentimentTier === 'falling_in_love' ? 'excited' :
+                          sentimentTier === 'want_another_date' ? 'happy' :
+                          sentimentTier === 'uncertain' ? 'neutral' :
+                          sentimentTier === 'no_second_date' ? 'uncomfortable' : 'horrified'
+      
+      if (ttsEnabled) setDaterBubbleReady(false)
+      setDaterEmotion(verdictMood)
+      setDaterBubble(daterVerdict)
+      addDateMessage('dater', daterVerdict)
+      await syncConversationToPartyKit(undefined, daterVerdict, undefined)
+      if (partyClient) partyClient.syncState({ daterEmotion: verdictMood })
+      
+      console.log(`💬 Dater verdict (${sentimentTier}): "${daterVerdict}"`)
+      await waitForAllAudio()
+      await new Promise(r => setTimeout(r, 2000))
+      
+      console.log('✅ Wrap-Up Round complete!')
+      
     } catch (error) {
-      console.error('Error generating final summary:', error)
+      console.error('Error in wrap-up round:', error)
+      // Fallback - just show a simple closing
+      setDaterBubble("Well... it was nice meeting you.")
     }
   }
   
@@ -2368,15 +2523,43 @@ Generate ${daterName}'s final closing statement:`
     }
     
     if (newRoundCount >= currentMaxCycles) {
-      // Game over! Generate Maya's final summary before showing results
-      await generateFinalSummary(currentCompatibility)
-      
+      // Game over! Show results
       setLivePhase('ended')
       if (partyClient) {
         partyClient.syncState( { phase: 'ended', compatibility: currentCompatibility, cycleCount: newRoundCount })
       }
       // Extend timeout to let players read the breakdown
       setTimeout(() => setPhase('results'), 15000)
+    } else if (newRoundCount === currentMaxCycles - 1) {
+      // ROUND 6: WRAP-UP ROUND (no questions, just final conversation)
+      console.log('🎬 Starting Round 6: Wrap-Up Round')
+      
+      // Set to phase3 but with a special "wrap-up" indicator
+      setLivePhase('phase3')
+      setCurrentRoundPrompt({ title: 'WRAP UP', subtitle: 'The date is ending...' })
+      setDaterBubble('')
+      setAvatarBubble('')
+      
+      if (partyClient) {
+        partyClient.syncState({
+          phase: 'phase3',
+          currentRoundPrompt: { title: 'WRAP UP', subtitle: 'The date is ending...' },
+          compatibility: currentCompatibility,
+          cycleCount: newRoundCount,
+          daterBubble: '',
+          avatarBubble: ''
+        })
+      }
+      
+      // Run the wrap-up conversation
+      await generateWrapUpRound(currentCompatibility)
+      
+      // After wrap-up, end the game
+      setLivePhase('ended')
+      if (partyClient) {
+        partyClient.syncState({ phase: 'ended', compatibility: currentCompatibility, cycleCount: newRoundCount + 1 })
+      }
+      setTimeout(() => setPhase('results'), 10000)
     } else {
       // Start new round - show round prompt interstitial (not dater question)
       setRoundPromptAnimationComplete(false)
