@@ -22,6 +22,7 @@ const EMOTION_SPEEDS = {
   likes: 40,
   curious: 38,
   confident: 35,
+  intrigued: 38,
   
   // Uncertain/processing emotions - SLOWER
   confused: 60,
@@ -29,6 +30,7 @@ const EMOTION_SPEEDS = {
   uncertain: 55,
   uncomfortable: 50,
   dislikes: 45,
+  worried: 50,
   
   // Negative/intense emotions - SLOW (dramatic effect)
   scared: 70,
@@ -49,38 +51,42 @@ const EMOTION_SPEEDS = {
 
 /**
  * Emotion-to-color mapping
- * Colors only - NO SCALE CHANGES (font size stays consistent)
+ * VIBRANT colors that clearly show emotional state
  */
 const EMOTION_COLORS = {
-  // Positive
-  excited: '#FFD700', // Gold
-  happy: '#FFC107', // Warm yellow
-  loves: '#FF69B4', // Hot pink
-  attracted: '#FF6B9D', // Soft pink
-  flirty: '#FF99AA', // Flirty pink
-  likes: '#66BB66', // Soft green
+  // POSITIVE - Warm, bright colors
+  excited: '#FFD700',     // Bright Gold - VERY excited!!!
+  happy: '#FFEB3B',       // Bright Yellow - happy!
+  loves: '#FF69B4',       // Hot Pink - LOVES this!!!
+  attracted: '#FF85A2',   // Warm Pink - smitten
+  flirty: '#FF99CC',      // Flirty Pink - playful
+  likes: '#7CFC00',       // Lawn Green - likes it!
+  confident: '#00BFFF',   // Deep Sky Blue - confident
   
-  // Negative/intense
-  angry: '#FF4444', // Bright red
-  furious: '#CC0000', // Dark red
-  scared: '#9966FF', // Purple
-  horrified: '#8B0000', // Dark red
-  dealbreakers: '#DC143C', // Crimson
-  shocked: '#FF6600', // Orange
+  // NEGATIVE/INTENSE - Bold, alarming colors
+  angry: '#FF3333',       // Bright Red - ANGRY!!!
+  furious: '#FF0000',     // Pure Red - FURIOUS!
+  scared: '#9966FF',      // Purple - scared
+  horrified: '#FF1744',   // Red accent - HORRIFIED!!!
+  dealbreakers: '#FF0044', // Crimson Red - DEALBREAKER!!!
+  shocked: '#FF6600',     // Orange - shocked!
+  worried: '#FFA726',     // Orange - worried...
   
-  // Uncertain
-  nervous: '#88AACC', // Muted blue
-  sad: '#6699AA', // Sad blue
-  uncomfortable: '#AA9988', // Muted brown
-  dislikes: '#CC8866', // Muted orange
+  // UNCERTAIN/UNCOMFORTABLE - Muted, unsettled colors
+  nervous: '#90A4AE',     // Blue Grey - nervous...
+  sad: '#78909C',         // Sad Blue Grey - sad...
+  uncomfortable: '#BCAAA4', // Warm Grey - uncomfortable
+  dislikes: '#FF8A65',    // Deep Orange - doesn't like this
+  confused: '#B39DDB',    // Light Purple - confused
+  uncertain: '#A1887F',   // Brown Grey - uncertain
   
-  // Neutral - no color change
+  // CURIOUS/INTERESTED - Engaged colors
+  curious: '#CE93D8',     // Light Purple - intrigued
+  interested: '#81D4FA',  // Light Blue - interested
+  intrigued: '#BA68C8',   // Purple - very intrigued
+  
+  // NEUTRAL - No color change (inherit)
   neutral: null,
-  curious: null,
-  interested: null,
-  confident: null,
-  confused: null,
-  uncertain: null,
   thinking: null,
   
   default: null,
