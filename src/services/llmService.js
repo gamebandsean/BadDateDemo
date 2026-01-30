@@ -786,25 +786,25 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
     
     behaviorInstructions = `🚨🚨🚨 CRITICAL: ONLY TALK ABOUT "${winningAnswer}" 🚨🚨🚨
 
-DO NOT mention ANYTHING from previous conversation!
-DO NOT reference ANY other topics or answers!
-ONLY talk about: "${winningAnswer}"
-
 🎯 TOPIC: "${questionContext}"
 🎯 YOUR ANSWER (THE ONLY THING YOU SHOULD DISCUSS): "${winningAnswer}"
 ${preferenceContext}
 
+⚠️ YOUR FIRST SENTENCE MUST REFERENCE "${winningAnswer}" DIRECTLY!
+- You are NOT introducing yourself. You are NOT saying hello.
+- You are sharing your answer to the question. Jump straight into it.
+- The very first words out of your mouth should be about "${winningAnswer}" (or lead into it in the same sentence).
+
 ✅ YOUR RESPONSE MUST:
-1. Introduce "${winningAnswer}" naturally
+1. First sentence = mention or reference "${winningAnswer}" immediately
 2. ONLY discuss "${winningAnswer}" - nothing else!
 3. Sound like casual conversation, not an interview
 
-✅ NATURAL OPENERS (use "${winningAnswer}" in one of these):
+✅ GOOD FIRST LINES (answer is in the opening):
 - "For me it's definitely ${winningAnswer}. Like, without question."
 - "Oh man, ${winningAnswer} is huge for me."
+- "Yeah, ${winningAnswer} is a no from me. Basic hygiene, come on."
 - "Real talk? ${winningAnswer}. I feel strongly about that."
-- "Honestly? ${winningAnswer}. That's just how I feel."
-- "See, ${winningAnswer} is my thing."
 
 ✅ EXAMPLES:
 Answer: "not flossing" → "Yeah, not flossing is a no from me. Basic hygiene, come on."
@@ -812,9 +812,9 @@ Answer: "loud chewing" → "Oh man, loud chewing. I just can't. Makes me so unco
 Answer: "being kind to waiters" → "For me it's how someone treats waiters. Says everything."
 
 ❌ FORBIDDEN - DO NOT:
+- Start with an introduction, hello, or "So..." / "Well..." that doesn't lead to the answer
+- Say "My answer is..." or "I would say..." - just SAY the answer naturally
 - Mention ANY previous topics or answers
-- Reference anything from earlier in the date
-- Say "as I was saying" or "like I mentioned"
 - Talk about anything OTHER than "${winningAnswer}"
 
 ${emotionalInstructions}`
@@ -836,30 +836,32 @@ ${emotionalInstructions}`
     
     behaviorInstructions = `🚨🚨🚨 CRITICAL: ONLY TALK ABOUT "${winningAnswer}" 🚨🚨🚨
 
-DO NOT mention ANYTHING from previous conversation!
-DO NOT reference ANY other topics or answers!
-ONLY talk about: "${winningAnswer}"
-
 Your date just said: "${daterOpener}"
 
 🎯 TOPIC: "${questionContext}"
 🎯 YOUR ANSWER (THE ONLY THING YOU SHOULD DISCUSS): "${winningAnswer}"
 ${preferenceContext}
 
-✅ YOUR RESPONSE MUST:
-1. Brief reaction to what they said (2-4 words max)
-2. Then introduce "${winningAnswer}" - THIS IS THE MAIN POINT!
-3. ONLY discuss "${winningAnswer}" - nothing else!
+⚠️ YOUR FIRST SENTENCE MUST REFERENCE "${winningAnswer}" DIRECTLY!
+- You are NOT introducing yourself. You are NOT saying hello.
+- React briefly to what they said (2-4 words), then immediately state your answer "${winningAnswer}" in the same sentence or the next.
+- The answer "${winningAnswer}" must appear in your first sentence or the very start of your response.
 
-✅ NATURAL RESPONSES (use "${winningAnswer}"):
+✅ YOUR RESPONSE MUST:
+1. Brief reaction (2-4 words) + "${winningAnswer}" in the same or next sentence
+2. ONLY discuss "${winningAnswer}" - nothing else!
+3. No intro, no "So..." - jump to your take
+
+✅ GOOD FIRST LINES:
 - "Oh totally! For me it's ${winningAnswer}."
 - "Ha! See, ${winningAnswer} is my thing."
-- "Right?? But ${winningAnswer} though. That's mine."
+- "Right?? ${winningAnswer} though. That's mine."
 - "I feel that! Mine's ${winningAnswer} - no question."
 
 ❌ FORBIDDEN - DO NOT:
+- Start with an introduction or hello
+- Say "My answer would be..." - just say the answer
 - Mention ANY previous topics or answers
-- Reference anything from earlier in the date
 - Talk about anything OTHER than "${winningAnswer}"
 
 ${emotionalInstructions}`
