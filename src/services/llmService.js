@@ -156,6 +156,67 @@ function isVisibleAttribute(attr) {
   return visibleKeywords.some(keyword => lowerAttr.includes(keyword))
 }
 
+/**
+ * Dater opens a round by sharing their own perspective on the topic
+ * This makes conversations feel more natural - like they're already chatting
+ */
+export async function getDaterConversationOpener(dater, avatar, conversationHistory, topicTitle, topicQuestion) {
+  console.log('🗣️ Dater opening conversation about:', topicTitle, '-', topicQuestion)
+  const systemPrompt = buildDaterAgentPrompt(dater, 'date')
+  
+  const openerPrompt = `You're in the middle of a date conversation. The topic of "${topicTitle}" has come up naturally.
+You want to share YOUR OWN perspective on: "${topicQuestion}"
+
+🎯 YOUR TASK: Open this topic by sharing YOUR OWN thoughts, experiences, or feelings about it.
+
+Based on your personality, values, and preferences:
+- YOUR IDEAL PARTNER: ${dater.idealPartner?.join(', ') || 'someone compatible'}
+- YOUR DEALBREAKERS: ${dater.dealbreakers?.join(', ') || 'dishonesty, cruelty'}
+- YOUR VALUES: ${dater.values || 'authenticity'}
+
+💬 SOUND LIKE YOU'RE IN THE MIDDLE OF A CONVERSATION:
+- Maybe you just thought of something: "Oh! Speaking of that..."
+- Or you're sharing an experience: "You know what I've noticed..."
+- Or stating your preference: "For me, I think..."
+- Or asking rhetorically before sharing: "Isn't it weird how...? Like, for me..."
+
+✅ GOOD OPENERS:
+- "You know what always gets me? When someone [your preference/ick/etc]..."
+- "Okay, but can we talk about [topic]? Because honestly..."
+- "I was just thinking about this! For me, [your perspective]..."
+- "Oh my god, this is gonna sound [way], but [your opinion]..."
+
+❌ DON'T:
+- Ask a direct question and wait for an answer
+- Be generic - share YOUR specific perspective based on your character
+- Be too long - just 1-2 sentences to open the topic
+
+Your response should invite your date to share their perspective too!`
+
+  try {
+    const response = await anthropic.messages.create({
+      model: MODEL_ID,
+      max_tokens: 150,
+      system: systemPrompt,
+      messages: [
+        ...conversationHistory.slice(-10).map(msg => ({
+          role: msg.speaker === 'dater' ? 'assistant' : 'user',
+          content: msg.message
+        })),
+        { role: 'user', content: openerPrompt }
+      ]
+    })
+    
+    let text = response.content[0].text.trim()
+    // Remove any action descriptions
+    text = text.replace(/\*[^*]+\*/g, '').trim()
+    return text
+  } catch (error) {
+    console.error('Error getting dater opener:', error)
+    return null
+  }
+}
+
 export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null, sentimentHit = null, reactionStreak = { positive: 0, negative: 0 }, isFinalRound = false, isFirstImpressions = false) {
   console.log('🔗 Using MODULAR PROMPT CHAIN for dater response')
   const systemPrompt = buildDaterAgentPrompt(dater, 'date')
@@ -678,6 +739,45 @@ ${emotionalInstructions}
 ⚠️ Let your emotional state subtly influence HOW you say things - don't announce how you feel, just let it color your delivery.`
     
     console.log('🔗 Using PARAPHRASE mode for avatar response')
+  } else if (mode === 'respond-to-opener') {
+    // MODE: RESPOND-TO-OPENER - Dater opened the topic, now avatar responds with their answer
+    const questionContext = latestAttribute?.questionContext || ''
+    const winningAnswer = latestAttribute?.answer || attributeText || ''
+    const daterOpener = latestAttribute?.daterOpener || ''
+    
+    behaviorInstructions = `🗣️ YOUR DATE JUST SHARED THEIR PERSPECTIVE - NOW RESPOND WITH YOURS!
+
+Your date said: "${daterOpener}"
+
+The topic is: "${questionContext}"
+YOUR ANSWER to share: "${winningAnswer}"
+
+🎯 YOUR TASK:
+1. ACKNOWLEDGE what your date just said - react to it! (agree, disagree, relate, be surprised)
+2. THEN share YOUR perspective using the answer above
+3. Make it feel like a NATURAL CONVERSATION, not a Q&A!
+
+💬 SOUND LIKE A REAL CONVERSATION:
+- "Oh totally! I get that. For me though, it's more like..."
+- "Ha! Really? See, I'm the opposite - I think..."
+- "Oh interesting! Yeah, mine is definitely..."
+- "Wait, seriously?? Okay well mine is way different then..."
+
+✅ GOOD EXAMPLE:
+Date: "Honestly, my biggest ick is when someone chews with their mouth open."
+You: "Oh god, yes!! I can't stand that either. But you know what REALLY gets me? [your answer]. Like, I literally cannot."
+
+❌ BAD EXAMPLE (ignoring what they said):
+Date: "Honestly, my biggest ick is when someone chews with their mouth open."
+You: "My ick is [your answer]." (Didn't acknowledge them at all!)
+
+Make them feel HEARD, then share your perspective!
+
+${emotionalInstructions}
+
+⚠️ Let your emotional state subtly influence HOW you say things - don't announce how you feel, just let it color your delivery.`
+    
+    console.log('🔗 Using RESPOND-TO-OPENER mode for avatar response')
   } else if (!hasRealAttributes) {
     behaviorInstructions = `YOU HAVE NO DEFINED PERSONALITY YET.
 - Be extremely generic but warm and friendly

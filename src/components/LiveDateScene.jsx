@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
-import { getDaterDateResponse, getAvatarDateResponse, generateDaterValues, checkAttributeMatch, runAttributePromptChain, groupSimilarAnswers, generateBreakdownSentences, generatePlotTwistSummary } from '../services/llmService'
+import { getDaterDateResponse, getAvatarDateResponse, getDaterConversationOpener, generateDaterValues, checkAttributeMatch, runAttributePromptChain, groupSimilarAnswers, generateBreakdownSentences, generatePlotTwistSummary } from '../services/llmService'
 import { speak, stopAllAudio, setTTSEnabled, isTTSEnabled, waitForAllAudio } from '../services/ttsService'
 import { getMayaPortraitCached, getAvatarPortraitCached, preloadExpressions, waitForPreload } from '../services/expressionService'
 import AnimatedText from './AnimatedText'
@@ -1906,71 +1906,192 @@ function LiveDateScene() {
       // Helper to get fresh conversation history (React state may be stale in async function)
       const getConversation = () => useGameStore.getState().dateConversation
       
-      // ============ EXCHANGE 1: Avatar paraphrases winning answer (1x scoring) ============
-      console.log('--- Exchange 1: Avatar paraphrases winning answer ---')
+      // ============ EXCHANGE 1: RANDOM - Either dater or avatar opens! ============
+      // 50% chance dater opens with her perspective, 50% avatar opens with the answer
+      const daterOpensFirst = Math.random() < 0.5
+      console.log('--- Exchange 1:', daterOpensFirst ? 'DATER opens the topic' : 'AVATAR opens with answer ---')
       console.log('🎯 Winning answer:', attrToUse)
       console.log('🎯 Question context:', questionContext)
       
-      // Avatar paraphrases the winning answer in their own words
-      // Use avatar's baseline emotional state for opening response
-      const avatarMood1 = getAvatarEmotionFromTraits()
+      let avatarResponse1 = null
+      let sentimentHit1 = null
+      let matchResult1 = null
       
-      const avatarResponse1 = await getAvatarDateResponse(
-        avatarWithNewAttr,
-        selectedDater,
-        getConversation().slice(-20),
-        framedAttribute, // Contains answer + questionContext
-        'paraphrase', // Use paraphrase mode
-        avatarMood1 // Pass current emotional state
-      )
-      
-      console.log('🔗 Avatar paraphrase:', avatarResponse1?.substring(0, 50))
-      
-      if (avatarResponse1) {
-        const avatarMood = getAvatarEmotionFromTraits()
-        setAvatarEmotion(avatarMood)
-        setAvatarBubble(avatarResponse1)
-        addDateMessage('avatar', avatarResponse1)
-        await syncConversationToPartyKit(avatarResponse1, undefined, undefined)
-        if (partyClient && isHost) {
-          partyClient.syncState({ avatarEmotion: avatarMood })
-        }
+      if (daterOpensFirst) {
+        // ===== DATER OPENS: She shares her perspective first =====
+        console.log('🗣️ Dater opening the conversation...')
         
-        await new Promise(resolve => setTimeout(resolve, 2500))
-        
-        // Check sentiment FIRST before generating dater's response
-        const matchResult1 = await checkAttributeMatch(avatarResponse1, daterValues, selectedDater, null)
-        const sentimentHit1 = matchResult1.category || null
-        console.log('🎯 Sentiment detected BEFORE dater response:', sentimentHit1)
-        
-        // Now generate dater's response WITH the sentiment knowledge
-        const daterReaction1 = await getDaterDateResponse(
+        // Dater shares her perspective on the topic
+        const daterOpener = await getDaterConversationOpener(
           selectedDater,
           avatarWithNewAttr,
-          [...getConversation().slice(-20), { speaker: 'avatar', message: avatarResponse1 }],
-          attrToUse, // The original attribute
-          sentimentHit1, // Pass the sentiment so dater knows how to react!
-          reactionStreak,
-          isFinalRound
+          getConversation().slice(-20),
+          currentRoundPrompt.title, // e.g., "ICK"
+          questionContext // e.g., "What's a small thing that turns you off?"
         )
         
-        if (daterReaction1) {
-          // Set dater's emotion based on sentiment
-          const daterMood = getDaterEmotionFromSentiment(sentimentHit1)
-          setDaterEmotion(daterMood)
-          setDaterBubble(daterReaction1)
-          addDateMessage('dater', daterReaction1)
-          await syncConversationToPartyKit(undefined, daterReaction1, undefined)
+        if (daterOpener) {
+          // Set dater emotion - she's sharing, so neutral/engaged
+          const daterOpenerMood = 'happy'
+          setDaterEmotion(daterOpenerMood)
+          setDaterBubble(daterOpener)
+          addDateMessage('dater', daterOpener)
+          await syncConversationToPartyKit(undefined, daterOpener, undefined)
           if (partyClient && isHost) {
-            partyClient.syncState({ daterEmotion: daterMood })
+            partyClient.syncState({ daterEmotion: daterOpenerMood })
           }
           
-          // Wait for Maya's bubble to appear
-          await new Promise(resolve => setTimeout(resolve, 800))
+          await new Promise(resolve => setTimeout(resolve, 2500))
           
-          // NOW show reaction feedback - after Maya has started speaking
-          if (sentimentHit1) {
-            showReactionFeedback(sentimentHit1, matchResult1.matchedValue, matchResult1.shortLabel)
+          // Now avatar responds to the dater's opener AND shares their answer
+          const avatarMood1 = getAvatarEmotionFromTraits()
+          
+          avatarResponse1 = await getAvatarDateResponse(
+            avatarWithNewAttr,
+            selectedDater,
+            [...getConversation().slice(-20), { speaker: 'dater', message: daterOpener }],
+            { answer: attrToUse, questionContext: questionContext, daterOpener: daterOpener },
+            'respond-to-opener', // New mode: respond to dater then share answer
+            avatarMood1
+          )
+          
+          if (avatarResponse1) {
+            setAvatarEmotion(avatarMood1)
+            setAvatarBubble(avatarResponse1)
+            addDateMessage('avatar', avatarResponse1)
+            await syncConversationToPartyKit(avatarResponse1, undefined, undefined)
+            if (partyClient && isHost) {
+              partyClient.syncState({ avatarEmotion: avatarMood1 })
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 2500))
+            
+            // Check sentiment for avatar's response
+            matchResult1 = await checkAttributeMatch(avatarResponse1, daterValues, selectedDater, null)
+            sentimentHit1 = matchResult1.category || null
+            console.log('🎯 Sentiment detected from avatar response:', sentimentHit1)
+            
+            // Dater reacts to avatar's response
+            const daterReaction1 = await getDaterDateResponse(
+              selectedDater,
+              avatarWithNewAttr,
+              getConversation().slice(-20),
+              attrToUse,
+              sentimentHit1,
+              reactionStreak,
+              isFinalRound
+            )
+            
+            if (daterReaction1) {
+              const daterMood = getDaterEmotionFromSentiment(sentimentHit1)
+              setDaterEmotion(daterMood)
+              setDaterBubble(daterReaction1)
+              addDateMessage('dater', daterReaction1)
+              await syncConversationToPartyKit(undefined, daterReaction1, undefined)
+              if (partyClient && isHost) {
+                partyClient.syncState({ daterEmotion: daterMood })
+              }
+              
+              await new Promise(resolve => setTimeout(resolve, 800))
+              
+              if (sentimentHit1) {
+                showReactionFeedback(sentimentHit1, matchResult1.matchedValue, matchResult1.shortLabel)
+                
+                // Apply scoring for dater-opens path
+                const wasAlreadyExposed = exposeValue(matchResult1.category, matchResult1.matchedValue, matchResult1.shortLabel)
+                if (wasAlreadyExposed) {
+                  triggerGlow(matchResult1.shortLabel)
+                }
+                const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
+                const change = Math.round(baseChanges[sentimentHit1] * 1) // Full scoring
+                if (change !== 0) {
+                  const newCompat = adjustCompatibility(change)
+                  if (partyClient) {
+                    partyClient.syncState({ compatibility: newCompat })
+                  }
+                  setCompatibilityHistory(prev => [...prev, {
+                    attribute: attrToUse,
+                    topic: matchResult1.shortLabel || matchResult1.matchedValue,
+                    category: sentimentHit1,
+                    change: change,
+                    daterValue: matchResult1.matchedValue,
+                    reason: matchResult1.reason || ''
+                  }])
+                }
+                // Update streak
+                const isPositive = sentimentHit1 === 'loves' || sentimentHit1 === 'likes'
+                if (isPositive) {
+                  currentStreak = { positive: currentStreak.positive + 1, negative: 0 }
+                } else {
+                  currentStreak = { positive: 0, negative: currentStreak.negative + 1 }
+                }
+              }
+              await syncConversationToPartyKit(undefined, undefined, true)
+            }
+          }
+        }
+      }
+      
+      } else {
+        // ===== AVATAR OPENS: Original behavior - avatar paraphrases winning answer =====
+        const avatarMood1 = getAvatarEmotionFromTraits()
+        
+        avatarResponse1 = await getAvatarDateResponse(
+          avatarWithNewAttr,
+          selectedDater,
+          getConversation().slice(-20),
+          framedAttribute, // Contains answer + questionContext
+          'paraphrase', // Use paraphrase mode
+          avatarMood1 // Pass current emotional state
+        )
+        
+        console.log('🔗 Avatar paraphrase:', avatarResponse1?.substring(0, 50))
+        
+        if (avatarResponse1) {
+          const avatarMood = getAvatarEmotionFromTraits()
+          setAvatarEmotion(avatarMood)
+          setAvatarBubble(avatarResponse1)
+          addDateMessage('avatar', avatarResponse1)
+          await syncConversationToPartyKit(avatarResponse1, undefined, undefined)
+          if (partyClient && isHost) {
+            partyClient.syncState({ avatarEmotion: avatarMood })
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 2500))
+          
+          // Check sentiment FIRST before generating dater's response
+          matchResult1 = await checkAttributeMatch(avatarResponse1, daterValues, selectedDater, null)
+          sentimentHit1 = matchResult1.category || null
+          console.log('🎯 Sentiment detected BEFORE dater response:', sentimentHit1)
+          
+          // Now generate dater's response WITH the sentiment knowledge
+          const daterReaction1 = await getDaterDateResponse(
+            selectedDater,
+            avatarWithNewAttr,
+            [...getConversation().slice(-20), { speaker: 'avatar', message: avatarResponse1 }],
+            attrToUse, // The original attribute
+            sentimentHit1, // Pass the sentiment so dater knows how to react!
+            reactionStreak,
+            isFinalRound
+          )
+          
+          if (daterReaction1) {
+            // Set dater's emotion based on sentiment
+            const daterMood = getDaterEmotionFromSentiment(sentimentHit1)
+            setDaterEmotion(daterMood)
+            setDaterBubble(daterReaction1)
+            addDateMessage('dater', daterReaction1)
+            await syncConversationToPartyKit(undefined, daterReaction1, undefined)
+            if (partyClient && isHost) {
+              partyClient.syncState({ daterEmotion: daterMood })
+            }
+            
+            // Wait for Maya's bubble to appear
+            await new Promise(resolve => setTimeout(resolve, 800))
+            
+            // NOW show reaction feedback - after Maya has started speaking
+            if (sentimentHit1) {
+              showReactionFeedback(sentimentHit1, matchResult1.matchedValue, matchResult1.shortLabel)
             
             // Apply scoring
             const wasAlreadyExposed = exposeValue(matchResult1.category, matchResult1.matchedValue, matchResult1.shortLabel)
@@ -2003,10 +2124,12 @@ function LiveDateScene() {
           }
           await syncConversationToPartyKit(undefined, undefined, true)
         }
-        
-        await new Promise(resolve => setTimeout(resolve, 3000))
-        
-        // ============ EXCHANGE 2: Avatar responds to Dater's reaction (0.25x scoring) ============
+      } // End of avatar-opens else block
+      
+      // ============ EXCHANGE 2 AND 3 RUN FOR BOTH PATHS ============
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      
+      // ============ EXCHANGE 2: Avatar responds to Dater's reaction (0.25x scoring) ============
         console.log('--- Exchange 2: Avatar responds to Dater reaction ---')
         
         // Avatar's mood is affected by how dater reacted in exchange 1
