@@ -686,57 +686,64 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
   
   // Check for paraphrase mode FIRST (before other checks)
   if (mode === 'paraphrase') {
-    // MODE: PARAPHRASE - Take the winning player answer and put it in Avatar's own words
+    // MODE: PARAPHRASE - Drop into the middle of a conversation naturally
     const questionContext = latestAttribute?.questionContext || ''
     const winningAnswer = latestAttribute?.answer || attributeText || ''
     
-    behaviorInstructions = `🎯 ANSWER THE QUESTION by RESTATING it and giving your answer:
+    behaviorInstructions = `🗣️ YOU'RE IN THE MIDDLE OF A CONVERSATION - JUST SHARE YOUR TAKE!
 
-THE QUESTION ASKED: "${questionContext}"
-YOUR ANSWER TO USE: "${winningAnswer}"
+TOPIC: "${questionContext}"
+YOUR ANSWER: "${winningAnswer}"
 
-⚠️ YOU MUST ANSWER THE QUESTION - NOT JUST REPEAT IT!
-Weave the question INTO your answer naturally, then give your response.
+💬 SOUND LIKE YOU'RE ALREADY CHATTING - NOT ANSWERING AN INTERVIEW QUESTION!
 
-🔥 THE FORMULA:
-1. RESTATE the question as part of your answer (don't ask it back!)
-2. GIVE your answer using the winning answer provided
-3. ADD a brief personal touch or elaboration
-4. Make it sound natural and conversational
+You're on a date, casually talking. The topic came up naturally. Just share your perspective like you would with a friend.
 
-✅ GREAT EXAMPLES (notice how the question is RESTATED as an answer):
+✅ NATURAL CONVERSATION OPENERS (pick one that fits):
+- "Oh man, I just can't stand when someone..."
+- "Yeah, not gonna lie, [answer] is a no from me, dog."
+- "Honestly? [answer]. That's just... nope."
+- "For me it's definitely [answer]. Like, without question."
+- "I gotta say, [answer] is huge for me."
+- "Oh, that's easy - [answer]. Every time."
+- "You know what I always think about? [answer]."
+- "Real talk? [answer]. I feel strongly about that."
+- "I mean, [answer], right? That's just basic."
+- "See, I'm weird about this - [answer] is my thing."
 
-Q: "What would you bring on a date?"
-A: "a bat"
-→ "I think the one thing I'd absolutely need to bring with me on any date is my trusty baseball bat. It just gives me so much security, you know?"
+✅ GREAT EXAMPLES:
 
-Q: "What's your ick?"
-A: "dirty feet"
-→ "If I'm being honest, the one thing that really gives me the ick is dirty feet. Like, please just wash them. Is that too much to ask?"
+Topic: "What's your dealbreaker?"
+Answer: "not flossing"
+→ "Yeah, not flossing is a no from me, dog. Like, basic hygiene. Come on."
 
-Q: "What's your biggest dealbreaker?"
-A: "lying"
-→ "My absolute biggest dealbreaker in any relationship has to be lying. I just cannot handle dishonesty at all."
+Topic: "What's your ick?"
+Answer: "loud chewing"  
+→ "Oh man, I just can't with loud chewing. It makes me physically uncomfortable."
 
-Q: "What's something surprising about you?"
-A: "I collect dolls"
-→ "Something surprising that most people don't know about me? I actually have a huge collection of vintage dolls. Yeah, it's a whole thing."
+Topic: "What would you bring on a date?"
+Answer: "a bat"
+→ "Okay so hear me out - I'd bring a bat. For protection! You never know."
 
-Q: "What superpower would make you the best partner?"
-A: "mind reading"
-→ "The superpower that would make me the perfect partner? Definitely mind reading. Imagine never having to ask what's wrong!"
+Topic: "What's a green flag?"
+Answer: "being kind to waiters"
+→ "For me it's how someone treats waiters. Says everything about a person."
 
-❌ WHAT NOT TO DO:
-- DON'T just repeat the question back: "What would I bring? Well..." (sounds like you're stalling!)
-- DON'T give a one-word answer: "A bat." (too short, no personality!)
-- DON'T ignore the question entirely
-- DON'T ask the question instead of answering it
+Topic: "What's your hot take?"
+Answer: "pineapple on pizza is good"
+→ "Real talk? Pineapple on pizza is actually amazing and I'll die on that hill."
 
-Your response should make it OBVIOUS you understood the question AND are giving a real answer.
+❌ DON'T DO THIS:
+- "What's my dealbreaker? Well, I would say..." (sounds like an interview!)
+- "If I had to pick a dealbreaker, it would be..." (too formal!)
+- "The thing that would make me lose interest is..." (restating the question!)
+- Just saying the answer with no personality: "Not flossing." (boring!)
+
+🎯 KEY: Jump straight into your take. Sound casual. Have personality. Don't restate the question!
 
 ${emotionalInstructions}
 
-⚠️ Let your emotional state subtly influence HOW you say things - don't announce how you feel, just let it color your delivery.`
+⚠️ Let your emotional state color HOW you say it - excited? energetic! nervous? hesitant... angry? emphatic!`
     
     console.log('🔗 Using PARAPHRASE mode for avatar response')
   } else if (mode === 'respond-to-opener') {
@@ -745,37 +752,42 @@ ${emotionalInstructions}
     const winningAnswer = latestAttribute?.answer || attributeText || ''
     const daterOpener = latestAttribute?.daterOpener || ''
     
-    behaviorInstructions = `🗣️ YOUR DATE JUST SHARED THEIR PERSPECTIVE - NOW RESPOND WITH YOURS!
+    behaviorInstructions = `🗣️ YOUR DATE JUST SHARED - NOW KEEP THE CONVERSATION FLOWING!
 
-Your date said: "${daterOpener}"
+They said: "${daterOpener}"
 
-The topic is: "${questionContext}"
-YOUR ANSWER to share: "${winningAnswer}"
+Topic: "${questionContext}"
+YOUR TAKE: "${winningAnswer}"
 
-🎯 YOUR TASK:
-1. ACKNOWLEDGE what your date just said - react to it! (agree, disagree, relate, be surprised)
-2. THEN share YOUR perspective using the answer above
-3. Make it feel like a NATURAL CONVERSATION, not a Q&A!
+💬 THIS IS A REAL CONVERSATION - REACT AND SHARE!
 
-💬 SOUND LIKE A REAL CONVERSATION:
-- "Oh totally! I get that. For me though, it's more like..."
-- "Ha! Really? See, I'm the opposite - I think..."
-- "Oh interesting! Yeah, mine is definitely..."
-- "Wait, seriously?? Okay well mine is way different then..."
+1. Quick reaction to what they said (agree, disagree, laugh, be surprised - just 2-4 words!)
+2. Then share YOUR take naturally
 
-✅ GOOD EXAMPLE:
-Date: "Honestly, my biggest ick is when someone chews with their mouth open."
-You: "Oh god, yes!! I can't stand that either. But you know what REALLY gets me? [your answer]. Like, I literally cannot."
+✅ NATURAL RESPONSES:
+- "Oh totally! But for me, it's gotta be [answer]."
+- "Ha! See, I'm different - [answer] is my thing."
+- "Right?? Okay but [answer] though. That's mine."
+- "I feel that! Mine's [answer] - no question."
+- "Interesting! I'd say [answer] for sure."
+- "Oh wow, really? See, [answer] is what gets me."
 
-❌ BAD EXAMPLE (ignoring what they said):
-Date: "Honestly, my biggest ick is when someone chews with their mouth open."
-You: "My ick is [your answer]." (Didn't acknowledge them at all!)
+✅ EXAMPLES:
 
-Make them feel HEARD, then share your perspective!
+Date: "Loud chewing drives me insane."
+You: "Ugh, same!! But for me? [answer]. That's the real dealbreaker."
 
-${emotionalInstructions}
+Date: "I think honesty is everything in a relationship."
+You: "Oh hundred percent. And [answer] too - that's huge for me."
 
-⚠️ Let your emotional state subtly influence HOW you say things - don't announce how you feel, just let it color your delivery.`
+❌ DON'T:
+- Ignore what they said entirely
+- Give a formal interview answer
+- Restate the question back
+
+Keep it flowing like you're actually vibing!
+
+${emotionalInstructions}`
     
     console.log('🔗 Using RESPOND-TO-OPENER mode for avatar response')
   } else if (!hasRealAttributes) {
