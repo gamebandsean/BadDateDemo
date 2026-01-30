@@ -887,35 +887,39 @@ ${emotionalInstructions}`
     
     console.log('🔗 Using MODULAR PROMPT CHAIN for avatar response (mode: answer)')
   } else if (mode === 'react') {
-    // MODE: REACT - Respond to what the Dater just said
+    // MODE: REACT - Respond to what the Dater just said, STAY ON THIS ROUND'S TOPIC
     const lastDaterMessage = [...conversationHistory].reverse().find(msg => msg.speaker === 'dater')?.message || ''
-    const newestAttribute = latestAttribute || realAttributes[realAttributes.length - 1]
+    const newestAttribute = latestAttribute?.answer || latestAttribute || realAttributes[realAttributes.length - 1]
+    const currentTopic = latestAttribute?.questionContext || ''
     
-    behaviorInstructions = `🎯 RESPOND TO YOUR DATE'S REACTION:
+    behaviorInstructions = `🎯 RESPOND TO YOUR DATE'S REACTION - STAY ON TOPIC!
 
 Your date just said: "${lastDaterMessage}"
 
-YOUR TRAITS: ${realAttributes.join(', ')}
-YOUR NEWEST TRAIT: "${newestAttribute}"
+${currentTopic ? `🎯 CURRENT TOPIC/QUESTION: "${currentTopic}"` : ''}
+YOUR ANSWER TO THIS TOPIC: "${newestAttribute}"
+YOUR OTHER TRAITS: ${realAttributes.join(', ')}
 
-⚠️ IMPORTANT: Only reference traits from YOUR TRAITS list above! Do not invent new traits!
+⚠️ CRITICAL: STAY ON THIS ROUND'S TOPIC!
+- You're still discussing YOUR ANSWER: "${newestAttribute}"
+- Do NOT change subjects or bring up random other traits
+- Elaborate MORE on your answer, share a story, explain WHY
 
 🔥 HOW TO RESPOND:
-- DIRECTLY respond to what your date just said
-- If they seem positive, continue the topic enthusiastically
-- If they seem negative or confused, you're genuinely confused why - "Is that... weird?"
-- You can elaborate on your newest trait ("${newestAttribute}") based on their reaction
-- Stay casual and matter-of-fact about your traits
+- DIRECTLY respond to what your date just said about YOUR ANSWER
+- If they seem positive → get more excited, share more details about "${newestAttribute}"
+- If they seem negative → defend or explain "${newestAttribute}" - "What? It's not that weird..."
+- If they seem curious → tell a quick story or example related to "${newestAttribute}"
 
-✅ GOOD RESPONSES:
-- If date says "That's terrifying!" → "Terrifying? I mean, I guess? It's just what I do."
-- If date says "That's so cool!" → "Thanks! Yeah, I really enjoy it."
-- If date seems curious → Share a bit more detail about your trait
+✅ GOOD RESPONSES (staying on topic):
+- "Yeah, the [answer] thing started when I was a kid actually..."
+- "Right?? I know it sounds weird but honestly [answer] is just part of who I am."
+- "Let me explain - so with [answer], it's more about..."
 
-❌ BAD RESPONSES:
-- Ignoring what they said
-- Changing the subject completely
-- Being mysterious about your traits
+❌ BAD RESPONSES (going off topic):
+- Changing to a completely different subject
+- Bringing up unrelated traits from earlier rounds
+- Ignoring what they said about your answer
 
 ${emotionalInstructions}
 
@@ -923,30 +927,36 @@ ${emotionalInstructions}
     
     console.log('🔗 Using MODULAR PROMPT CHAIN for avatar response (mode: react)')
   } else if (mode === 'connect') {
-    // MODE: CONNECT - Draw connections between ALL previous attributes
-    behaviorInstructions = `🎯 CONNECT ALL YOUR TRAITS - Find the bigger picture:
+    // MODE: CONNECT - Wrap up THIS ROUND's topic, optionally connect to other traits
+    const newestAttribute = latestAttribute?.answer || latestAttribute || realAttributes[realAttributes.length - 1]
+    const currentTopic = latestAttribute?.questionContext || ''
+    
+    behaviorInstructions = `🎯 WRAP UP THIS TOPIC - Final thought on your answer:
 
-ALL YOUR TRAITS SO FAR: ${realAttributes.join(', ')}
+${currentTopic ? `🎯 CURRENT TOPIC/QUESTION: "${currentTopic}"` : ''}
+YOUR ANSWER TO THIS TOPIC: "${newestAttribute}"
+YOUR OTHER TRAITS: ${realAttributes.join(', ')}
 
-⚠️ IMPORTANT: Only reference traits from the list above! Do not invent new traits!
+⚠️ CRITICAL: This is your FINAL comment on "${newestAttribute}" for this round!
+- Give a closing thought, summary, or punchline about YOUR ANSWER
+- You can OPTIONALLY connect it to one of your other traits if it makes sense
+- Keep it SHORT - this wraps up the topic
 
-🔥 YOUR GOAL - FIND CONNECTIONS:
-- Look at ALL your traits and find interesting CONNECTIONS between them
-- How do these traits work together? How do they relate?
-- Share an insight, story, or observation that COMBINES multiple traits
-- Make your date see the "whole picture" of who you are
+🔥 GOOD WAYS TO WRAP UP:
+- A quick conclusion: "Anyway, that's just how I feel about [answer]."
+- A funny aside: "But yeah, [answer]. That's me in a nutshell."
+- A connection to another trait: "Actually [answer] probably explains why I also [other trait]."
+- A rhetorical question: "Is that weird? I never thought [answer] was that unusual..."
 
-✅ EXCELLENT CONNECTION EXAMPLES:
-- If you're "a vampire" + "love gardening": "Being nocturnal actually helps with the gardening - I do most of my planting at night."
-- If you're "100 feet tall" + "shy": "Being this tall makes it hard to be shy, everyone notices me anyway."
-- If you're "a murderer" + "love cooking": "Murder and cooking have a lot in common, actually. Both require patience."
+✅ EXCELLENT WRAP-UPS:
+- "So yeah, [answer]. Take it or leave it, that's just me."
+- "Honestly [answer] has shaped a lot of who I am."
+- "And that's actually connected to why I [other trait] - it all makes sense if you think about it."
 
-💡 IF TRAITS DON'T OBVIOUSLY CONNECT:
-- Find creative or humorous ways to link them
-- Or share how one trait affects living with another
-- Even "these things seem random but they're all me" works!
-
-Make the conversation feel like it's building toward understanding WHO YOU ARE.
+❌ BAD RESPONSES:
+- Starting a completely new topic
+- Asking the dater a question (this is YOUR closing statement)
+- Being too long or rambling
 
 ${emotionalInstructions}
 

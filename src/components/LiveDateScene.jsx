@@ -2000,9 +2000,10 @@ function LiveDateScene() {
       if (exchange1.daterReaction) convoAfterEx1.push({ speaker: 'dater', message: exchange1.daterReaction })
       
       const avatarMood2 = getAvatarEmotionFromContext(exchange1.sentimentHit)
+      // Pass framedAttribute so avatar stays on THIS round's topic
       const avatarResponse2 = await getAvatarDateResponse(
         avatarWithNewAttr, selectedDater, convoAfterEx1,
-        attrToUse, 'react', avatarMood2
+        framedAttribute, 'react', avatarMood2
       )
       
       let exchange2 = { avatarResponse: avatarResponse2, avatarMood: avatarMood2, daterReaction: null, matchResult: null }
@@ -2036,9 +2037,10 @@ function LiveDateScene() {
       if (exchange2.daterReaction) convoAfterEx2.push({ speaker: 'dater', message: exchange2.daterReaction })
       
       const avatarMood3 = getAvatarEmotionFromContext(exchange2.sentimentHit)
+      // Pass framedAttribute so avatar wraps up THIS round's topic
       const avatarResponse3 = await getAvatarDateResponse(
         avatarWithNewAttr, selectedDater, convoAfterEx2,
-        attrToUse, 'connect', avatarMood3
+        framedAttribute, 'connect', avatarMood3
       )
       
       let exchange3 = { avatarResponse: avatarResponse3, avatarMood: avatarMood3, daterReaction: null, matchResult: null }
