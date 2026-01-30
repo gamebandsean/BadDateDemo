@@ -2102,6 +2102,8 @@ function LiveDateScene() {
       
       // Play dater opener (only exchange 1 might have this)
       if (exchange.daterOpener) {
+        // Hide bubble first, then set text - audio start will show it
+        if (ttsEnabled) setDaterBubbleReady(false)
         setDaterEmotion(exchange.daterOpenerMood || 'happy')
         setDaterBubble(exchange.daterOpener)
         addDateMessage('dater', exchange.daterOpener)
@@ -2114,6 +2116,8 @@ function LiveDateScene() {
       
       // Play avatar response
       if (exchange.avatarResponse) {
+        // Hide bubble first, then set text - audio start will show it
+        if (ttsEnabled) setAvatarBubbleReady(false)
         setAvatarEmotion(exchange.avatarMood || 'neutral')
         setAvatarBubble(exchange.avatarResponse)
         addDateMessage('avatar', exchange.avatarResponse)
@@ -2126,6 +2130,8 @@ function LiveDateScene() {
       
       // Play dater reaction
       if (exchange.daterReaction) {
+        // Hide bubble first, then set text - audio start will show it
+        if (ttsEnabled) setDaterBubbleReady(false)
         setDaterEmotion(exchange.daterMood || 'neutral')
         setDaterBubble(exchange.daterReaction)
         addDateMessage('dater', exchange.daterReaction)
@@ -2205,6 +2211,12 @@ function LiveDateScene() {
       // Clear refs for next round
       preGenConversationRef.current = null
       preGenPromiseRef.current = null
+      
+      // IMPORTANT: Clear pre-generating indicator before playback starts!
+      setIsPreGenerating(false)
+      if (partyClient) {
+        partyClient.syncState({ isPreGenerating: false })
+      }
       
       if (preGenData) {
         // PHASE 2: Playback smoothly
