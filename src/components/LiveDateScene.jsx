@@ -4319,21 +4319,6 @@ Give your final thoughts on this dramatic moment.`
           )}
         </AnimatePresence>
         
-        {/* Pre-generation Loading Indicator */}
-        <AnimatePresence>
-          {isPreGenerating && (
-            <motion.div
-              className="pre-generating-indicator"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <span className="loading-heart">💕</span>
-              <span className="loading-text">The conversation is heating up...</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
         {/* Conversation Bubbles Area - Both bubbles visible */}
         <div className="conversation-bubbles">
           <div className="bubble-column avatar-column">
