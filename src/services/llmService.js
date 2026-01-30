@@ -784,64 +784,40 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
 - Talk about this as YOUR PREFERENCE for what you want in a partner!
 ` : ''
     
-    behaviorInstructions = `🆕🆕🆕 NEW TOPIC ALERT! 🆕🆕🆕
+    behaviorInstructions = `🚨🚨🚨 CRITICAL: ONLY TALK ABOUT "${winningAnswer}" 🚨🚨🚨
 
-⚠️ IGNORE PREVIOUS CONVERSATION! A new topic just came up. You MUST talk about THIS topic now.
+DO NOT mention ANYTHING from previous conversation!
+DO NOT reference ANY other topics or answers!
+ONLY talk about: "${winningAnswer}"
 
-🎯 THE NEW TOPIC: "${questionContext}"
-🎯 YOUR ANSWER: "${winningAnswer}"
+🎯 TOPIC: "${questionContext}"
+🎯 YOUR ANSWER (THE ONLY THING YOU SHOULD DISCUSS): "${winningAnswer}"
 ${preferenceContext}
-⚠️ YOU MUST INTRODUCE YOUR ANSWER "${winningAnswer}" IN THIS RESPONSE!
 
-💬 SOUND LIKE YOU'RE ALREADY CHATTING - NOT ANSWERING AN INTERVIEW QUESTION!
+✅ YOUR RESPONSE MUST:
+1. Introduce "${winningAnswer}" naturally
+2. ONLY discuss "${winningAnswer}" - nothing else!
+3. Sound like casual conversation, not an interview
 
-You're on a date, casually talking. The topic came up naturally. Just share your perspective like you would with a friend.
+✅ NATURAL OPENERS (use "${winningAnswer}" in one of these):
+- "For me it's definitely ${winningAnswer}. Like, without question."
+- "Oh man, ${winningAnswer} is huge for me."
+- "Real talk? ${winningAnswer}. I feel strongly about that."
+- "Honestly? ${winningAnswer}. That's just how I feel."
+- "See, ${winningAnswer} is my thing."
 
-✅ NATURAL CONVERSATION OPENERS (pick one that fits):
-- "Oh man, I just can't stand when someone..."
-- "Yeah, not gonna lie, [answer] is a no from me, dog."
-- "Honestly? [answer]. That's just... nope."
-- "For me it's definitely [answer]. Like, without question."
-- "I gotta say, [answer] is huge for me."
-- "Oh, that's easy - [answer]. Every time."
-- "You know what I always think about? [answer]."
-- "Real talk? [answer]. I feel strongly about that."
-- "I mean, [answer], right? That's just basic."
-- "See, I'm weird about this - [answer] is my thing."
+✅ EXAMPLES:
+Answer: "not flossing" → "Yeah, not flossing is a no from me. Basic hygiene, come on."
+Answer: "loud chewing" → "Oh man, loud chewing. I just can't. Makes me so uncomfortable."
+Answer: "being kind to waiters" → "For me it's how someone treats waiters. Says everything."
 
-✅ GREAT EXAMPLES:
+❌ FORBIDDEN - DO NOT:
+- Mention ANY previous topics or answers
+- Reference anything from earlier in the date
+- Say "as I was saying" or "like I mentioned"
+- Talk about anything OTHER than "${winningAnswer}"
 
-Topic: "What's your dealbreaker?"
-Answer: "not flossing"
-→ "Yeah, not flossing is a no from me, dog. Like, basic hygiene. Come on."
-
-Topic: "What's your ick?"
-Answer: "loud chewing"  
-→ "Oh man, I just can't with loud chewing. It makes me physically uncomfortable."
-
-Topic: "What would you bring on a date?"
-Answer: "a bat"
-→ "Okay so hear me out - I'd bring a bat. For protection! You never know."
-
-Topic: "What's a green flag?"
-Answer: "being kind to waiters"
-→ "For me it's how someone treats waiters. Says everything about a person."
-
-Topic: "What's your hot take?"
-Answer: "pineapple on pizza is good"
-→ "Real talk? Pineapple on pizza is actually amazing and I'll die on that hill."
-
-❌ DON'T DO THIS:
-- "What's my dealbreaker? Well, I would say..." (sounds like an interview!)
-- "If I had to pick a dealbreaker, it would be..." (too formal!)
-- "The thing that would make me lose interest is..." (restating the question!)
-- Just saying the answer with no personality: "Not flossing." (boring!)
-
-🎯 KEY: Jump straight into your take. Sound casual. Have personality. Don't restate the question!
-
-${emotionalInstructions}
-
-⚠️ Let your emotional state color HOW you say it - excited? energetic! nervous? hesitant... angry? emphatic!`
+${emotionalInstructions}`
     
     console.log('🔗 Using PARAPHRASE mode for avatar response')
   } else if (mode === 'respond-to-opener') {
@@ -858,44 +834,33 @@ ${emotionalInstructions}
 - Talk about this as YOUR PREFERENCE for partners!
 ` : ''
     
-    behaviorInstructions = `🆕🆕🆕 NEW TOPIC ALERT! 🆕🆕🆕
+    behaviorInstructions = `🚨🚨🚨 CRITICAL: ONLY TALK ABOUT "${winningAnswer}" 🚨🚨🚨
 
-⚠️ IGNORE PREVIOUS CONVERSATION! A new topic just came up. Respond to THIS topic now.
+DO NOT mention ANYTHING from previous conversation!
+DO NOT reference ANY other topics or answers!
+ONLY talk about: "${winningAnswer}"
 
-Your date just opened with: "${daterOpener}"
+Your date just said: "${daterOpener}"
 
-🎯 THE NEW TOPIC: "${questionContext}"
-🎯 YOUR ANSWER: "${winningAnswer}"
+🎯 TOPIC: "${questionContext}"
+🎯 YOUR ANSWER (THE ONLY THING YOU SHOULD DISCUSS): "${winningAnswer}"
 ${preferenceContext}
-⚠️ YOU MUST STATE YOUR ANSWER "${winningAnswer}" IN THIS RESPONSE!
 
-💬 THIS IS A REAL CONVERSATION - REACT AND SHARE!
+✅ YOUR RESPONSE MUST:
+1. Brief reaction to what they said (2-4 words max)
+2. Then introduce "${winningAnswer}" - THIS IS THE MAIN POINT!
+3. ONLY discuss "${winningAnswer}" - nothing else!
 
-1. Quick reaction to what they said (agree, disagree, laugh, be surprised - just 2-4 words!)
-2. Then share YOUR take naturally
+✅ NATURAL RESPONSES (use "${winningAnswer}"):
+- "Oh totally! For me it's ${winningAnswer}."
+- "Ha! See, ${winningAnswer} is my thing."
+- "Right?? But ${winningAnswer} though. That's mine."
+- "I feel that! Mine's ${winningAnswer} - no question."
 
-✅ NATURAL RESPONSES:
-- "Oh totally! But for me, it's gotta be [answer]."
-- "Ha! See, I'm different - [answer] is my thing."
-- "Right?? Okay but [answer] though. That's mine."
-- "I feel that! Mine's [answer] - no question."
-- "Interesting! I'd say [answer] for sure."
-- "Oh wow, really? See, [answer] is what gets me."
-
-✅ EXAMPLES:
-
-Date: "Loud chewing drives me insane."
-You: "Ugh, same!! But for me? [answer]. That's the real dealbreaker."
-
-Date: "I think honesty is everything in a relationship."
-You: "Oh hundred percent. And [answer] too - that's huge for me."
-
-❌ DON'T:
-- Ignore what they said entirely
-- Give a formal interview answer
-- Restate the question back
-
-Keep it flowing like you're actually vibing!
+❌ FORBIDDEN - DO NOT:
+- Mention ANY previous topics or answers
+- Reference anything from earlier in the date
+- Talk about anything OTHER than "${winningAnswer}"
 
 ${emotionalInstructions}`
     

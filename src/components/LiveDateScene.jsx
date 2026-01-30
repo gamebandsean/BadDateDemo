@@ -1932,13 +1932,10 @@ function LiveDateScene() {
       const daterOpensFirst = Math.random() < 0.5
       console.log('📝 Pre-generating:', daterOpensFirst ? 'DATER opens' : 'AVATAR opens')
       
-      // For the FIRST exchange of a new round, use LIMITED history with a round boundary marker
-      // This prevents the LLM from continuing the previous round's conversation
-      const recentHistory = getConversation().slice(-6) // Just last 6 messages for context
-      const newRoundHistory = [
-        ...recentHistory,
-        { speaker: 'system', message: `--- NEW TOPIC: ${questionContext} ---` }
-      ]
+      // For the FIRST exchange of a new round, pass EMPTY history
+      // This completely prevents the LLM from referencing previous rounds
+      // The avatar should ONLY talk about the current round's answer
+      const newRoundHistory = [] // Empty! No previous context allowed for first response
       
       // ===== EXCHANGE 1 =====
       let exchange1 = { daterOpener: null, avatarResponse: null, daterReaction: null, matchResult: null }
