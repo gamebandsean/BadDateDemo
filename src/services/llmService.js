@@ -797,28 +797,27 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
     
     behaviorInstructions = `🚨🚨🚨 CRITICAL: ONLY TALK ABOUT "${winningAnswer}" 🚨🚨🚨
 
-📋 THE QUESTION THAT WAS ASKED: "${questionContext}"
-🎯 YOUR ANSWER (your response to that question): "${winningAnswer}"
-🎯 YOUR PERSONALITY / OTHER TRAITS (use these to make your REASON feel consistent): ${realAttributes.join(', ') || 'none yet'}
+📋 THE QUESTION (asked by a HOST — unseen; you are NOT responding to the dater): "${questionContext}"
+🎯 YOUR ANSWER: "${winningAnswer}"
+🎯 YOUR PERSONALITY / OTHER TRAITS: ${realAttributes.join(', ') || 'none yet'}
 ${preferenceContext}
 
-Use the question above as context — your answer and reason should make sense as a response TO that question.`
+⚠️ YOUR FIRST LINE MUST BE A DIRECT STATEMENT that takes the QUESTION and your ANSWER into account.
+- You are answering the Host's question. Your first sentence should state your answer IN THE CONTEXT of that question.
+- Example: Question "What superpower would make you the best partner?" + Answer "X-ray vision" → "X-ray vision would make the most sense to me — that way I could tell if someone's lying, or find my keys."
+- Example: Question "What's your dealbreaker?" + Answer "not flossing" → "Not flossing would be a dealbreaker for me. Basic hygiene — if you can't do that, what else are you skipping?"
+- Do NOT start with "Right?", "Oh totally!", "Ha!", or anything that sounds like you're responding to something the dater said. The dater did NOT ask the question. The Host did. Lead with YOUR statement about your answer.
 
-⚠️ YOUR RESPONSE MUST DO TWO THINGS:
-1. State your answer "${winningAnswer}" in the first sentence (no intro, no hello).
-2. Explain WHY you answered that way — a brief reason that fits YOUR personality and traits above. You don't have to mention every trait; just give a reason that feels like *you*.
-
-✅ STRUCTURE: [Answer] + [Why — reason that fits your personality]
-✅ EXAMPLES WITH REASONS:
-- Answer "not flossing" + reason: "Yeah, not flossing is a no from me. Basic hygiene — like, if you can't do that, what else are you skipping?"
-- Answer "loud chewing" + reason: "Oh man, loud chewing. I just can't. Makes me so uncomfortable, I lose my appetite."
-- Answer "being kind to waiters" + reason: "For me it's how someone treats waiters. Says everything about how they'll treat you when nobody's watching."
-- Answer "pineapple on pizza" + reason: "Real talk? Pineapple on pizza. I'm a sweet-and-savory person, that's just who I am."
+✅ STRUCTURE: First sentence = [Your answer] + [in context of the question] + [brief why]. Example: "[Answer] would make the most sense to me because..." or "For me it's [answer] — that way I could..."
+✅ MORE EXAMPLES (first line is a direct statement):
+- "Loud chewing is a no for me — I just can't, it makes me lose my appetite."
+- "Being kind to waiters. That would be it for me — says everything about how they'll treat you when nobody's watching."
+- "Pineapple on pizza — I'm a sweet-and-savory person, that's just who I am."
 
 ❌ FORBIDDEN:
-- Don't just state the answer with no reason. Always include a brief "why."
-- No introduction or hello. Jump to answer + reason.
-- Don't mention every trait — one coherent reason is enough.
+- Do NOT start with "Right?", "Oh totally!", "Ha!", "See," or as if the dater just said something. The question came from the Host.
+- No intro or hello. First line = direct statement about your answer in context of the question.
+- Always include a brief "why." Don't mention every trait — one coherent reason is enough.
 
 ${emotionalInstructions}`
     
@@ -839,29 +838,28 @@ ${emotionalInstructions}`
     
     behaviorInstructions = `🚨🚨🚨 CRITICAL: ONLY TALK ABOUT "${winningAnswer}" 🚨🚨🚨
 
-Your date just said: "${daterOpener}"
+Your date just shared their take: "${daterOpener}"
+The QUESTION was asked by a HOST (unseen) — you are answering the Host's question, not replying to the dater.
 
-📋 THE QUESTION THAT WAS ASKED: "${questionContext}"
-🎯 YOUR ANSWER (your response to that question): "${winningAnswer}"
-🎯 YOUR PERSONALITY / OTHER TRAITS (use these to make your REASON feel consistent): ${realAttributes.join(', ') || 'none yet'}
+📋 THE QUESTION (from the Host): "${questionContext}"
+🎯 YOUR ANSWER: "${winningAnswer}"
+🎯 YOUR PERSONALITY / OTHER TRAITS: ${realAttributes.join(', ') || 'none yet'}
 ${preferenceContext}
 
-Use the question above as context — your answer and reason should make sense as a response TO that question.`
+⚠️ YOUR FIRST LINE MUST BE A DIRECT STATEMENT about your answer in context of the QUESTION.
+- Do NOT start with "Right?", "Oh totally!", "Ha!", "See," or as if you're responding to what the dater said. The question came from the Host.
+- Lead with YOUR statement: your answer + in context of the question + brief why. Example: "${winningAnswer} would make the most sense to me — that way I could..." or "For me it's ${winningAnswer}, because..."
+- You can briefly acknowledge the dater's take in the same breath or after your statement, but your FIRST sentence must be the direct statement about your answer.
 
-⚠️ YOUR RESPONSE MUST DO TWO THINGS:
-1. Brief reaction to what they said (2-4 words), then state your answer "${winningAnswer}" in the same or next sentence.
-2. Explain WHY you answered that way — a brief reason that fits YOUR personality and traits above. You don't have to mention every trait; just give a reason that feels like *you*.
-
-✅ STRUCTURE: [Reaction] + [Answer] + [Why — reason that fits your personality]
-✅ EXAMPLES WITH REASONS:
-- "Oh totally! For me it's ${winningAnswer}. [Then add why — e.g. that's just how I'm wired / I've had bad experiences / it says a lot about a person.]"
-- "Ha! See, ${winningAnswer} is my thing. [Then add why — one sentence that fits your traits.]"
-- "Right?? ${winningAnswer} though. That's mine. [Then add why.]"
+✅ STRUCTURE: First sentence = [Your answer] + [in context of question] + [why]. Optional: then a brief "same" or "I get that" about the dater.
+✅ EXAMPLES (first line is a direct statement):
+- "${winningAnswer} would be my pick — that way I could actually [reason]."
+- "For me it's ${winningAnswer}. [Brief why.]"
+- "I'd go with ${winningAnswer} — [reason]."
 
 ❌ FORBIDDEN:
-- Don't just state the answer with no reason. Always include a brief "why."
-- No introduction or hello. Jump to reaction + answer + reason.
-- Don't mention every trait — one coherent reason is enough.
+- Do NOT lead with "Right?", "Oh totally!", "Ha!", "See," or "I feel that!" — the dater did not ask the question.
+- First line = direct statement about your answer. Always include a brief "why."
 
 ${emotionalInstructions}`
     
