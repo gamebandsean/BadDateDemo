@@ -1386,28 +1386,30 @@
   flex-shrink: 0;
 }
 
+/* Good attributes: yellow text */
 .reaction-feedback.loves {
-  color: #ff4d6d;
-  border-color: #ff4d6d;
-  text-shadow: 0 0 20px rgba(255, 77, 109, 0.5);
+  color: #facc15;
+  border-color: #facc15;
+  text-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
 }
 
 .reaction-feedback.likes {
-  color: #a855f7;
-  border-color: #a855f7;
-  text-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
-}
-
-.reaction-feedback.dislikes {
   color: #fbbf24;
   border-color: #fbbf24;
-  text-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+  text-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
 }
 
-.reaction-feedback.dealbreakers {
+/* Bad attributes: red text */
+.reaction-feedback.dislikes {
   color: #ef4444;
   border-color: #ef4444;
   text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+}
+
+.reaction-feedback.dealbreakers {
+  color: #dc2626;
+  border-color: #dc2626;
+  text-shadow: 0 0 20px rgba(220, 38, 38, 0.6);
   animation: pulse-danger 0.5s ease-in-out 2;
 }
 
@@ -1623,6 +1625,11 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+}
+
+/* When round prompt banner is visible, reserve space so submitted answers and content are not covered */
+.date-screen.has-round-prompt-banner {
+  padding-top: 170px;
 }
 
 /* Subtle romantic pattern overlay */

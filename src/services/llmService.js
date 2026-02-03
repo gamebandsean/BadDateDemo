@@ -962,6 +962,30 @@ ${emotionalInstructions}
 ⚠️ Let your emotional state subtly influence HOW you say things - don't announce how you feel, just let it color your delivery.`
     
     console.log('🔗 Using MODULAR PROMPT CHAIN for avatar response (mode: react)')
+  } else if (mode === 'plot-twist-respond') {
+    // MODE: After "What Happened" – Avatar justifies (if dater didn't like it) or doubles down (if they did)
+    const plotTwistAction = typeof latestAttribute === 'object' && latestAttribute?.plotTwistAction != null
+      ? latestAttribute.plotTwistAction
+      : (typeof latestAttribute === 'string' ? '' : '')
+    const daterReactionText = typeof latestAttribute === 'object' && latestAttribute?.daterReaction != null
+      ? latestAttribute.daterReaction
+      : (typeof latestAttribute === 'string' ? latestAttribute : '')
+    const lastDaterMessage = daterReactionText || [...conversationHistory].reverse().find(m => m.speaker === 'dater')?.message || ''
+    behaviorInstructions = `🎭 PLOT TWIST – RESPOND TO YOUR DATE'S REACTION
+
+What you did in the plot twist: "${plotTwistAction}"
+Your date (${dater.name}) just reacted: "${lastDaterMessage}"
+
+🎯 YOUR TASK (one short response, 1-2 sentences):
+- If they DID NOT like what you did → JUSTIFY your actions. Explain why you did it, defend yourself briefly. Do not apologize away; give a real reason.
+- If they DID like what you did → DOUBLE DOWN. Show you're glad you did it, maybe get a little more intense or romantic about it.
+
+Keep it to 1-2 sentences. Dialogue only. No action descriptions (*smiles*, etc).
+
+${emotionalInstructions}
+
+⚠️ Let your emotional state subtly influence HOW you say things.`
+    console.log('🔗 Using avatar response (mode: plot-twist-respond)')
   } else if (mode === 'connect') {
     // MODE: CONNECT - Wrap up THIS ROUND's topic, optionally connect to other traits
     const newestAttribute = latestAttribute?.answer || latestAttribute || realAttributes[realAttributes.length - 1]
@@ -1793,11 +1817,10 @@ export async function checkAttributeMatch(attribute, daterValues, dater, daterRe
 THE DATER'S REACTION TO THIS WAS: "${daterReaction}"
 
 🚨 CRITICAL: THE CATEGORY MUST MATCH THE DATER'S ACTUAL REACTION!
-- If the dater reacted POSITIVELY (happy, interested, attracted, amused, impressed) → return LOVES or LIKES
+- If the dater reacted POSITIVELY (happy, interested, attracted, amused, impressed) → you MUST return LOVES or LIKES. NEVER return dislikes or dealbreakers for a positive reaction.
 - If the dater reacted NEGATIVELY (scared, disgusted, concerned, uncomfortable, upset, disappointed) → you MUST return DISLIKES or DEALBREAKERS — NEVER return LOVES or LIKES
 - If the dater seemed HORRIFIED, TERRIFIED, or FURIOUS → MUST return DEALBREAKERS
-- NEVER hit a good attribute (loves/likes) when the dater is clearly reacting negatively. Find a DISLIKES or DEALBREAKERS match that fits what they're upset about.
-- The reaction text is the source of truth: negative words = negative category; positive words = positive category.` : ''
+- The reaction text is the source of truth: positive words = LOVES or LIKES only; negative words = DISLIKES or DEALBREAKERS only.` : ''
 
   const systemPrompt = `You are checking how a dating attribute affects the dater's opinion.
 
@@ -1814,7 +1837,7 @@ ATTRIBUTE/STATEMENT TO CHECK: "${attribute}"
 ${reactionContext}
 
 MATCHING RULES (in order of priority):
-1. If the dater's reaction was POSITIVE → find a LOVES or LIKES match
+1. If the dater's reaction was POSITIVE → you MUST find a LOVES or LIKES match. NEVER return dislikes or dealbreakers when the dater reacted positively.
 2. If the dater's reaction was NEGATIVE → you MUST find a DISLIKES or DEALBREAKERS match. NEVER return loves or likes when the dater reacted negatively.
 3. Use creative interpretation - what does this attribute IMPLY about the person?
 4. Consider BASELINE HUMAN MORALITY: murder, violence, danger, monsters = generally bad
@@ -1873,11 +1896,19 @@ Return ONLY valid JSON (matches MUST be true):
           matchedValue: parsed.matchedValue || 'general impression',
           shortLabel: parsed.shortLabel
         }
-        // Safeguard: never return loves/likes when dater reacted negatively
-        if (daterReaction && (result.category === 'loves' || result.category === 'likes')) {
+        // Safeguard: reaction must match category
+        if (daterReaction) {
           const fallback = getFallbackMatch(daterReaction)
-          if (fallback.category === 'dislikes' || fallback.category === 'dealbreakers') {
-            console.warn('Attribute match: dater reacted negatively but LLM returned positive category; overriding to', fallback.category)
+          const resultPositive = result.category === 'loves' || result.category === 'likes'
+          const resultNegative = result.category === 'dislikes' || result.category === 'dealbreakers'
+          const fallbackPositive = fallback.category === 'loves' || fallback.category === 'likes'
+          const fallbackNegative = fallback.category === 'dislikes' || fallback.category === 'dealbreakers'
+          if (resultPositive && fallbackNegative) {
+            console.warn('Attribute match: dater reacted negatively but LLM returned positive; overriding to', fallback.category)
+            return fallback
+          }
+          if (resultNegative && fallbackPositive) {
+            console.warn('Attribute match: dater reacted positively but LLM returned negative; overriding to', fallback.category)
             return fallback
           }
         }

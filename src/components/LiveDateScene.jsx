@@ -10,6 +10,14 @@ import './LiveDateScene.css'
 // PartyKit replaces Firebase for real-time state sync
 // All state is managed by the PartyKit server - clients send actions, receive state
 
+// EXPERIMENT: Dater sometimes interrupts Avatar when they hit a Love or Dealbreaker (low probability)
+const INTERRUPT_AVATAR_PROBABILITY = 0.12 // ~12% of the time for loves/dealbreakers
+const INTERRUPT_AFTER_AVATAR_MS = 2600   // Let avatar speak this long before "interruption"
+const DATER_INTERRUPTIONS = {
+  loves: ['Oh my god—', 'Wait, really?!', 'No way—', 'Oh!', 'Seriously?!'],
+  dealbreakers: ['Wait, what?!', 'Hold on—', "I'm sorry, what?!", 'What?!', 'Excuse me—']
+}
+
 // Phase timers: 30 seconds for Phase 1 and Phase 2
 function LiveDateScene() {
   const selectedDater = useGameStore((state) => state.selectedDater)
@@ -2087,40 +2095,53 @@ function LiveDateScene() {
         await new Promise(r => setTimeout(r, 500)) // Brief pause between speakers
       }
       
-      // Play avatar response
+      // Play avatar response (optionally interrupted by dater for loves/dealbreakers)
+      const shouldInterrupt = exchange.avatarResponse && exchange.daterReaction &&
+        (exchange.sentimentHit === 'loves' || exchange.sentimentHit === 'dealbreakers') &&
+        Math.random() < INTERRUPT_AVATAR_PROBABILITY
+
       if (exchange.avatarResponse) {
-        // Hide bubble first, then set text - audio start will show it
         if (ttsEnabled) setAvatarBubbleReady(false)
         setAvatarEmotion(exchange.avatarMood || 'neutral')
         setAvatarBubble(exchange.avatarResponse)
         addDateMessage('avatar', exchange.avatarResponse)
         await syncConversationToPartyKit(exchange.avatarResponse, undefined, undefined)
         if (partyClient) partyClient.syncState({ avatarEmotion: exchange.avatarMood || 'neutral' })
-        // Wait for audio to complete before next message
-        await waitForAllAudio()
-        await new Promise(r => setTimeout(r, 500)) // Brief pause between speakers
+
+        if (shouldInterrupt && ttsEnabled) {
+          // EXPERIMENT: Avatar starts (useEffect queues TTS). Cut off after a short time; dater interjects then full reaction.
+          await new Promise(r => setTimeout(r, INTERRUPT_AFTER_AVATAR_MS))
+          stopAllAudio()
+          const interjections = DATER_INTERRUPTIONS[exchange.sentimentHit] || DATER_INTERRUPTIONS.dealbreakers
+          const interjection = interjections[Math.floor(Math.random() * interjections.length)]
+          if (ttsEnabled) setDaterBubbleReady(false)
+          setDaterEmotion(exchange.daterMood || 'neutral')
+          setDaterBubble(interjection)
+          addDateMessage('dater', interjection)
+          await syncConversationToPartyKit(undefined, interjection, undefined)
+          if (partyClient) partyClient.syncState({ daterEmotion: exchange.daterMood || 'neutral' })
+          await new Promise(r => setTimeout(r, 150))
+          await waitForAllAudio()
+          await new Promise(r => setTimeout(r, 400))
+        } else {
+          await waitForAllAudio()
+          await new Promise(r => setTimeout(r, 500))
+        }
       }
-      
-      // Play dater reaction
+
+      // Play dater reaction (full line; if we interrupted, we already showed the short interjection)
       if (exchange.daterReaction) {
-        // Hide bubble first, then set text - audio start will show it
         if (ttsEnabled) setDaterBubbleReady(false)
         setDaterEmotion(exchange.daterMood || 'neutral')
         setDaterBubble(exchange.daterReaction)
         addDateMessage('dater', exchange.daterReaction)
         await syncConversationToPartyKit(undefined, exchange.daterReaction, undefined)
         if (partyClient) partyClient.syncState({ daterEmotion: exchange.daterMood || 'neutral' })
-        
-        // Show reaction feedback IMMEDIATELY when dater starts speaking (not before!)
-        // Apply scoring at the same time
+
         if (exchange.sentimentHit && exchange.matchResult) {
-          // Show reaction text NOW - when dater is speaking
           showReactionFeedback(exchange.sentimentHit, exchange.matchResult.matchedValue, exchange.matchResult.shortLabel)
-          
-          // Apply scoring
           const wasAlreadyExposed = exposeValue(exchange.matchResult.category, exchange.matchResult.matchedValue, exchange.matchResult.shortLabel)
           if (wasAlreadyExposed) triggerGlow(exchange.matchResult.shortLabel)
-          
           const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
           const change = Math.round(baseChanges[exchange.sentimentHit] * (exchange.scoringMultiplier || 1))
           if (change !== 0) {
@@ -2136,13 +2157,10 @@ function LiveDateScene() {
             }])
           }
         }
-        
+
         await syncConversationToPartyKit(undefined, undefined, true)
-        
-        // Wait for dater's audio to complete before next exchange
         await waitForAllAudio()
-        
-        // Pause between exchanges
+
         if (i < exchanges.length - 1) {
           await new Promise(r => setTimeout(r, 1000))
         }
@@ -2837,11 +2855,11 @@ Generate ${daterName}'s final verdict:`
       const daterDealbreakers = Array.isArray(selectedDater?.dealbreakers) ? selectedDater.dealbreakers.join(', ') : (selectedDater?.dealbreakers || '')
       const daterBackstoryNote = selectedDater?.backstory ? selectedDater.backstory.slice(0, 200) + '...' : ''
       const storyContext = whatHappenedStory
-        ? `PLOT TWIST SCENARIO - HERE IS WHAT HAPPENED (you must react to this story):\n\nWHAT HAPPENED:\n"${whatHappenedStory}"\n\nYOU ARE ${daterName}. Respond as ${daterName} would honestly respond to what happened in the story above.\n\nYOUR CHARACTER: Values: ${daterValues}. Dealbreakers: ${daterDealbreakers}.${daterBackstoryNote ? ` Backstory (who you are): ${daterBackstoryNote}` : ''}\n\nReact with full emotion, in character. Your response should be how YOU would really feel given your values and personality. The winning action was: "${winner.answer}" — but you are reacting to the NARRATIVE above.`
-        : `PLOT TWIST SCENARIO: Someone else hit on ${daterName}. Your date's response (action): "${winner.answer}". You are ${daterName}. Values: ${daterValues}. Dealbreakers: ${daterDealbreakers}. React honestly, as yourself, with full emotion.`
+        ? `PLOT TWIST SCENARIO - HERE IS WHAT HAPPENED (you must react to this story):\n\nWHAT HAPPENED:\n"${whatHappenedStory}"\n\nYOU ARE ${daterName}. Give a few sentences (2-4) reacting to what just happened in the story above.\n\nYOUR CHARACTER: Values: ${daterValues}. Dealbreakers: ${daterDealbreakers}.${daterBackstoryNote ? ` Backstory (who you are): ${daterBackstoryNote}` : ''}\n\nReact with full emotion, in character. Say how you feel about what happened and what it means to you. The winning action was: "${winner.answer}" — but you are reacting to the NARRATIVE above.`
+        : `PLOT TWIST SCENARIO: Someone else hit on ${daterName}. Your date's response (action): "${winner.answer}". You are ${daterName}. Give a few sentences (2-4) reacting honestly, as yourself. Values: ${daterValues}. Dealbreakers: ${daterDealbreakers}.`
       
-      // ============ EXCHANGE 1: Dater's FIRST reaction to "What happened" ============
-      console.log('🎭 Plot Twist Exchange 1: Dater reacts to what happened story (with dater attributes)')
+      // ============ EXCHANGE 1: Dater reacts with a few sentences to what happened ============
+      console.log('🎭 Plot Twist Exchange 1: Dater reacts to what happened (few sentences)')
       const plotTwistCompat = useGameStore.getState().compatibility
       const daterReaction1 = await getDaterDateResponse(
         selectedDater,
@@ -2871,14 +2889,11 @@ Generate ${daterName}'s final verdict:`
         partyClient.syncState({ daterEmotion: plotTwistDaterMood })
       }
       
-      // Wait for Maya to finish speaking - this is important!
       await waitForAllAudio()
       await new Promise(resolve => setTimeout(resolve, 2000))
       
-      // ============ EXCHANGE 2: Avatar responds to Maya's reaction ============
-      console.log('🎭 Plot Twist Exchange 2: Avatar responds')
-      
-      // During plot twist, avatar is likely excited or nervous depending on what they did
+      // ============ EXCHANGE 2: Avatar justifies (if she didn't like it) or doubles down (if she did), then phase ends ============
+      console.log('🎭 Plot Twist Exchange 2: Avatar justifies or doubles down')
       const plotTwistAvatarMood = winner.answer.toLowerCase().includes('nothing') ? 'nervous' : 
                                   winner.answer.toLowerCase().includes('punch') ||
                                   winner.answer.toLowerCase().includes('fight') ? 'confident' : 'excited'
@@ -2887,69 +2902,21 @@ Generate ${daterName}'s final verdict:`
         avatar,
         selectedDater,
         useGameStore.getState().dateConversation || [],
-        daterReaction1,
-        'react',
-        plotTwistAvatarMood // Pass emotional state for plot twist reaction
+        { plotTwistAction: winner.answer, daterReaction: daterReaction1 },
+        'plot-twist-respond',
+        plotTwistAvatarMood
       )
       
-      const avatarMood = plotTwistAvatarMood
-      setAvatarEmotion(avatarMood)
+      setAvatarEmotion(plotTwistAvatarMood)
       setAvatarBubble(avatarResponse)
       addDateMessage('avatar', avatarResponse)
       syncConversationToPartyKit(avatarResponse, undefined)
       if (partyClient && isHost) {
-        partyClient.syncState({ avatarEmotion: avatarMood })
+        partyClient.syncState({ avatarEmotion: plotTwistAvatarMood })
       }
       
-      // Wait for Avatar to finish
       await waitForAllAudio()
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // ============ EXCHANGE 3: Maya continues processing - final thoughts ============
-      console.log('🎭 Plot Twist Exchange 3: Maya continues her emotional processing')
-      const continueContext = whatHappenedStory
-        ? `PLOT TWIST - CONTINUE REACTING TO WHAT HAPPENED.\n\nWHAT HAPPENED: "${whatHappenedStory}"\n\nYou (${daterName}) already said: "${daterReaction1}"\n\nNow give your final thoughts on this moment. What does what happened mean for you and this date? Are you more or less interested? Stay in character (values: ${daterValues}; dealbreakers: ${daterDealbreakers}). React honestly.`
-        : `Continue reacting to the PLOT TWIST. Your date just ${winner.answer}. You already said: "${daterReaction1}". Now give your final thoughts — what does this mean for you and this date? Stay in character.`
-      
-      const daterReaction2 = await getDaterDateResponse(
-        selectedDater,
-        avatar,
-        useGameStore.getState().dateConversation || [],
-        continueContext,
-        null,
-        { positive: 0, negative: 0 },
-        false,
-        false, // not first impressions
-        plotTwistCompat // Pass current compatibility
-      )
-      
-      // Update dater's emotion for final thoughts - could shift based on processing
-      const finalPlotTwistMood = winner.answer.toLowerCase().includes('nothing') ? 'uncomfortable' :
-                                 winner.answer.toLowerCase().includes('punch') ||
-                                 winner.answer.toLowerCase().includes('fight') ? 'worried' : 'happy'
-      setDaterEmotion(finalPlotTwistMood)
-      setDaterBubble(daterReaction2)
-      addDateMessage('dater', daterReaction2)
-      syncConversationToPartyKit(undefined, daterReaction2)
-      if (partyClient && isHost) {
-        partyClient.syncState({ daterEmotion: finalPlotTwistMood })
-      }
-      
-      // Avatar reacts to Maya's final feelings
-      const avatarFinalMood = finalPlotTwistMood === 'happy' ? 'happy' : 
-                              finalPlotTwistMood === 'worried' ? 'nervous' : 'worried'
-      setAvatarEmotion(avatarFinalMood)
-      if (partyClient && isHost) {
-        partyClient.syncState({ avatarEmotion: avatarFinalMood })
-      }
-      
-      // Wait for all audio to complete before transitioning
-      console.log('⏳ Waiting for plot twist audio to complete...')
-      await waitForAllAudio()
-      console.log('✅ Plot twist audio complete')
-      
-      // Longer pause to let the moment sink in - this is important!
-      await new Promise(resolve => setTimeout(resolve, 4000))
+      await new Promise(resolve => setTimeout(resolve, 2500))
       
     } catch (error) {
       console.error('Error generating plot twist reaction:', error)
@@ -4160,7 +4127,9 @@ Generate ${daterName}'s final verdict:`
       )}
       
       {/* Date Screen - Characters with Speech Bubbles */}
-      <div className="date-screen">
+      <div
+        className={`date-screen ${['phase1', 'answer-selection', 'phase3'].includes(livePhase) && currentRoundPrompt?.title ? 'has-round-prompt-banner' : ''}`}
+      >
         {/* Phase Announcement Banner - at top of conversation area */}
         <AnimatePresence>
           {showPhaseAnnouncement && (
