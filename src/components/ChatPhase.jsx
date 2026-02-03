@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX (motion.button)
 import { useGameStore } from '../store/gameStore'
 import { getDaterChatResponse, getFallbackDaterResponse, extractTraitFromResponse } from '../services/llmService'
 import './ChatPhase.css'
@@ -19,7 +19,7 @@ function ChatPhase() {
     scrollToBottom()
   }, [chatMessages])
   
-  // Initial greeting from Dater - asks what they want to know
+  // Initial greeting from Dater - asks what they want to know (run once on mount)
   useEffect(() => {
     if (chatMessages.length === 0 && !greetingSentRef.current) {
       greetingSentRef.current = true
@@ -27,6 +27,7 @@ function ChatPhase() {
         addChatMessage(`Hey! 👋 So, what do you want to know about me? Ask away!`, false)
       }, 1000)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run only once on mount
   }, [])
   
   const handleSendMessage = async (e) => {

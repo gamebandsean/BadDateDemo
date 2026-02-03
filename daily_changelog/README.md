@@ -1,6 +1,13 @@
 # Daily Changelog Generator
 
-A simple Python app that runs every weekday at 10am to summarize yesterday's git changes into a bulleted list and saves it to your Desktop.
+A simple Python app that runs every weekday at 10am to summarize the **most recent day that had git activity**:
+
+- Starts with **yesterday** and checks for commits.
+- If that day has no commits, checks the day before, and so on.
+- Stops at the first day that has at least one commit (or after 14 days).
+- Works for any schedule: weekends, holidays, or random days off.
+
+Saves a txt file to your Desktop in a "Daily Changelog" folder.
 
 ## Setup
 
@@ -35,10 +42,10 @@ python daily_changelog.py --now
 
 ## Output
 
-The script creates a file on your Desktop named `changelog_YYYY-MM-DD.txt` containing:
-- Date of the changes
-- Bulleted summary (max 10 bullets)
-- Similar changes combined into single bullets
+The script creates a file in `~/Desktop/Daily Changelog/` named `changelog_YYYY-MM-DD.txt` (date = the day that had commits). Contents:
+- Date of the changes (the day that had activity)
+- Theme line (e.g. "Yesterday's Focus", "Friday's Focus", or the specific date)
+- Bulleted summary (4–8 bullets, similar changes combined)
 
 ## Running in Background
 

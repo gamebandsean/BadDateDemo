@@ -104,7 +104,6 @@ const EMOTION_COLORS = {
  */
 export default function AnimatedText({ text, emotion = 'neutral', charDelay, onComplete }) {
   const [visibleCharCount, setVisibleCharCount] = useState(0)
-  const [isComplete, setIsComplete] = useState(false)
   const intervalRef = useRef(null)
   const textRef = useRef(text)
   
@@ -134,7 +133,6 @@ export default function AnimatedText({ text, emotion = 'neutral', charDelay, onC
     
     // Reset state
     setVisibleCharCount(0)
-    setIsComplete(false)
     
     if (!text || text.length === 0) return
     
@@ -150,8 +148,7 @@ export default function AnimatedText({ text, emotion = 'neutral', charDelay, onC
         // All characters shown
         clearInterval(intervalRef.current)
         intervalRef.current = null
-        setIsComplete(true)
-        if (onComplete) onComplete()
+        onComplete?.()
       }
     }, calculatedDelay)
     

@@ -210,7 +210,7 @@ Don't just SAY you feel this way. Let the emotion come through in HOW you speak.
  * Humanize a response by adding natural speech patterns
  * This is a post-processing helper (optional)
  */
-export function addHumanTouch(text, emotion = null) {
+export function addHumanTouch(text, _emotion = null) {
   // This could be expanded to do light post-processing
   // For now, it's a placeholder for future enhancement
   return text

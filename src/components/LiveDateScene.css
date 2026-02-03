@@ -682,6 +682,20 @@
   font-size: 1.1rem;
 }
 
+/* Wheel phase - prevent cut-off / black screen; keep wheel visible */
+.plot-twist-wheel-phase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+  width: 100%;
+}
+
+.plot-twist-wheel-phase .wheel-container.plot-twist-wheel {
+  flex-shrink: 0;
+}
+
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 30px rgba(255, 77, 109, 0.5); }
   50% { box-shadow: 0 0 50px rgba(255, 140, 66, 0.8); }

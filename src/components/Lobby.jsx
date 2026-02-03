@@ -1,37 +1,34 @@
-import { motion } from 'framer-motion'
+import { useMemo } from 'react'
+import { motion } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX
 import { useGameStore } from '../store/gameStore'
 import './Lobby.css'
 
 function Lobby() {
   const setPhase = useGameStore((state) => state.setPhase)
-  
+  /* eslint-disable react-hooks/purity -- stable random values per mount */
+  const heartConfigs = useMemo(() => [...Array(12)].map(() => ({
+    x: `${Math.random() * 100}vw`,
+    rotateInitial: Math.random() * 360,
+    rotateAnimate: Math.random() * 360 + 180,
+    duration: 8 + Math.random() * 4,
+    delay: Math.random() * 5,
+    emoji: ['💔', '💕', '❤️', '💘', '💗', '💖', '💝'][Math.floor(Math.random() * 7)]
+  })), [])
+  /* eslint-enable react-hooks/purity */
+
   return (
     <div className="lobby">
       <div className="lobby-background">
         <div className="floating-hearts">
-          {[...Array(12)].map((_, i) => (
+          {heartConfigs.map((cfg, i) => (
             <motion.span
               key={i}
               className="floating-heart"
-              initial={{ 
-                y: '100vh', 
-                x: `${Math.random() * 100}vw`,
-                opacity: 0,
-                rotate: Math.random() * 360
-              }}
-              animate={{ 
-                y: '-20vh',
-                opacity: [0, 1, 1, 0],
-                rotate: Math.random() * 360 + 180
-              }}
-              transition={{
-                duration: 8 + Math.random() * 4,
-                repeat: Infinity,
-                delay: Math.random() * 5,
-                ease: 'linear'
-              }}
+              initial={{ y: '100vh', x: cfg.x, opacity: 0, rotate: cfg.rotateInitial }}
+              animate={{ y: '-20vh', opacity: [0, 1, 1, 0], rotate: cfg.rotateAnimate }}
+              transition={{ duration: cfg.duration, repeat: Infinity, delay: cfg.delay, ease: 'linear' }}
             >
-              {['💔', '💕', '❤️', '💘', '💗', '💖', '💝'][Math.floor(Math.random() * 7)]}
+              {cfg.emoji}
             </motion.span>
           ))}
         </div>

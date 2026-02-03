@@ -185,7 +185,7 @@ export function buildDaterAgentPrompt(dater, phase = 'chat') {
     beliefs,
     admires,
     formality,
-    complexity,
+    complexity: _complexity,
     quirk,
     talkingTraits,
     characterReferences,

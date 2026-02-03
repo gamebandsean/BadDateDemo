@@ -28,8 +28,8 @@ let ttsEnabled = true // Enabled by default
 let onAudioStartCallbacks = []
 let onAudioEndCallbacks = []
 
-// Track pending audio completion promises
-let currentAudioEndResolve = null
+// Track pending audio completion promises (reserved for future use)
+let _currentAudioEndResolve = null
 
 /**
  * Register a callback for when audio starts playing

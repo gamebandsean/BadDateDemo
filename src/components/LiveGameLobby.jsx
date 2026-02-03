@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX
 import { QRCodeSVG } from 'qrcode.react'
 import { useGameStore } from '../store/gameStore'
 import PartySocket from 'partysocket'
@@ -17,7 +17,7 @@ function LiveGameLobby() {
   const isHost = useGameStore((state) => state.isHost)
   const players = useGameStore((state) => state.players)
   const setPlayers = useGameStore((state) => state.setPlayers)
-  const username = useGameStore((state) => state.username)
+  const _username = useGameStore((state) => state.username)
   const playerId = useGameStore((state) => state.playerId)
   const partyClient = useGameStore((state) => state.partyClient)
   

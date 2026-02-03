@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX (motion.div, etc.)
 import { useGameStore } from '../store/gameStore'
-import { 
-  getDaterDateResponse, 
-  getAvatarDateResponse, 
-  getFallbackDateDialogue 
-} from '../services/llmService'
+import { getDaterDateResponse, getAvatarDateResponse } from '../services/llmService'
 import './DateScene.css'
 
 /**
@@ -91,9 +87,9 @@ function determineAffectedFactor(response, avatarMessage = '') {
  * @param {string} response - The Dater's response text
  * @param {number} reactionsLeft - How many heightened reactions remain (2 = first reaction, 1 = second, 0 = normal)
  * @param {string} avatarMessage - The Avatar's previous message (for context)
- * @param {string} daterName - The Dater's name for personalized reasons
+ * @param {string} [_daterName] - The Dater's name for personalized reasons (reserved for future use)
  */
-function evaluateDaterSentiment(response, reactionsLeft = 0, avatarMessage = '', daterName = 'They') {
+function evaluateDaterSentiment(response, reactionsLeft = 0, avatarMessage = '', _daterName = 'They') {
   const lower = response.toLowerCase()
   
   // Determine which factor this affects
@@ -328,9 +324,9 @@ function evaluateDaterSentiment(response, reactionsLeft = 0, avatarMessage = '',
  * Returns null most of the time (actions should be rare)
  * @param {string} speaker - 'avatar' or 'dater'
  * @param {number} compatibility - current compatibility score
- * @param {object} dater - the dater's data (for personality-based actions)
+ * @param {object} [_dater] - the dater's data (reserved for personality-based actions)
  */
-function getSpontaneousAction(speaker, compatibility, dater) {
+function getSpontaneousAction(speaker, compatibility, _dater) {
   // Only ~5% chance of a spontaneous action (rare, not overwhelming)
   if (Math.random() > 0.05) return null
   
@@ -402,10 +398,7 @@ function DateScene() {
     dateConversation,
     submittedAttributes,
     appliedAttributes,
-    latestAttribute,
-    latestAttributeReactionsLeft,
     attributeCooldown,
-    hotSeatPlayer,
     compatibility,
     compatibilityReason,
     discoveredTraits,
@@ -416,17 +409,12 @@ function DateScene() {
     conversationTurns,
     addDateMessage,
     submitAttribute,
-    consumeDaterReaction,
     triggerTimedEvent,
     consumeTimedEvent,
-    updateCompatibilityFactor,
-    incrementConversationTurn,
     clearCompatibilityReason,
     voteForAttribute,
     applyTopAttributes,
-    selectRandomHotSeat,
     applyHotSeatAttribute,
-    setPhase,
     tickTimer,
   } = useGameStore()
   
@@ -445,18 +433,21 @@ function DateScene() {
   const conversationIntervalRef = useRef(null)
   const lastSpeakerRef = useRef(null)
   const conversationActiveRef = useRef(true)
-  const greetingSentRef = useRef(false)
   
-  // Track compatibility changes for flash animation
+  // Track compatibility changes for flash animation (defer setState to avoid sync setState in effect)
   useEffect(() => {
     if (compatibility !== prevCompatibilityRef.current) {
       const delta = compatibility - prevCompatibilityRef.current
-      setCompatibilityFlash(delta > 0 ? 'positive' : 'negative')
+      const flash = delta > 0 ? 'positive' : 'negative'
       prevCompatibilityRef.current = compatibility
-      
-      // Clear flash after animation
+      const id = requestAnimationFrame(() => {
+        setCompatibilityFlash(flash)
+      })
       const timer = setTimeout(() => setCompatibilityFlash(null), 800)
-      return () => clearTimeout(timer)
+      return () => {
+        cancelAnimationFrame(id)
+        clearTimeout(timer)
+      }
     }
   }, [compatibility])
   
@@ -483,7 +474,8 @@ function DateScene() {
       })
       
       if (matchingTrait) {
-        setHighlightedTrait({ trait: matchingTrait, type: isPositive ? 'positive' : 'negative' })
+        const payload = { trait: matchingTrait, type: isPositive ? 'positive' : 'negative' }
+        requestAnimationFrame(() => setHighlightedTrait(payload))
       }
       
       const timer = setTimeout(() => {
@@ -637,6 +629,7 @@ function DateScene() {
         clearTimeout(conversationIntervalRef.current)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run only once on mount
   }, []) // Only run on mount
   
   // Watch for new attributes and trigger immediate Avatar response
@@ -787,20 +780,20 @@ function DateScene() {
     setInputValue('')
   }
   
-  const handleVote = (attrId) => {
+  const _handleVote = (attrId) => {
     if (votedAttributes.has(attrId) || votedAttributes.size >= 3) return
     voteForAttribute(attrId)
     setVotedAttributes(new Set([...votedAttributes, attrId]))
   }
   
-  const handleHotSeatSubmit = (e) => {
+  const _handleHotSeatSubmit = (e) => {
     e.preventDefault()
     if (!hotSeatInput.trim()) return
     applyHotSeatAttribute(hotSeatInput.trim())
     setHotSeatInput('')
   }
   
-  const handleFinishVoting = () => {
+  const _handleFinishVoting = () => {
     applyTopAttributes()
     setVotedAttributes(new Set())
   }

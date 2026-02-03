@@ -1,5 +1,5 @@
 import { useGameStore } from '../store/gameStore'
-import { motion } from 'framer-motion'
+import { motion } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX (motion.div)
 import './GameHeader.css'
 
 function GameHeader() {

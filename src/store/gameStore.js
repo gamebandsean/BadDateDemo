@@ -357,7 +357,7 @@ export const useGameStore = create((set, get) => ({
   },
   
   // Legacy voting functions (kept for compatibility, not used in single player)
-  voteForAttribute: (attributeId) => {
+  voteForAttribute: (_attributeId) => {
     // No-op in single player mode
   },
   

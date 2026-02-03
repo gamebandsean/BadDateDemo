@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX
 import { useGameStore } from '../store/gameStore'
 import './Matchmaking.css'
 

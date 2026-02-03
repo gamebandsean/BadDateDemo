@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion'
-import { useRef, useState } from 'react'
+import { motion } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX
+import { useRef, useState, useMemo } from 'react'
 import html2canvas from 'html2canvas'
 import { useGameStore } from '../store/gameStore'
 import './Results.css'
@@ -91,65 +91,54 @@ function Results() {
   // Get the most interesting messages for the share card (limit to 8)
   const getHighlightMessages = () => {
     if (dateConversation.length <= 8) return dateConversation
-    // Take first 2, last 2, and 4 from the middle
     const first = dateConversation.slice(0, 2)
     const last = dateConversation.slice(-2)
     const middleStart = Math.floor(dateConversation.length / 2) - 2
     const middle = dateConversation.slice(middleStart, middleStart + 4)
     return [...first, ...middle, ...last]
   }
+
+  /* eslint-disable react-hooks/purity -- stable random confetti per mount */
+  const winConfettiConfigs = useMemo(() => [...Array(20)].map(() => ({
+    x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 400),
+    rotate: Math.random() * 720 - 360,
+    duration: 3 + Math.random() * 2,
+    delay: Math.random() * 2,
+    emoji: ['💕', '❤️', '✨', '💖', '🎉'][Math.floor(Math.random() * 5)]
+  })), [])
+  const loseConfettiConfigs = useMemo(() => [...Array(10)].map(() => ({
+    x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 400),
+    duration: 4 + Math.random() * 2,
+    delay: Math.random() * 3,
+    emoji: ['💔', '😬', '🙈', '❌'][Math.floor(Math.random() * 4)]
+  })), [])
+  /* eslint-enable react-hooks/purity */
   
   return (
     <div className={`results ${isWin ? 'win' : 'lose'} ${liveMode ? 'live-mode-results' : ''}`}>
       <div className="results-background">
         {isWin ? (
-          [...Array(20)].map((_, i) => (
+          winConfettiConfigs.map((cfg, i) => (
             <motion.span
               key={i}
               className="confetti"
-              initial={{ 
-                y: -20, 
-                x: Math.random() * window.innerWidth,
-                rotate: 0,
-                opacity: 1 
-              }}
-              animate={{ 
-                y: window.innerHeight + 100,
-                rotate: Math.random() * 720 - 360,
-                opacity: 0
-              }}
-              transition={{
-                duration: 3 + Math.random() * 2,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-                ease: 'linear'
-              }}
+              initial={{ y: -20, x: cfg.x, rotate: 0, opacity: 1 }}
+              animate={{ y: (typeof window !== 'undefined' ? window.innerHeight : 600) + 100, rotate: cfg.rotate, opacity: 0 }}
+              transition={{ duration: cfg.duration, repeat: Infinity, delay: cfg.delay, ease: 'linear' }}
             >
-              {['💕', '❤️', '✨', '💖', '🎉'][Math.floor(Math.random() * 5)]}
+              {cfg.emoji}
             </motion.span>
           ))
         ) : (
-          [...Array(10)].map((_, i) => (
+          loseConfettiConfigs.map((cfg, i) => (
             <motion.span
               key={i}
               className="confetti"
-              initial={{ 
-                y: -20, 
-                x: Math.random() * window.innerWidth,
-                opacity: 0.6 
-              }}
-              animate={{ 
-                y: window.innerHeight + 100,
-                opacity: 0
-              }}
-              transition={{
-                duration: 4 + Math.random() * 2,
-                repeat: Infinity,
-                delay: Math.random() * 3,
-                ease: 'linear'
-              }}
+              initial={{ y: -20, x: cfg.x, opacity: 0.6 }}
+              animate={{ y: (typeof window !== 'undefined' ? window.innerHeight : 600) + 100, opacity: 0 }}
+              transition={{ duration: cfg.duration, repeat: Infinity, delay: cfg.delay, ease: 'linear' }}
             >
-              {['💔', '😬', '🙈', '❌'][Math.floor(Math.random() * 4)]}
+              {cfg.emoji}
             </motion.span>
           ))
         )}

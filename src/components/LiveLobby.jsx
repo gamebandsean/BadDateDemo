@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX
 import { useGameStore } from '../store/gameStore'
 import { PartyGameClient, generateRoomCode, generatePlayerId } from '../services/partyClient'
 import PartySocket from 'partysocket'
@@ -9,7 +9,7 @@ import './LiveLobby.css'
 const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999'
 
 // Game version - increment with each deployment
-const GAME_VERSION = '0.02.22'
+const GAME_VERSION = '0.02.24'
 
 // Main game entry screen - Bad Date
 
@@ -28,13 +28,33 @@ function LiveLobby() {
   const [username, setUsernameLocal] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [partyKitReady, setPartyKitReady] = useState(true) // PartyKit is always "ready"
+  const [_partyKitReady, _setPartyKitReady] = useState(true) // PartyKit is always "ready"
   const [showAdminModal, setShowAdminModal] = useState(false)
   const [adminStatus, setAdminStatus] = useState('')
   const [qrRoomCode, setQrRoomCode] = useState(null) // Room code from QR scan
   
   // Registry connection for room discovery
   const registryRef = useRef(null)
+  
+  // Stable random values for floating hearts (computed once per mount)
+  /* eslint-disable react-hooks/purity -- Math.random intentional inside useMemo for stable values */
+  const heartConfigs = useMemo(() => [...Array(8)].map(() => ({
+    x: `${Math.random() * 100}vw`,
+    rotateInitial: Math.random() * 360,
+    rotateAnimate: Math.random() * 360 + 180,
+    duration: 8 + Math.random() * 4,
+    delay: Math.random() * 5,
+    emoji: ['💔', '💕', '❤️', '💘', '💗', '💖', '💝'][Math.floor(Math.random() * 7)]
+  })), [])
+  const mainHeartConfigs = useMemo(() => [...Array(12)].map(() => ({
+    x: `${Math.random() * 100}vw`,
+    rotateInitial: Math.random() * 360,
+    rotateAnimate: Math.random() * 360 + 180,
+    duration: 8 + Math.random() * 4,
+    delay: Math.random() * 5,
+    emoji: ['💔', '💕', '❤️', '💘', '💗', '💖', '💝'][Math.floor(Math.random() * 7)]
+  })), [])
+  /* eslint-enable react-hooks/purity */
   
   // Check for room code in URL (from QR scan)
   useEffect(() => {
@@ -250,29 +270,29 @@ function LiveLobby() {
         {/* Floating hearts background */}
         <div className="lobby-background">
           <div className="floating-hearts">
-            {[...Array(8)].map((_, i) => (
+            {heartConfigs.map((cfg, i) => (
               <motion.span
                 key={i}
                 className="floating-heart"
-                initial={{ 
-                  y: '100vh', 
-                  x: `${Math.random() * 100}vw`,
+                initial={{
+                  y: '100vh',
+                  x: cfg.x,
                   opacity: 0,
-                  rotate: Math.random() * 360
+                  rotate: cfg.rotateInitial
                 }}
-                animate={{ 
+                animate={{
                   y: '-20vh',
                   opacity: [0, 1, 1, 0],
-                  rotate: Math.random() * 360 + 180
+                  rotate: cfg.rotateAnimate
                 }}
                 transition={{
-                  duration: 8 + Math.random() * 4,
+                  duration: cfg.duration,
                   repeat: Infinity,
-                  delay: Math.random() * 5,
+                  delay: cfg.delay,
                   ease: 'linear'
                 }}
               >
-                {['💔', '💕', '❤️', '💘', '💗', '💖', '💝'][Math.floor(Math.random() * 7)]}
+                {cfg.emoji}
               </motion.span>
             ))}
           </div>
@@ -379,29 +399,29 @@ function LiveLobby() {
         {/* Floating hearts background */}
         <div className="lobby-background">
           <div className="floating-hearts">
-            {[...Array(12)].map((_, i) => (
+            {mainHeartConfigs.map((cfg, i) => (
               <motion.span
                 key={i}
                 className="floating-heart"
-                initial={{ 
-                  y: '100vh', 
-                  x: `${Math.random() * 100}vw`,
+                initial={{
+                  y: '100vh',
+                  x: cfg.x,
                   opacity: 0,
-                  rotate: Math.random() * 360
+                  rotate: cfg.rotateInitial
                 }}
-                animate={{ 
+                animate={{
                   y: '-20vh',
                   opacity: [0, 1, 1, 0],
-                  rotate: Math.random() * 360 + 180
+                  rotate: cfg.rotateAnimate
                 }}
                 transition={{
-                  duration: 8 + Math.random() * 4,
+                  duration: cfg.duration,
                   repeat: Infinity,
-                  delay: Math.random() * 5,
+                  delay: cfg.delay,
                   ease: 'linear'
                 }}
               >
-                {['💔', '💕', '❤️', '💘', '💗', '💖', '💝'][Math.floor(Math.random() * 7)]}
+                {cfg.emoji}
               </motion.span>
             ))}
           </div>

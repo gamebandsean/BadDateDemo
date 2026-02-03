@@ -230,7 +230,7 @@ function loadAndCacheImage(character, emotion) {
   
   const url = getExpressionPortrait(character, emotion)
   
-  const loadPromise = new Promise((resolve, reject) => {
+  const loadPromise = new Promise((resolve, _reject) => {
     const img = new Image()
     
     img.onload = () => {

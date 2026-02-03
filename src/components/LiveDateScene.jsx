@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX (motion.div, etc.)
 import { useGameStore } from '../store/gameStore'
-import { getDaterDateResponse, getAvatarDateResponse, getDaterConversationOpener, generateDaterValues, checkAttributeMatch, runAttributePromptChain, groupSimilarAnswers, generateBreakdownSentences, generatePlotTwistSummary } from '../services/llmService'
-import { speak, stopAllAudio, setTTSEnabled, isTTSEnabled, waitForAllAudio } from '../services/ttsService'
-import { getMayaPortraitCached, getAvatarPortraitCached, preloadExpressions, waitForPreload } from '../services/expressionService'
+import { getDaterDateResponse, getAvatarDateResponse, generateDaterValues, checkAttributeMatch, groupSimilarAnswers, generateBreakdownSentences, generatePlotTwistSummary, getSingleResponseWithTimeout } from '../services/llmService'
+import { speak, stopAllAudio, waitForAllAudio } from '../services/ttsService'
+import { getMayaPortraitCached, getAvatarPortraitCached, preloadExpressions } from '../services/expressionService'
 import AnimatedText from './AnimatedText'
 import './LiveDateScene.css'
 
@@ -24,7 +24,6 @@ function LiveDateScene() {
   const playerChat = useGameStore((state) => state.playerChat)
   const sentimentCategories = useGameStore((state) => state.sentimentCategories)
   const username = useGameStore((state) => state.username)
-  const winningAttribute = useGameStore((state) => state.winningAttribute)
   const dateConversation = useGameStore((state) => state.dateConversation)
   const latestAttribute = useGameStore((state) => state.latestAttribute)
   const daterValues = useGameStore((state) => state.daterValues)
@@ -36,15 +35,11 @@ function LiveDateScene() {
   
   const setLivePhase = useGameStore((state) => state.setLivePhase)
   const setPhaseTimer = useGameStore((state) => state.setPhaseTimer)
-  const tickPhaseTimer = useGameStore((state) => state.tickPhaseTimer)
   const submitAttributeSuggestion = useGameStore((state) => state.submitAttributeSuggestion)
-  const processAttributesForVoting = useGameStore((state) => state.processAttributesForVoting)
-  const voteForNumberedAttribute = useGameStore((state) => state.voteForNumberedAttribute)
   const applyWinningAttribute = useGameStore((state) => state.applyWinningAttribute)
   const incrementCycle = useGameStore((state) => state.incrementCycle)
   const addPlayerChatMessage = useGameStore((state) => state.addPlayerChatMessage)
   const addDateMessage = useGameStore((state) => state.addDateMessage)
-  const addSentimentItem = useGameStore((state) => state.addSentimentItem)
   const setPhase = useGameStore((state) => state.setPhase)
   const setDaterValues = useGameStore((state) => state.setDaterValues)
   const exposeValue = useGameStore((state) => state.exposeValue)
@@ -71,11 +66,12 @@ function LiveDateScene() {
   const [avatarEmotion, setAvatarEmotion] = useState('neutral') // Avatar's current emotional state
   const [daterEmotion, setDaterEmotion] = useState('neutral') // Dater's current emotional state
   const [isGenerating, setIsGenerating] = useState(false)
-  const [userVote, setUserVote] = useState(null)
+  const [_userVote, setUserVote] = useState(null)
   const [showDaterValuesPopup, setShowDaterValuesPopup] = useState(false)
   const showAttributesByDefault = useGameStore((state) => state.showAttributesByDefault)
-  const [showCompatPercent, setShowCompatPercent] = useState(false) // Heart shows compatibility %
   const [showSentimentDebug, setShowSentimentDebug] = useState(showAttributesByDefault) // Phase label shows attributes
+  const [_preGeneratedConvo, _setPreGeneratedConvo] = useState(null)
+  const [isPreGenerating, setIsPreGenerating] = useState(false) // eslint-disable-line no-unused-vars -- used in JSX (pre-generating indicator)
   const [usingFallback, setUsingFallback] = useState(false)
   const [showWinnerPopup, setShowWinnerPopup] = useState(false)
   
@@ -91,21 +87,19 @@ function LiveDateScene() {
   // Timer starts immediately when phase begins (no waiting for submissions)
   const [showPhaseAnnouncement, setShowPhaseAnnouncement] = useState(false)
   const [announcementPhase, setAnnouncementPhase] = useState('')
-  const [reactionStreak, setReactionStreak] = useState({ positive: 0, negative: 0 }) // Track escalation
+  const [reactionStreak, _setReactionStreak] = useState({ positive: 0, negative: 0 }) // Track escalation
   
   // LLM Debug state (host only)
   const [showLLMDebug, setShowLLMDebug] = useState(false)
-  const [lastLLMPrompt, setLastLLMPrompt] = useState({ avatar: '', dater: '' })
+  const [lastLLMPrompt, _setLastLLMPrompt] = useState({ avatar: '', dater: '' })
   
   // Plot Twist state
   const plotTwist = useGameStore((state) => state.plotTwist)
-  const plotTwistCompleted = useGameStore((state) => state.plotTwistCompleted)
   const setPlotTwist = useGameStore((state) => state.setPlotTwist)
-  const resetPlotTwist = useGameStore((state) => state.resetPlotTwist)
   const [plotTwistInput, setPlotTwistInput] = useState('')
   
   // Text-to-Speech state
-  const [ttsEnabled, setTtsEnabledState] = useState(true) // Enabled by default
+  const [ttsEnabled] = useState(true) // Enabled by default
   const lastSpokenDater = useRef('')
   const lastSpokenAvatar = useRef('')
   const [hasSubmittedPlotTwist, setHasSubmittedPlotTwist] = useState(false)
@@ -222,7 +216,7 @@ function LiveDateScene() {
     const compat = currentCompatibility ?? useGameStore.getState().compatibility
     const isMajor = sentiment === 'loves' || sentiment === 'dealbreakers'
     const isMinor = sentiment === 'likes' || sentiment === 'dislikes'
-    const isPositive = sentiment === 'loves' || sentiment === 'likes'
+    const _isPositive = sentiment === 'loves' || sentiment === 'likes'
     
     // Base emotions for each sentiment
     const baseEmotionMap = {
@@ -272,8 +266,8 @@ function LiveDateScene() {
     return baseEmotionMap[sentiment] || 'neutral'
   }
   
-  // Show reaction feedback temporarily (auto-clears after 4 seconds)
-  // Now includes matchedValue and shortLabel to explain WHY the dater reacted this way
+  // Show reaction feedback temporarily (auto-clears after 6 seconds — 50% longer for readability)
+  const REACTION_FEEDBACK_DURATION_MS = 6000
   const showReactionFeedback = (category, matchedValue = null, shortLabel = null) => {
     const daterName = selectedDater?.name || 'Maya'
     const topic = shortLabel || matchedValue || ''
@@ -315,6 +309,7 @@ function LiveDateScene() {
       }
       
       const categoryReactions = specificReactions[category] || specificReactions.dislikes
+      // Picked when feedback is shown (async/event), not during render
       reactionText = categoryReactions[Math.floor(Math.random() * categoryReactions.length)]
     } else {
       // Fallback generic reactions if no topic provided
@@ -357,10 +352,9 @@ function LiveDateScene() {
     // Set dater emotion based on reaction category for speech animation speed
     setDaterEmotion(category)
     
-    // Auto-clear after 4 seconds
     reactionFeedbackTimeout.current = setTimeout(() => {
       setReactionFeedback(null)
-    }, 4000)
+    }, REACTION_FEEDBACK_DURATION_MS)
     
     // Sync to other players
     if (partyClient && isHost) {
@@ -444,7 +438,8 @@ function LiveDateScene() {
         activePlayerId: startingStats.activePlayerId
       }
     })
-  }, []) // Empty dependency - only logs on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: log once on mount
+  }, [])
   
   // Subscribe to PartyKit game state (for all players to receive updates)
   useEffect(() => {
@@ -467,15 +462,14 @@ function LiveDateScene() {
       if (state.numberedAttributes !== undefined) {
         const numberedArray = Array.isArray(state.numberedAttributes) ? state.numberedAttributes : []
         const votesMap = state.votes || {}
-        const totalVotes = Object.keys(votesMap).length
         
         console.log('🗳️ CLIENT received numberedAttributes from server:', numberedArray.length, 'items', JSON.stringify(numberedArray))
         
         // Build numbered attributes with votes
         const numberedWithVotes = numberedArray.filter(attr => attr).map(attr => {
           const votersForThis = Object.entries(votesMap)
-            .filter(([_, voteNum]) => voteNum === attr.number)
-            .map(([odId, _]) => odId)
+            .filter(([, voteNum]) => voteNum === attr.number)
+            .map(([odId]) => odId)
           
           return {
             ...attr,
@@ -510,7 +504,7 @@ function LiveDateScene() {
       // Sync phase - but don't let server overwrite host's forward progress
       if (state.phase) {
         const currentLocalPhase = useGameStore.getState().livePhase
-        const phaseOrder = ['lobby', 'starting-stats', 'reaction', 'phase1', 'answer-selection', 'phase3', 'plot-twist', 'ended']
+        const phaseOrder = ['lobby', 'starting-stats', 'reaction', 'phase1', 'answer-selection', 'phase3', 'plot-twist', 'plot-twist-reaction', 'ended']
         const serverPhaseIndex = phaseOrder.indexOf(state.phase)
         const localPhaseIndex = phaseOrder.indexOf(currentLocalPhase)
         
@@ -597,13 +591,12 @@ function LiveDateScene() {
       // Sync reaction feedback (non-host only)
       if (state.reactionFeedback && !isHost) {
         setReactionFeedback(state.reactionFeedback)
-        // Auto-clear after 4 seconds
         if (reactionFeedbackTimeout.current) {
           clearTimeout(reactionFeedbackTimeout.current)
         }
         reactionFeedbackTimeout.current = setTimeout(() => {
           setReactionFeedback(null)
-        }, 4000)
+        }, REACTION_FEEDBACK_DURATION_MS)
       }
       
       // Sync character emotions for speech animation (non-host only)
@@ -721,6 +714,7 @@ function LiveDateScene() {
     return () => {
       unsubscribe()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: subscription setup only
   }, [partyClient, roomCode, isHost, setSuggestedAttributes, setCompatibility, setLivePhase, setPhaseTimer, setPlayerChat, setNumberedAttributes, setShowTutorial, setTutorialStep, setPlayers, setPlotTwist])
   
   // Track timer value in a ref for the interval to access
@@ -758,7 +752,7 @@ function LiveDateScene() {
       setDaterBubbleReady(false)
       
       // Start TTS
-      speak(daterBubble, 'dater').then(result => {
+      speak(daterBubble, 'dater').then(() => {
         // Show bubble when audio starts (speak resolves when audio begins)
         setDaterBubbleReady(true)
         console.log('▶️ Dater bubble shown - audio started')
@@ -780,7 +774,7 @@ function LiveDateScene() {
       setAvatarBubbleReady(false)
       
       // Start TTS
-      speak(avatarBubble, 'avatar').then(result => {
+      speak(avatarBubble, 'avatar').then(() => {
         // Show bubble when audio starts (speak resolves when audio begins)
         setAvatarBubbleReady(true)
         console.log('▶️ Avatar bubble shown - audio started')
@@ -858,6 +852,7 @@ function LiveDateScene() {
       console.log('⏰ Timer hit 0, triggering phase end for:', livePhase)
       handlePhaseEnd()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: handlePhaseEnd is stable
   }, [phaseTimer, livePhase])
   
   // ============ STARTING STATS MODE LOGIC ============
@@ -997,6 +992,7 @@ function LiveDateScene() {
       cycleCount: currentCycleCount
     })
     console.log('🎲 Starting Stats initialized:', newStartingStats)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: init once when phase/assignments change
   }, [livePhase, isHost, partyClient, roomCode, players.length, startingStats.questionAssignments?.length])
   
   // Starting Stats timer (host only)
@@ -1056,6 +1052,7 @@ function LiveDateScene() {
         clearInterval(startingStatsTimerRef.current)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: moveToNextStartingStatsQuestion is stable
   }, [livePhase, isHost, partyClient, roomCode])
   
   // Move to next Starting Stats question
@@ -1375,7 +1372,7 @@ function LiveDateScene() {
     console.log('🧹 Cleared conversation history for fresh reaction round')
     
     const currentAvatar = useGameStore.getState().avatar
-    const avatarName = currentAvatar.name || 'the date'
+    const _avatarName = currentAvatar.name || 'the date'
     const attributes = currentAvatar.attributes || []
     const currentStartingStats = useGameStore.getState().startingStats
     const answers = currentStartingStats?.answers || []
@@ -1646,6 +1643,7 @@ function LiveDateScene() {
       }, 1000)
       return () => clearTimeout(timer)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: runReactionRound/isGenerating not in deps
   }, [livePhase, isHost])
   
   // Phase 1 initialization - round prompt is now set by finishReactionRound/handleRoundComplete/finishPlotTwist
@@ -1662,6 +1660,7 @@ function LiveDateScene() {
       }
       console.log('🎯 Fallback round prompt:', roundPrompt.title, '-', roundPrompt.subtitle)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: getRoundPrompt/partyClient stable
   }, [livePhase, isHost, currentRoundPrompt.title])
   
   // Timer is now started immediately when phase1 begins - no animation-based delay needed
@@ -1691,11 +1690,11 @@ function LiveDateScene() {
   
   // Get phase announcement content
   const getPhaseAnnouncement = () => {
+    const daterName = selectedDater?.name || 'Maya'
     switch (announcementPhase) {
       case 'reaction':
-        return { title: 'FIRST IMPRESSIONS', subtitle: `Meeting ${selectedDater?.name || 'Maya'}`, icon: '👋', description: 'Watch them meet for the first time!' }
+        return { title: 'FIRST IMPRESSIONS', subtitle: `Meeting ${daterName}`, icon: '👋', description: 'Watch them meet for the first time!' }
       case 'phase1':
-        // Use current round prompt if available
         return { 
           title: currentRoundPrompt.title || 'ROUND ' + (cycleCount + 1), 
           subtitle: '', 
@@ -1706,6 +1705,8 @@ function LiveDateScene() {
         return { title: 'SELECTING', subtitle: 'Answer', icon: '🎲', description: 'Picking an answer...' }
       case 'phase3':
         return { title: 'PHASE 3', subtitle: 'Watch the Date', icon: '👀', description: 'See how they react!' }
+      case 'plot-twist-reaction':
+        return { title: 'Plot Twist', subtitle: `${daterName}'s reaction`, icon: '🎭', description: "Watch the date react to what happened!" }
       default:
         return { title: '', subtitle: '', icon: '', description: '' }
     }
@@ -1756,6 +1757,7 @@ function LiveDateScene() {
       }
     }
     initDaterValues()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: daterValues/setDaterValues not in deps
   }, [selectedDater, isHost, partyClient, roomCode])
   
   // Round prompts - Title + Subtitle (Question) for each round
@@ -1842,16 +1844,16 @@ function LiveDateScene() {
         }
         // Move to Answer Selection - show all answers and randomly pick one
         console.log('📋 Processing suggestions for answer selection:', suggestedAttributes)
-        const answers = suggestedAttributes
-          .filter(attr => attr && (attr.text || typeof attr === 'string'))
-          .map((attr, index) => ({
-            id: index,
-            text: typeof attr === 'string' ? attr : (attr.text || 'Unknown'),
-            submittedBy: attr.username || 'Anonymous'
-          }))
-        
-        // Start the answer selection sequence
-        startAnswerSelection(answers)
+        {
+          const answers = suggestedAttributes
+            .filter(attr => attr && (attr.text || typeof attr === 'string'))
+            .map((attr, idx) => ({
+              id: idx,
+              text: typeof attr === 'string' ? attr : (attr.text || 'Unknown'),
+              submittedBy: attr.username || 'Anonymous'
+            }))
+          startAnswerSelection(answers)
+        }
         break
         
       // Phase 3 ends are handled by handleRoundComplete() after conversation finishes
@@ -1864,10 +1866,11 @@ function LiveDateScene() {
       // First suggestion came in while waiting - now we can proceed
       handlePhaseEnd()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: handlePhaseEnd/livePhase/phaseTimer stable
   }, [suggestedAttributes.length])
   
   // Get the winning attribute text (before applying it to the store)
-  const getWinningAttributeText = () => {
+  const _getWinningAttributeText = () => {
     if (numberedAttributes.length === 0) return null
     
     // Check if anyone voted
@@ -1884,10 +1887,6 @@ function LiveDateScene() {
     const sorted = [...numberedAttributes].sort((a, b) => b.votes.length - a.votes.length)
     return sorted[0]?.text || null
   }
-  
-  // State for pre-generated conversation
-  const [preGeneratedConvo, setPreGeneratedConvo] = useState(null)
-  const [isPreGenerating, setIsPreGenerating] = useState(false)
   
   // ============================================
   // PHASE 1: PRE-GENERATE ALL CONVERSATION
@@ -1928,46 +1927,24 @@ function LiveDateScene() {
     const exchanges = []
     
     try {
-      // Decide who opens (50/50)
-      const daterOpensFirst = Math.random() < 0.5
-      console.log('📝 Pre-generating:', daterOpensFirst ? 'DATER opens' : 'AVATAR opens')
+      // Phase 3 always starts with the AVATAR speaking first (fresh start).
+      // The Avatar makes a statement based on the winning answer — conversational, not verbatim.
+      // The Dater has not said anything yet; after the Avatar's first line, the Dater can react and make connections.
+      console.log('📝 Pre-generating: AVATAR opens (Phase 3 fresh start)')
       
       // For the FIRST exchange of a new round, pass EMPTY history
       // This completely prevents the LLM from referencing previous rounds
-      // The avatar should ONLY talk about the current round's answer
       const newRoundHistory = [] // Empty! No previous context allowed for first response
       
       // ===== EXCHANGE 1 =====
+      // Avatar always opens with a conversational statement based on the winning answer
       let exchange1 = { daterOpener: null, avatarResponse: null, daterReaction: null, matchResult: null }
-      
-      if (daterOpensFirst) {
-        // Dater opens
-        exchange1.daterOpener = await getDaterConversationOpener(
-          selectedDater, avatarWithNewAttr, newRoundHistory,
-          currentRoundPrompt.title, questionContext
-        )
-        exchange1.daterOpenerMood = 'happy'
-        
-        if (exchange1.daterOpener) {
-          // Avatar responds to opener
-          const avatarMood1 = getAvatarEmotionFromTraits()
-          exchange1.avatarResponse = await getAvatarDateResponse(
-            avatarWithNewAttr, selectedDater,
-            [...newRoundHistory, { speaker: 'dater', message: exchange1.daterOpener }],
-            { answer: attrToUse, questionContext, daterOpener: exchange1.daterOpener },
-            'respond-to-opener', avatarMood1
-          )
-          exchange1.avatarMood = avatarMood1
-        }
-      } else {
-        // Avatar opens
-        const avatarMood1 = getAvatarEmotionFromTraits()
-        exchange1.avatarResponse = await getAvatarDateResponse(
-          avatarWithNewAttr, selectedDater, newRoundHistory,
-          framedAttribute, 'paraphrase', avatarMood1
-        )
-        exchange1.avatarMood = avatarMood1
-      }
+      const avatarMood1 = getAvatarEmotionFromTraits()
+      exchange1.avatarResponse = await getAvatarDateResponse(
+        avatarWithNewAttr, selectedDater, newRoundHistory,
+        framedAttribute, 'paraphrase', avatarMood1
+      )
+      exchange1.avatarMood = avatarMood1
       
       // Check sentiment for avatar's response
       if (exchange1.avatarResponse) {
@@ -2018,11 +1995,12 @@ function LiveDateScene() {
         const sentimentHit2 = exchange2.matchResult.category || null
         
         const convoWithEx2 = [...convoAfterEx1, { speaker: 'avatar', message: avatarResponse2 }]
-        // Dater reacts - pass current compatibility for weighted response
         const currentCompat2 = useGameStore.getState().compatibility
+        // Dater reacts to avatar's new comment and tries to connect to other things avatar said earlier
         exchange2.daterReaction = await getDaterDateResponse(
           selectedDater, avatarWithNewAttr, convoWithEx2,
-          { answer: exchange2.matchResult.matchedValue, questionContext }, sentimentHit2, currentStreak, isFinalRound, false, currentCompat2
+          { answer: exchange2.matchResult.matchedValue, questionContext }, sentimentHit2, currentStreak, isFinalRound, false, currentCompat2,
+          'React to what the avatar just said. Try to connect your response to other things the avatar said earlier in the date — reference or tie in something they mentioned before.'
         )
         exchange2.daterMood = getDaterEmotionFromSentiment(sentimentHit2, currentCompat2)
         exchange2.sentimentHit = sentimentHit2
@@ -2055,11 +2033,12 @@ function LiveDateScene() {
         const sentimentHit3 = exchange3.matchResult.category || null
         
         const convoWithEx3 = [...convoAfterEx2, { speaker: 'avatar', message: avatarResponse3 }]
-        // Dater reacts - pass current compatibility for weighted response
         const currentCompat3 = useGameStore.getState().compatibility
+        // Dater offers their opinion about the Avatar based on this round's interaction
         exchange3.daterReaction = await getDaterDateResponse(
           selectedDater, avatarWithNewAttr, convoWithEx3,
-          { answer: exchange3.matchResult.matchedValue, questionContext }, sentimentHit3, currentStreak, isFinalRound, false, currentCompat3
+          { answer: exchange3.matchResult.matchedValue, questionContext }, sentimentHit3, currentStreak, isFinalRound, false, currentCompat3,
+          "Offer your opinion about the Avatar based on this round's interaction — what do you think of them so far? Summarize your take in 1-2 sentences (dialogue only)."
         )
         exchange3.daterMood = getDaterEmotionFromSentiment(sentimentHit3, currentCompat3)
         exchange3.sentimentHit = sentimentHit3
@@ -2099,7 +2078,7 @@ function LiveDateScene() {
     if (!preGenData || !isHost) return
     
     console.log('▶️ PLAYING BACK pre-generated conversation...')
-    const { attribute, exchanges, avatarWithNewAttr } = preGenData
+    const { attribute, exchanges } = preGenData
     
     for (let i = 0; i < exchanges.length; i++) {
       const exchange = exchanges[i]
@@ -2234,9 +2213,9 @@ function LiveDateScene() {
       console.log('✅ All audio complete')
       
       // Handle round completion
-      const currentCycleForCheck = useGameStore.getState().cycleCount
-      const maxCyclesForCheck = useGameStore.getState().maxCycles
-      const isFinalRound = currentCycleForCheck >= maxCyclesForCheck - 1
+      const _currentCycleForCheck = useGameStore.getState().cycleCount
+      const _maxCyclesForCheck = useGameStore.getState().maxCycles
+      const _isFinalRound = _currentCycleForCheck >= _maxCyclesForCheck - 1
       
       // Note: Wrap-up round is handled separately after Round 5 completes
       
@@ -2254,15 +2233,18 @@ function LiveDateScene() {
   // ROUND 6: WRAP-UP ROUND
   // No questions - just final conversation
   // ============================================
+  // Wait for audio with a max delay so we never hang forever
+  const waitForAudioOrTimeout = (maxMs = 12000) =>
+    Promise.race([waitForAllAudio(), new Promise(r => setTimeout(r, maxMs))])
+
   const generateWrapUpRound = async (compatibilityScore) => {
     const daterName = selectedDater?.name || 'Maya'
     const avatarName = avatar?.name || 'you'
-    const conversationHistory = getConversation()
     const avatarAttributes = avatar?.attributes || []
-    
+    const LLM_TIMEOUT_MS = 25000
+
     console.log('🎬 Starting Wrap-Up Round (Round 6)')
-    
-    // Determine sentiment tier based on compatibility
+
     let sentimentTier, avatarMood, daterMood
     if (compatibilityScore >= 80) {
       sentimentTier = 'falling_in_love'
@@ -2285,11 +2267,11 @@ function LiveDateScene() {
       avatarMood = 'worried'
       daterMood = 'horrified'
     }
-    
+
     try {
       // ===== EXCHANGE 1: Avatar wraps up and asks for another date =====
       console.log('🎭 Wrap-Up Exchange 1: Avatar summarizes and asks for another date')
-      
+
       const avatarWrapUpPrompt = `You are ${avatarName} wrapping up a first date with ${daterName}.
 
 YOUR TRAITS REVEALED DURING THE DATE: ${avatarAttributes.join(', ')}
@@ -2304,118 +2286,71 @@ RULES:
 - NO action descriptors (*smiles*, etc) - dialogue only
 - Sound natural, like you're actually on a date
 
-EXAMPLES:
-- "So... I feel like this went pretty well? I mean, you didn't run away when I mentioned [trait]. Would you maybe want to grab coffee sometime?"
-- "This was fun! Even if I did probably overshare about [trait]. So... any chance I could see you again?"
-- "I had a really good time tonight. What do you think - should we do this again?"
-
 Generate ${avatarName}'s wrap-up statement:`
 
-      const avatarResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 200,
-          messages: [{ role: 'user', content: avatarWrapUpPrompt }]
-        })
-      })
-      
-      const avatarData = await avatarResponse.json()
-      const avatarWrapUp = avatarData.content?.[0]?.text?.trim() || "So... would you want to do this again sometime?"
-      
-      // Show avatar wrap-up
+      const avatarWrapUp = await getSingleResponseWithTimeout(avatarWrapUpPrompt, { maxTokens: 200, timeoutMs: LLM_TIMEOUT_MS })
+        || "So... would you want to do this again sometime?"
+
       if (ttsEnabled) setAvatarBubbleReady(false)
       setAvatarEmotion(avatarMood)
       setAvatarBubble(avatarWrapUp)
       addDateMessage('avatar', avatarWrapUp)
       await syncConversationToPartyKit(avatarWrapUp, undefined, undefined)
       if (partyClient) partyClient.syncState({ avatarEmotion: avatarMood })
-      
-      console.log(`💬 Avatar wrap-up: "${avatarWrapUp}"`)
-      await waitForAllAudio()
-      await new Promise(r => setTimeout(r, 1000))
-      
-      // ===== EXCHANGE 2: Dater gives honest assessment =====
-      console.log('🎭 Wrap-Up Exchange 2: Dater gives honest assessment')
-      
-      // Build summary of what avatar said for dater to reference
-      const recentConvo = conversationHistory.slice(-10).map(m => `${m.speaker}: ${m.message}`).join('\n')
-      
-      const daterAssessmentPrompt = `You are ${daterName} giving your honest assessment after a first date with ${avatarName}.
 
-COMPATIBILITY: ${compatibilityScore}%
-OVERALL FEELING: ${sentimentTier.replace(/_/g, ' ')}
+      console.log(`💬 Avatar wrap-up: "${avatarWrapUp}"`)
+      await waitForAudioOrTimeout()
+      await new Promise(r => setTimeout(r, 1000))
+
+      // ===== EXCHANGE 2: Dater sums up feelings about the date and the avatar =====
+      console.log('🎭 Wrap-Up Exchange 2: Dater sums up feelings (conversation + compatibility)')
+
+      const conversationAfterAvatar = useGameStore.getState().dateConversation
+      const recentConvo = conversationAfterAvatar.slice(-12).map(m => `${m.speaker}: ${m.message}`).join('\n')
+
+      const daterAssessmentPrompt = `You are ${daterName} at the end of a first date with ${avatarName}.
+
+CURRENT COMPATIBILITY SCORE: ${compatibilityScore}% (this reflects how well your values and reactions matched during the date.)
+
+WHAT WAS SAID DURING THE DATE (recent conversation):
+${recentConvo}
 
 THINGS ${avatarName.toUpperCase()} REVEALED ABOUT THEMSELVES:
 ${avatarAttributes.map(a => `- ${a}`).join('\n')}
 
-RECENT CONVERSATION:
-${recentConvo}
-
-🎯 YOUR TASK: Give an honest 2-3 sentence assessment of what you thought about ${avatarName} based on everything they said.
+🎯 YOUR TASK: Sum up your feelings about the date and about ${avatarName} based on what was said and your overall compatibility (${compatibilityScore}%). Give an honest 2-3 sentence assessment.
 
 RULES:
-- Be HONEST about how you feel - this matches your ${compatibilityScore}% compatibility
+- Base your summary on what was actually said in the conversation and how you felt about it
+- Your tone should match a ${compatibilityScore}% compatibility: ${sentimentTier.replace(/_/g, ' ')}
 - Reference specific things they said or traits they revealed
-- Show your genuine reaction - good or bad
-- Keep it to 2-3 sentences exactly
-- NO action descriptors (*smiles*, etc) - dialogue only
-- Don't mention percentages or scores
+- Keep it to 2-3 sentences. NO action descriptors - dialogue only. Don't mention percentages.
 
-${sentimentTier === 'falling_in_love' ? 'You are TOTALLY SMITTEN. You loved everything about them!' :
-  sentimentTier === 'want_another_date' ? 'You had a great time and would definitely see them again.' :
-  sentimentTier === 'uncertain' ? 'You have mixed feelings - some good, some concerning.' :
-  sentimentTier === 'no_second_date' ? 'You are NOT feeling it. Be polite but honest.' :
-  'This was a DISASTER. You are ready to RUN.'}
+${sentimentTier === 'falling_in_love' ? 'You are TOTALLY SMITTEN. Sum up why you loved the date and them.' :
+  sentimentTier === 'want_another_date' ? 'You had a great time. Sum up what you liked and that you\'d see them again.' :
+  sentimentTier === 'uncertain' ? 'You have mixed feelings. Sum up the good and the concerning.' :
+  sentimentTier === 'no_second_date' ? 'You are NOT feeling it. Sum up why it didn\'t work for you.' :
+  'This was a disaster. Sum up why you\'re done.'}
 
-EXAMPLES BY SENTIMENT:
-- Falling in love: "Honestly? I haven't connected with someone like this in... I don't even know how long. The way you talked about [trait] - I just get you."
-- Want another date: "You know what? I really enjoyed this. You're funny, you're honest about [trait], and I actually want to know more."
-- Uncertain: "So... there were definitely moments I was into. But then you mentioned [trait] and I'm just... not sure."
-- No second date: "Look, you seem nice, but I don't think we're really compatible. The [trait] thing kind of sealed it for me."
-- Deleting number: "I'm gonna be honest - that was a lot. Like, [trait]? I don't even know what to say to that."
+Generate ${daterName}'s summary of their feelings about the date and ${avatarName}:`
 
-Generate ${daterName}'s honest assessment:`
+      const daterAssessment = await getSingleResponseWithTimeout(daterAssessmentPrompt, { maxTokens: 200, timeoutMs: LLM_TIMEOUT_MS })
+        || "Well... that was certainly something."
 
-      const daterAssessResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 200,
-          messages: [{ role: 'user', content: daterAssessmentPrompt }]
-        })
-      })
-      
-      const daterAssessData = await daterAssessResponse.json()
-      const daterAssessment = daterAssessData.content?.[0]?.text?.trim() || "Well... that was certainly something."
-      
-      // Show dater assessment
       if (ttsEnabled) setDaterBubbleReady(false)
       setDaterEmotion(daterMood)
       setDaterBubble(daterAssessment)
       addDateMessage('dater', daterAssessment)
       await syncConversationToPartyKit(undefined, daterAssessment, undefined)
       if (partyClient) partyClient.syncState({ daterEmotion: daterMood })
-      
+
       console.log(`💬 Dater assessment: "${daterAssessment}"`)
-      await waitForAllAudio()
+      await waitForAudioOrTimeout()
       await new Promise(r => setTimeout(r, 1000))
-      
+
       // ===== EXCHANGE 3: Dater gives final verdict =====
       console.log('🎭 Wrap-Up Exchange 3: Dater gives final verdict')
-      
+
       const verdictInstructions = {
         falling_in_love: `You are TOTALLY falling for them! Say something enthusiastic about wanting to see them again SOON. Maybe even tonight. Be flirty and excited!`,
         want_another_date: `You definitely want another date! Be warm and clear that you'd like to see them again. Leave it open-ended but positive.`,
@@ -2423,7 +2358,7 @@ Generate ${daterName}'s honest assessment:`
         no_second_date: `You do NOT want another date. Be polite but clear - make an excuse or just be honest that you don't see it working.`,
         deleting_number: `You are DONE. You're being polite but you're definitely deleting their number after this. Make it clear this is goodbye forever.`
       }
-      
+
       const verdictExamples = {
         falling_in_love: '"YES. Absolutely yes. When are you free? Tomorrow? Tonight? I\'m not even joking."',
         want_another_date: '"I\'d really like that. Text me - let\'s figure something out."',
@@ -2431,7 +2366,7 @@ Generate ${daterName}'s honest assessment:`
         no_second_date: '"I think I\'m good, actually. Take care of yourself though."',
         deleting_number: '"Yeah... I\'m gonna go. Good luck with everything. Don\'t call me."'
       }
-      
+
       const daterVerdictPrompt = `You are ${daterName} giving your FINAL answer about whether you want to see ${avatarName} again.
 
 COMPATIBILITY: ${compatibilityScore}%
@@ -2439,60 +2374,36 @@ YOUR DECISION: ${sentimentTier.replace(/_/g, ' ').toUpperCase()}
 
 ${verdictInstructions[sentimentTier]}
 
-🎯 YOUR TASK: Give your final verdict in ONE sentence. This is your closing line.
+🎯 Give your final verdict in ONE sentence. NO action descriptors - dialogue only.
 
-RULES:
-- ONE sentence only - this is the final word
-- Be clear about your decision
-- Match the energy of your verdict: ${sentimentTier.replace(/_/g, ' ')}
-- NO action descriptors (*smiles*, etc) - dialogue only
-
-EXAMPLE FOR YOUR SENTIMENT:
-${verdictExamples[sentimentTier]}
+EXAMPLE: ${verdictExamples[sentimentTier]}
 
 Generate ${daterName}'s final verdict:`
 
-      const daterVerdictResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 100,
-          messages: [{ role: 'user', content: daterVerdictPrompt }]
-        })
-      })
-      
-      const daterVerdictData = await daterVerdictResponse.json()
-      const daterVerdict = daterVerdictData.content?.[0]?.text?.trim() || "We'll see."
-      
-      // Show dater verdict with appropriate emotion
+      const daterVerdict = await getSingleResponseWithTimeout(daterVerdictPrompt, { maxTokens: 100, timeoutMs: LLM_TIMEOUT_MS })
+        || "We'll see."
+
       const verdictMood = sentimentTier === 'falling_in_love' ? 'excited' :
                           sentimentTier === 'want_another_date' ? 'happy' :
                           sentimentTier === 'uncertain' ? 'neutral' :
                           sentimentTier === 'no_second_date' ? 'uncomfortable' : 'horrified'
-      
+
       if (ttsEnabled) setDaterBubbleReady(false)
       setDaterEmotion(verdictMood)
       setDaterBubble(daterVerdict)
       addDateMessage('dater', daterVerdict)
       await syncConversationToPartyKit(undefined, daterVerdict, undefined)
       if (partyClient) partyClient.syncState({ daterEmotion: verdictMood })
-      
+
       console.log(`💬 Dater verdict (${sentimentTier}): "${daterVerdict}"`)
-      await waitForAllAudio()
+      await waitForAudioOrTimeout()
       await new Promise(r => setTimeout(r, 2000))
-      
+
       console.log('✅ Wrap-Up Round complete!')
-      
     } catch (error) {
       console.error('Error in wrap-up round:', error)
-      // Fallback - just show a simple closing
       setDaterBubble("Well... it was nice meeting you.")
+      addDateMessage('dater', "Well... it was nice meeting you.")
     }
   }
   
@@ -2749,9 +2660,10 @@ Generate ${daterName}'s final verdict:`
       }
     })
     
+    // Show wheel first (same as other rounds), then start spinning after brief pause
     const newPlotTwist = {
       ...currentPlotTwist,
-      subPhase: 'spinning',
+      subPhase: 'showing',
       answers: answers,
       slices: slices,
       spinAngle: 0,
@@ -2759,18 +2671,21 @@ Generate ${daterName}'s final verdict:`
     }
     setPlotTwist(newPlotTwist)
     
-    // Sync to PartyKit
     if (partyClient) {
       partyClient.syncState({ plotTwist: newPlotTwist })
     }
     
-    // Start wheel spin after brief pause
+    // Give wheel time to render (longer delay so it never cuts off)
     setTimeout(() => {
+      const spinningState = { ...newPlotTwist, subPhase: 'spinning', slices }
+      setPlotTwist(spinningState)
+      if (partyClient) partyClient.syncState({ plotTwist: spinningState })
       startPlotTwistWheelSpin(slices)
-    }, 500)
+    }, 1000)
   }
   
   // Start the plot twist wheel spinning animation
+  // Keep slices in closure so state updates never lose them (avoids black screen / cut-off)
   const startPlotTwistWheelSpin = (slices) => {
     if (!isHost) return
     
@@ -2779,21 +2694,16 @@ Generate ${daterName}'s final verdict:`
       return
     }
     
-    // Pick random winner (equal weight for all)
     const winnerIndex = Math.floor(Math.random() * slices.length)
     const winningSlice = slices[winnerIndex]
-    
-    // Calculate the angle to stop at (middle of winning slice)
     const winningMidAngle = (winningSlice.startAngle + winningSlice.endAngle) / 2
-    // Arrow points up (0 degrees), so we need to rotate to put winning slice at top
-    const fullRotations = 5 + Math.floor(Math.random() * 3) // 5-7 full spins
+    const fullRotations = 5 + Math.floor(Math.random() * 3)
     const finalAngle = (fullRotations * 360) + (360 - winningMidAngle)
     
     console.log('🎭 Plot Twist wheel spinning to', finalAngle, 'degrees, winner:', winningSlice.label)
     
-    // Animate the spin with ease-in-out
     let startTime = null
-    const duration = 5000 // 5 seconds
+    const duration = 6000 // 6 seconds so spin is clearly visible
     const startAngle = 0
     
     const animateSpin = (timestamp) => {
@@ -2801,7 +2711,6 @@ Generate ${daterName}'s final verdict:`
       const elapsed = timestamp - startTime
       const progress = Math.min(elapsed / duration, 1)
       
-      // Ease-in-out cubic
       let eased
       if (progress < 0.5) {
         eased = 4 * progress * progress * progress
@@ -2811,18 +2720,28 @@ Generate ${daterName}'s final verdict:`
       
       const currentAngle = startAngle + (finalAngle * eased)
       
-      setPlotTwist(prev => ({ ...prev, spinAngle: currentAngle }))
+      // Always preserve slices so wheel never disappears mid-spin
+      setPlotTwist(prev => ({
+        ...prev,
+        spinAngle: currentAngle,
+        subPhase: 'spinning',
+        slices: prev.slices?.length ? prev.slices : slices,
+      }))
       
-      // Sync less frequently
       if (partyClient && Math.floor(elapsed / 200) !== Math.floor((elapsed - 16) / 200)) {
-        const currentPlotTwistState = useGameStore.getState().plotTwist
-        partyClient.syncState({ plotTwist: { ...currentPlotTwistState, spinAngle: currentAngle } })
+        partyClient.syncState({
+          plotTwist: {
+            ...useGameStore.getState().plotTwist,
+            spinAngle: currentAngle,
+            subPhase: 'spinning',
+            slices,
+          },
+        })
       }
       
       if (progress < 1) {
         plotTwistAnimationRef.current = requestAnimationFrame(animateSpin)
       } else {
-        // Spin complete - declare winner
         setTimeout(() => {
           declareWinner(winningSlice.originalAnswer, winnerIndex)
         }, 800)
@@ -2893,18 +2812,18 @@ Generate ${daterName}'s final verdict:`
     
     const currentPlotTwist = useGameStore.getState().plotTwist
     if (currentPlotTwist.winningAnswer) {
-      generatePlotTwistReaction(currentPlotTwist.winningAnswer)
+      // Pass the "What happened" story so the Dater responds to that narrative
+      generatePlotTwistReaction(currentPlotTwist.winningAnswer, currentPlotTwist.summary)
     }
   }
   
   // Generate LLM reaction to the plot twist - THIS IS A KEY MOMENT!
-  // Maya should really express herself here - multiple exchanges, more emotional
-  const generatePlotTwistReaction = async (winner) => {
+  // whatHappenedStory = the LLM-generated "What happened" narrative; Dater responds to that.
+  const generatePlotTwistReaction = async (winner, whatHappenedStory) => {
     if (!isHost) return
     
-    // IMPORTANT: Switch to phase3 to close the overlay and show the date window
-    // This lets players see the conversation happening
-    setLivePhase('phase3')
+    // Close overlay and show date window in plot-twist-reaction (not Phase 3 of previous round)
+    setLivePhase('plot-twist-reaction')
     setPhaseTimer(0)
     
     const currentCompatibility = useGameStore.getState().compatibility
@@ -2912,11 +2831,10 @@ Generate ${daterName}'s final verdict:`
     
     if (partyClient) {
       partyClient.syncState({ 
-        phase: 'phase3', 
+        phase: 'plot-twist-reaction', 
         phaseTimer: 0,
         compatibility: currentCompatibility,
         cycleCount: currentCycleCount,
-        // Clear the plot twist overlay state
         plotTwist: { ...useGameStore.getState().plotTwist, subPhase: 'done' }
       })
     }
@@ -2924,24 +2842,24 @@ Generate ${daterName}'s final verdict:`
     setIsGenerating(true)
     
     try {
-      // Create context for the plot twist scenario - emphasize this is IMPORTANT
-      const plotTwistContext = `PLOT TWIST SCENARIO: Someone else just started hitting on ${selectedDater?.name || 'your date'}! 
-The avatar's response to this situation: "${winner.answer}"
-This is a DRAMATIC, PIVOTAL moment - react with FULL emotion to what the avatar did!`
+      // Dater responds to the "What happened" story (not just the raw winning action)
+      const storyContext = whatHappenedStory
+        ? `PLOT TWIST SCENARIO - HERE IS WHAT HAPPENED (react to this story):\n\n"${whatHappenedStory}"\n\nYou are ${selectedDater?.name || 'the dater'}. React with FULL emotion to what happened. The winning choice was an ACTION: "${winner.answer}" — but you're responding to the story above.`
+        : `PLOT TWIST SCENARIO: Someone else hit on ${selectedDater?.name || 'your date'}. The avatar's response (action): "${winner.answer}". React with full emotion to what the avatar did!`
       
-      // ============ EXCHANGE 1: Maya's FIRST big reaction ============
-      console.log('🎭 Plot Twist Exchange 1: Maya reacts to what happened')
+      // ============ EXCHANGE 1: Dater's FIRST reaction to "What happened" ============
+      console.log('🎭 Plot Twist Exchange 1: Dater reacts to what happened story')
       const plotTwistCompat = useGameStore.getState().compatibility
       const daterReaction1 = await getDaterDateResponse(
         selectedDater,
         avatar,
         useGameStore.getState().dateConversation || [],
-        plotTwistContext,
-        null, // no sentiment hit for plot twist
+        storyContext,
+        null,
         { positive: 0, negative: 0 },
         false,
-        false, // not first impressions
-        plotTwistCompat // Pass current compatibility
+        false,
+        plotTwistCompat
       )
       
       // Dater is probably shocked/excited during plot twist!
@@ -3534,12 +3452,14 @@ Give your final thoughts on this dramatic moment.`
   }
   
   const getPhaseTitle = () => {
+    const daterName = selectedDater?.name || 'Maya'
     switch (livePhase) {
       case 'reaction': return { line1: '👋 FIRST', line2: 'Impressions', line3: '' }
       case 'phase1': return { line1: 'PHASE 1', line2: 'Submit', line3: 'Answers' }
       case 'answer-selection': return { line1: '🎲', line2: 'Selecting', line3: 'Answer' }
       case 'phase3': return { line1: 'PHASE 3', line2: 'Watch', line3: 'the Date' }
       case 'plot-twist': return { line1: '🎭 PLOT', line2: 'Twist!', line3: '' }
+      case 'plot-twist-reaction': return { line1: 'Plot Twist', line2: `${daterName}'s reaction`, line3: '' }
       case 'ended': return { line1: 'DONE', line2: 'Date', line3: 'Over' }
       default: return { line1: '', line2: '', line3: '' }
     }
@@ -3556,6 +3476,7 @@ Give your final thoughts on this dramatic moment.`
       case 'answer-selection': return 'Selecting an answer...'
       case 'phase3': return 'Chat with other players'
       case 'plot-twist': return 'What do you do?'
+      case 'plot-twist-reaction': return "Watch the reaction"
       default: return ''
     }
   }
@@ -3808,11 +3729,11 @@ Give your final thoughts on this dramatic moment.`
               </div>
             )}
             
-            {/* Spinning Phase - Wheel selection (replaces reveal and animation) */}
-            {plotTwist.subPhase === 'spinning' && (
+            {/* Showing / Spinning Phase - Wheel (same flow as other rounds) */}
+            {(plotTwist.subPhase === 'showing' || plotTwist.subPhase === 'spinning') && (
               <div className="plot-twist-wheel-phase">
-                <div className="plot-twist-badge spinning">🎭 CHOOSING...</div>
-                <h2 className="spinning-text">Spinning the wheel...</h2>
+                <div className="plot-twist-badge spinning">🎭 {plotTwist.subPhase === 'showing' ? 'GET READY...' : 'CHOOSING...'}</div>
+                <h2 className="spinning-text">{plotTwist.subPhase === 'showing' ? 'Starting spin...' : 'Spinning the wheel...'}</h2>
                 
                 {/* The Wheel */}
                 {plotTwist.slices && plotTwist.slices.length > 0 && (
@@ -3823,7 +3744,7 @@ Give your final thoughts on this dramatic moment.`
                       viewBox="0 0 200 200"
                       style={{ transform: `rotate(${plotTwist.spinAngle || 0}deg)` }}
                     >
-                      {plotTwist.slices.map((slice, index) => {
+                      {plotTwist.slices.map((slice) => {
                         const sliceAngle = slice.endAngle - slice.startAngle
                         const isFullCircle = sliceAngle >= 359.9
                         
@@ -4049,9 +3970,9 @@ Give your final thoughts on this dramatic moment.`
             title="Tap to toggle debug info"
           >
             <div className="round-indicator">
-              <span className="round-label">{livePhase === 'reaction' ? 'Intro' : livePhase === 'plot-twist' ? 'Plot Twist' : 'Round'}</span>
+              <span className="round-label">{livePhase === 'reaction' ? 'Intro' : (livePhase === 'plot-twist' || livePhase === 'plot-twist-reaction') ? 'Plot Twist' : 'Round'}</span>
               <span className="round-value">
-                {livePhase === 'reaction' ? '👋' : livePhase === 'plot-twist' ? '🎭' : `${cycleCount + 1}/${maxCycles}`}
+                {livePhase === 'reaction' ? '👋' : (livePhase === 'plot-twist' || livePhase === 'plot-twist-reaction') ? '🎭' : `${cycleCount + 1}/${maxCycles}`}
               </span>
             </div>
             <div className="header-cta">
@@ -4269,7 +4190,7 @@ Give your final thoughts on this dramatic moment.`
           )}
         </AnimatePresence>
         
-        {/* Round Prompt Banner - Starts centered, animates to top */}
+        {/* Round Prompt Banner - not shown during plot twist reaction (header shows Plot Twist / Maya's reaction) */}
         <AnimatePresence mode="wait">
           {['phase1', 'answer-selection', 'phase3'].includes(livePhase) && currentRoundPrompt.title && (
             <motion.div 
@@ -4349,7 +4270,7 @@ Give your final thoughts on this dramatic moment.`
                       viewBox="0 0 200 200"
                       style={{ transform: `rotate(${answerSelection.spinAngle}deg)` }}
                     >
-                      {answerSelection.slices.map((slice, index) => {
+                      {answerSelection.slices.map((slice) => {
                         const sliceAngle = slice.endAngle - slice.startAngle
                         const isFullCircle = sliceAngle >= 359.9 // Handle single slice (full wheel)
                         const isWinner = answerSelection.subPhase === 'winner' && answerSelection.winningSlice?.id === slice.id

@@ -10,7 +10,7 @@ import {
   PROMPT_05_DATER_INFER,
   PROMPT_05B_DATER_REACTION_STYLE
 } from './promptChain'
-import { getVoiceProfilePrompt, getEmotionalVoiceGuidance } from './voiceProfiles'
+import { getVoiceProfilePrompt } from './voiceProfiles'
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 
@@ -113,6 +113,49 @@ export async function getChatResponse(messages, systemPrompt) {
 }
 
 /**
+ * Single prompt LLM call with timeout - for wrap-up and other flows that must not hang
+ * @param {string} userPrompt - The user message content
+ * @param {{ maxTokens?: number, timeoutMs?: number }} options
+ * @returns {Promise<string|null>} - Response text or null on failure/timeout
+ */
+export async function getSingleResponseWithTimeout(userPrompt, options = {}) {
+  const { maxTokens = 200, timeoutMs = 25000 } = options
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+  if (!apiKey) return null
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch(ANTHROPIC_API_URL, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    })
+    clearTimeout(timeoutId)
+    if (!response.ok) return null
+    const data = await response.json()
+    const text = data.content?.[0]?.text?.trim()
+    return text ? stripActionDescriptions(text) : null
+  } catch (err) {
+    clearTimeout(timeoutId)
+    if (err.name === 'AbortError') console.warn('LLM request timed out')
+    else console.error('LLM request error:', err)
+    return null
+  }
+}
+
+/**
  * Get Dater response in chat phase
  */
 export async function getDaterChatResponse(dater, conversationHistory) {
@@ -193,31 +236,26 @@ Based on your personality, values, and preferences:
 
 Your response should invite your date to share their perspective too!`
 
+  const messages = [
+    ...conversationHistory.slice(-10).map(msg => ({
+      role: msg.speaker === 'dater' ? 'assistant' : 'user',
+      content: msg.message
+    })),
+    { role: 'user', content: openerPrompt }
+  ]
+
   try {
-    const response = await anthropic.messages.create({
-      model: MODEL_ID,
-      max_tokens: 150,
-      system: systemPrompt,
-      messages: [
-        ...conversationHistory.slice(-10).map(msg => ({
-          role: msg.speaker === 'dater' ? 'assistant' : 'user',
-          content: msg.message
-        })),
-        { role: 'user', content: openerPrompt }
-      ]
-    })
-    
-    let text = response.content[0].text.trim()
+    const text = await getChatResponse(messages, systemPrompt)
+    if (!text) return null
     // Remove any action descriptions
-    text = text.replace(/\*[^*]+\*/g, '').trim()
-    return text
+    return text.replace(/\*[^*]+\*/g, '').trim()
   } catch (error) {
     console.error('Error getting dater opener:', error)
     return null
   }
 }
 
-export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null, sentimentHit = null, reactionStreak = { positive: 0, negative: 0 }, isFinalRound = false, isFirstImpressions = false, compatibility = 50) {
+export async function getDaterDateResponse(dater, avatar, conversationHistory, latestAttribute = null, sentimentHit = null, reactionStreak = { positive: 0, negative: 0 }, isFinalRound = false, isFirstImpressions = false, compatibility = 50, customInstruction = null) {
   console.log('🔗 Using MODULAR PROMPT CHAIN for dater response')
   console.log('📊 Current compatibility:', compatibility, '% | Sentiment:', sentimentHit)
   const systemPrompt = buildDaterAgentPrompt(dater, 'date')
@@ -513,7 +551,9 @@ A normal person + scary thing = scared reaction (even if they try to be polite a
   
   // Special instruction if a new attribute was just added - USING MODULAR PROMPT CHAIN
   let latestAttrContext = ''
-  if (latestAttribute) {
+  if (customInstruction) {
+    latestAttrContext = `\n\n🎯 YOUR TASK FOR THIS RESPONSE:\n${customInstruction}\n\nKeep your tone consistent with how the date is going. 1-2 sentences, dialogue only. No action descriptions (*smiles*, etc).`
+  } else if (latestAttribute) {
     // Check if this is a PLOT TWIST scenario (special handling)
     const isPlotTwist = (typeof latestAttribute === 'string' ? latestAttribute : latestAttribute?.answer || '').includes('PLOT TWIST SCENARIO')
     
@@ -639,7 +679,7 @@ React to what they revealed about themselves!`
  * @param mode - 'answer' (answering question with new attribute), 'continue' (continuing with all attributes)
  */
 export async function getAvatarDateResponse(avatar, dater, conversationHistory, latestAttribute = null, mode = 'answer', emotionalState = 'neutral') {
-  const { name, age, occupation, attributes } = avatar
+  const { name, occupation, attributes } = avatar
   
   // Filter out the generic starter attributes
   const genericStarters = ['seems friendly', 'has a nice smile', 'appears well-dressed']
@@ -781,7 +821,8 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
   
   // Check for paraphrase mode FIRST (before other checks)
   if (mode === 'paraphrase') {
-    // MODE: PARAPHRASE - OPEN A NEW ROUND by sharing your answer
+    // MODE: PARAPHRASE - Phase 3 FRESH START. Avatar opens with a statement based on the winning answer.
+    // No one has said anything yet. Avatar is NOT responding to anything — they are opening the conversation.
     const questionContext = latestAttribute?.questionContext || ''
     const winningAnswer = latestAttribute?.answer || attributeText || ''
     const isPreference = isPreferenceQuestion(questionContext)
@@ -795,29 +836,24 @@ export async function getAvatarDateResponse(avatar, dater, conversationHistory, 
 - Talk about this as YOUR PREFERENCE for what you want in a partner!
 ` : ''
     
-    behaviorInstructions = `🚨🚨🚨 CRITICAL: ONLY TALK ABOUT "${winningAnswer}" 🚨🚨🚨
+    behaviorInstructions = `🚨 FRESH START — PHASE 3 OPENER 🚨
+Phase 3 is a NEW conversation. NO ONE has said anything yet. You are OPENING the conversation. You are NOT responding to anything previously said.
 
-📋 THE QUESTION (asked by a HOST — unseen; you are NOT responding to the dater): "${questionContext}"
-🎯 YOUR ANSWER: "${winningAnswer}"
+🎯 YOUR WINNING ANSWER (you MUST state this in your first comment, rephrased conversationally): "${winningAnswer}"
+📋 THE QUESTION (context only; the Host asked this — the dater has not spoken): "${questionContext}"
 🎯 YOUR PERSONALITY / OTHER TRAITS: ${realAttributes.join(', ') || 'none yet'}
 ${preferenceContext}
 
-⚠️ YOUR FIRST LINE MUST BE A DIRECT STATEMENT that takes the QUESTION and your ANSWER into account.
-- You are answering the Host's question. Your first sentence should state your answer IN THE CONTEXT of that question.
-- Example: Question "What superpower would make you the best partner?" + Answer "X-ray vision" → "X-ray vision would make the most sense to me — that way I could tell if someone's lying, or find my keys."
-- Example: Question "What's your dealbreaker?" + Answer "not flossing" → "Not flossing would be a dealbreaker for me. Basic hygiene — if you can't do that, what else are you skipping?"
-- Do NOT start with "Right?", "Oh totally!", "Ha!", or anything that sounds like you're responding to something the dater said. The dater did NOT ask the question. The Host did. Lead with YOUR statement about your answer.
+⚠️ RULE: Your first comment MUST state your answer — but rephrase it slightly more conversationally. The listener should clearly hear what your answer is, expressed in natural, casual language (not word-for-word).
+- ALWAYS include your answer in the first line; never be vague or avoid stating it.
+- REPHRASE slightly: same meaning, more conversational. E.g. "${winningAnswer}" might become a short phrase or sentence that says the same thing in a natural way.
+- Example: answer "pineapple on pizza" → "I'm totally team pineapple on pizza — sweet and savory, that's just me." (answer stated, rephrased.)
+- Example: answer "loud chewing" → "Loud chewing is a no for me — I just can't, it kills my appetite."
+- Example: answer "kindness to waiters" → "Being kind to waiters. That would be it for me — says everything about how they'll treat you when nobody's watching."
+- NEVER start with "Right?", "So," "Yeah," or filler. Open with the statement that states your answer (conversationally rephrased).
 
-✅ STRUCTURE: First sentence = [Your answer] + [in context of the question] + [brief why]. Example: "[Answer] would make the most sense to me because..." or "For me it's [answer] — that way I could..."
-✅ MORE EXAMPLES (first line is a direct statement):
-- "Loud chewing is a no for me — I just can't, it makes me lose my appetite."
-- "Being kind to waiters. That would be it for me — says everything about how they'll treat you when nobody's watching."
-- "Pineapple on pizza — I'm a sweet-and-savory person, that's just who I am."
-
-❌ FORBIDDEN:
-- Do NOT start with "Right?", "Oh totally!", "Ha!", "See," or as if the dater just said something. The question came from the Host.
-- No intro or hello. First line = direct statement about your answer in context of the question.
-- Always include a brief "why." Don't mention every trait — one coherent reason is enough.
+✅ DO: One short sentence that clearly states your answer in conversational wording + optional brief why.
+❌ DON'T: Skip stating your answer, or say it verbatim like a label. Don't use filler openers.
 
 ${emotionalInstructions}`
     
@@ -846,10 +882,11 @@ The QUESTION was asked by a HOST (unseen) — you are answering the Host's quest
 🎯 YOUR PERSONALITY / OTHER TRAITS: ${realAttributes.join(', ') || 'none yet'}
 ${preferenceContext}
 
+⚠️ NEVER start with "Right?", "So," "Yeah," "I know right," "Oh totally," "Ha!," or similar. Frame your answer in a conversational sentence — state your answer, don't lead with a filler.
+
 ⚠️ YOUR FIRST LINE MUST BE A DIRECT STATEMENT about your answer in context of the QUESTION.
-- Do NOT start with "Right?", "Oh totally!", "Ha!", "See," or as if you're responding to what the dater said. The question came from the Host.
 - Lead with YOUR statement: your answer + in context of the question + brief why. Example: "${winningAnswer} would make the most sense to me — that way I could..." or "For me it's ${winningAnswer}, because..."
-- You can briefly acknowledge the dater's take in the same breath or after your statement, but your FIRST sentence must be the direct statement about your answer.
+- You can briefly acknowledge the dater's take after your statement, but your FIRST sentence must be the direct statement about your answer.
 
 ✅ STRUCTURE: First sentence = [Your answer] + [in context of question] + [why]. Optional: then a brief "same" or "I get that" about the dater.
 ✅ EXAMPLES (first line is a direct statement):
@@ -858,7 +895,7 @@ ${preferenceContext}
 - "I'd go with ${winningAnswer} — [reason]."
 
 ❌ FORBIDDEN:
-- Do NOT lead with "Right?", "Oh totally!", "Ha!", "See," or "I feel that!" — the dater did not ask the question.
+- Do NOT lead with "Right?", "So," "Yeah," "Oh totally!," "Ha!," "See," or "I feel that!" — state your answer in a conversational way, not as a response to a question.
 - First line = direct statement about your answer. Always include a brief "why."
 
 ${emotionalInstructions}`
@@ -899,7 +936,7 @@ ${emotionalInstructions}`
 - This is NOT about you having this trait - it's about you WANTING (or not wanting) it in others
 ` : ''
     
-    behaviorInstructions = `🎯 RESPOND TO YOUR DATE'S REACTION - STAY ON TOPIC!
+    behaviorInstructions = `🎯 REACT TO YOUR DATE'S REACTION AND/OR JUSTIFY WHAT YOU SAID - STAY ON TOPIC!
 
 Your date just said: "${lastDaterMessage}"
 
@@ -910,19 +947,23 @@ YOUR OTHER TRAITS: ${realAttributes.join(', ')}
 ⚠️ CRITICAL: STAY ON THIS ROUND'S TOPIC!
 - You're still discussing YOUR ANSWER: "${newestAttribute}"
 - Do NOT change subjects or bring up random other traits
-- Elaborate MORE on your answer, share a story, explain WHY
+- React to what they just said and/or justify what you said originally (give reasons, a story, or push back if they disliked it)
 
 🔥 HOW TO RESPOND:
-- DIRECTLY respond to what your date just said about YOUR ANSWER
+- DIRECTLY respond to what your date just said about YOUR ANSWER — react to their reaction and/or justify your original answer
 - If they seem positive → get more excited, share more details about "${newestAttribute}"
-- If they seem negative → defend or explain "${newestAttribute}" - "What? It's not that weird..."
+- If they seem NEGATIVE or they HATE it → DOUBLE DOWN: give real reasoning, explain WHY you believe it, argue your case. Defend "${newestAttribute}" with concrete reasons, a story, or logic. Do NOT back down or brush it off.
 - If they seem curious → tell a quick story or example related to "${newestAttribute}"
 
-✅ GOOD RESPONSES (staying on topic):
-- "Yeah, the [answer] thing started when I was a kid actually..."
-- "Right?? I know it sounds weird but honestly [answer] is just part of who I am."
-- "Let me explain - so with [answer], it's more about..."
+✅ GOOD RESPONSES (staying on topic, state your thought directly):
+- "The [answer] thing started when I was a kid actually..."
+- "I know it sounds weird but honestly [answer] is just part of who I am."
+- "With [answer], it's more about..."
+- When they hate it: "Okay but hear me out — [specific reason or story]. That's why [answer] matters to me."
 
+❌ FORBIDDEN:
+- Do NOT start with "Right?", "Right??", "Yeah," "So," "I mean" — state your answer or thought in a clear, conversational sentence.
+- NEVER say dismissive cop-outs like "That's just my answer," "That's just how I feel," "Take it or leave it," "That's just me," "It is what it is," or "We can agree to disagree" without giving real reasoning first. If your date really dislikes your answer, you MUST justify with reasons — never shrug it off.
 ❌ BAD RESPONSES (going off topic):
 - Changing to a completely different subject
 - Bringing up unrelated traits from earlier rounds
@@ -944,32 +985,34 @@ ${emotionalInstructions}
 ⚠️ REMEMBER: "${newestAttribute}" is your PREFERENCE for partners, not about yourself!
 ` : ''
     
-    behaviorInstructions = `🎯 WRAP UP THIS TOPIC - Final thought on your answer:
+    behaviorInstructions = `🎯 MAKE YOUR FINAL COMMENT FOR THIS ROUND - Wrap up this topic:
 
 ${currentTopic ? `📋 THE QUESTION FOR THIS ROUND: "${currentTopic}"\nYOUR ANSWER TO THAT QUESTION: "${newestAttribute}"` : `YOUR ANSWER: "${newestAttribute}"`}
 ${preferenceContext}
 YOUR OTHER TRAITS: ${realAttributes.join(', ')}
 
-⚠️ CRITICAL: This is your FINAL comment on "${newestAttribute}" for this round!
+⚠️ Do NOT start with "Right?", "So," "Yeah," or similar — state your closing thought in a clear, conversational sentence.
+⚠️ CRITICAL: This is your FINAL comment for this round on "${newestAttribute}"!
 - Give a closing thought, summary, or punchline about YOUR ANSWER
 - You can OPTIONALLY connect it to one of your other traits if it makes sense
 - Keep it SHORT - this wraps up the topic
 
 🔥 GOOD WAYS TO WRAP UP:
-- A quick conclusion: "Anyway, that's just how I feel about [answer]."
-- A funny aside: "But yeah, [answer]. That's me in a nutshell."
+- A concrete reason or connection: "Honestly [answer] has shaped a lot of who I am."
 - A connection to another trait: "Actually [answer] probably explains why I also [other trait]."
-- A rhetorical question: "Is that weird? I never thought [answer] was that unusual..."
+- A rhetorical question with a reason: "Is that weird? I never thought [answer] was that unusual because..."
 
-✅ EXCELLENT WRAP-UPS:
-- "So yeah, [answer]. Take it or leave it, that's just me."
+✅ EXCELLENT WRAP-UPS (give a reason, not a cop-out):
 - "Honestly [answer] has shaped a lot of who I am."
 - "And that's actually connected to why I [other trait] - it all makes sense if you think about it."
+- "With [answer], it's more about [specific reason] for me."
 
+❌ FORBIDDEN: Do NOT wrap up with dismissive cop-outs like "That's just my answer," "That's just how I feel," "Take it or leave it," "That's just me," or "It is what it is" without giving a real reason. Always include a brief justification or connection.
 ❌ BAD RESPONSES:
 - Starting a completely new topic
 - Asking the dater a question (this is YOUR closing statement)
 - Being too long or rambling
+- Ending with "That's just my answer" or similar — you must give reasoning
 
 ${emotionalInstructions}
 
@@ -1320,7 +1363,7 @@ export async function runAttributePromptChain(avatar, dater, newAttribute, conve
  */
 export function getFallbackDaterResponse(dater, playerMessage) {
   const lowerMsg = playerMessage.toLowerCase()
-  const { talkingTraits, quirk, backstory, idealPartner, dealbreakers } = dater
+  const { quirk, idealPartner, dealbreakers } = dater
   
   // Check if the message contains a question
   const isQuestion = lowerMsg.includes('?') || 
@@ -1536,7 +1579,7 @@ const usedAvatarLines = new Set()
  * Fallback date conversation (initial greeting handled separately)
  * @param {string} expectedSpeaker - 'dater' or 'avatar'
  */
-export function getFallbackDateDialogue(expectedSpeaker, avatar, dater) {
+export function getFallbackDateDialogue(expectedSpeaker, _avatar, _dater) {
   const daterLines = [
     "Tell me something about yourself that would surprise me.",
     "What's the most spontaneous thing you've ever done?",
@@ -1861,7 +1904,7 @@ Return ONLY valid JSON (matches MUST be true):
  * Fallback dater values if API is unavailable
  * Includes both normal AND extreme categories for wild attributes
  */
-function getFallbackDaterValues(dater) {
+function getFallbackDaterValues(_dater) {
   return {
     loves: [
       'being authentic',
@@ -2122,8 +2165,8 @@ Return ONLY a JSON array of strings, like:
 }
 
 /**
- * Generate a narrative summary of what happened during the plot twist
- * This creates a 2-3 sentence dramatic description of the action
+ * Generate a narrative summary of what happened during the plot twist.
+ * The winning "answer" is typically an ACTION (what the avatar did), not something they said.
  */
 export async function generatePlotTwistSummary(avatarName, daterName, winningAction) {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
@@ -2137,7 +2180,9 @@ export async function generatePlotTwistSummary(avatarName, daterName, winningAct
 CONTEXT:
 - ${avatarName} is on a date with ${daterName}
 - A random stranger just started hitting on ${daterName}
-- ${avatarName}'s response to this was: "${winningAction}"
+- The winning choice (what ${avatarName} DID) is: "${winningAction}"
+
+IMPORTANT: "${winningAction}" is usually an ACTION or choice (e.g. "punch them", "kiss the dater", "run away", "do nothing"), NOT something they said. Interpret it as what the avatar DID in the situation. Build the story from that action.
 
 Write a 2-3 sentence DRAMATIC NARRATION of what happened. This should describe:
 1. What ${avatarName} actually did (interpret their action dramatically)
@@ -2155,7 +2200,7 @@ RULES:
 - If the action was romantic/protective, make it swoony
 - If the action was weird, lean into the weirdness
 
-EXAMPLES:
+EXAMPLES (winning answer = action):
 Action: "Punch them in the face"
 → "${avatarName} wound up and delivered a devastating right hook. The flirty stranger crumpled to the floor. ${daterName}'s jaw dropped."
 

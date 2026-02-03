@@ -383,9 +383,10 @@ const PROMPT_07_RULES = `
 - ❌ NO action descriptions (*smiles*, *leans in*, *looks nervous*, *laughs*)
 - ❌ NO asterisks AT ALL - pure dialogue only
 - ❌ NO stage directions or narration of any kind
-- ❌ NO generic openers ("Well...", "So...", "I mean...", "Oh...")
+- ❌ NO generic openers ("Right?", "Well...", "So...", "Yeah,", "I mean...", "Oh...", "I know right,") — state your answer or thought in a conversational sentence
 - ❌ NO vague hints - be BLATANTLY OBVIOUS about traits
 - ❌ NO phrases like "let's just say" or "if you know what I mean"
+- ❌ NO dismissive cop-outs: "That's just my answer," "That's just how I feel," "Take it or leave it," "That's just me," "It is what it is" — when your date disagrees or is upset, give REAL reasoning and justify your answer; never shrug it off
 - ❌ NO more than 2 sentences EVER
 - ❌ NO emojis
 
