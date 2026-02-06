@@ -10,6 +10,10 @@
  * Usage:
  *   npm install puppeteer
  *   node test-agent.js
+ *
+ * Record a video playthrough (requires ffmpeg installed):
+ *   RECORD=1 node test-agent.js
+ *   npm run record-playthrough
  */
 
 import puppeteer from 'puppeteer'
@@ -17,6 +21,8 @@ import { setTimeout } from 'timers/promises'
 
 const GAME_URL = 'https://bad-date-demo.vercel.app/'
 const HEADLESS = false // Set to true to hide browser windows
+const RECORD = process.env.RECORD === '1' || process.env.RECORD === 'true'
+const OUTPUT_VIDEO = RECORD ? `playthrough-${Date.now()}.webm` : null
 
 // Issue tracking
 const issues = []
@@ -132,7 +138,7 @@ function generateAttribute() {
  */
 async function runHostAgent() {
   const agentName = 'HOST'
-  let browser, page
+  let browser, page, recorder
 
   try {
     log.info(agentName, 'Starting browser...')
@@ -154,6 +160,12 @@ async function runHostAgent() {
     // Check for blank screen
     if (await detectBlankScreen(page, agentName)) {
       return { success: false, reason: 'Blank screen at main menu' }
+    }
+
+    // Start video recording (host view only) if RECORD=1
+    if (RECORD && OUTPUT_VIDEO) {
+      log.info(agentName, `Starting screencast → ${OUTPUT_VIDEO}`)
+      recorder = await page.screencast({ path: OUTPUT_VIDEO })
     }
 
     // Step 2: Click Live Mode
@@ -461,8 +473,16 @@ async function runHostAgent() {
     console.error(error)
     return { success: false, reason: error.message }
   } finally {
-    // Keep browser open for inspection
-    log.info(agentName, 'Browser staying open for inspection...')
+    if (recorder) {
+      log.info(agentName, 'Stopping recording...')
+      await recorder.stop()
+      log.success(agentName, `Video saved: ${OUTPUT_VIDEO}`)
+    }
+    if (RECORD && browser) {
+      await browser.close()
+    } else {
+      log.info(agentName, 'Browser staying open for inspection...')
+    }
   }
 }
 
@@ -783,7 +803,12 @@ async function main() {
 
   log.info('SYSTEM', 'Starting test with 3 agents (1 host + 2 clients)...')
   log.info('SYSTEM', `Game URL: ${GAME_URL}`)
-  log.info('SYSTEM', `Headless mode: ${HEADLESS}\n`)
+  log.info('SYSTEM', `Headless mode: ${HEADLESS}`)
+  if (RECORD) {
+    log.info('SYSTEM', `Recording: ON → ${OUTPUT_VIDEO} (requires ffmpeg)`)
+  }
+  console.log('')
+
 
   // Start host first
   const hostPromise = runHostAgent()
@@ -831,10 +856,19 @@ async function main() {
     console.log('\n\n✨ No issues detected!')
   }
 
-  console.log('\n' + '='.repeat(70))
-  console.log('ℹ️  Browsers left open for manual inspection.')
-  console.log('   Press Ctrl+C to close all browsers and exit.')
-  console.log('='.repeat(70) + '\n')
+  if (RECORD && OUTPUT_VIDEO) {
+    console.log('\n' + '='.repeat(70))
+    console.log('🎬 RECORDING SAVED')
+    console.log('='.repeat(70))
+    console.log(`   ${OUTPUT_VIDEO}`)
+    console.log('   (WebM/VP9 – play with VLC, Chrome, or convert with ffmpeg)')
+    console.log('='.repeat(70) + '\n')
+  } else {
+    console.log('\n' + '='.repeat(70))
+    console.log('ℹ️  Browsers left open for manual inspection.')
+    console.log('   Press Ctrl+C to close all browsers and exit.')
+    console.log('='.repeat(70) + '\n')
+  }
 }
 
 // Run the orchestrator

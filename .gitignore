@@ -31,3 +31,6 @@ dist-ssr
 
 # PartyKit local dev state
 partykit/.partykit/
+
+# Recorded playthrough videos
+playthrough-*.webm

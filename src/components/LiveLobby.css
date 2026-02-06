@@ -293,6 +293,43 @@
   color: var(--text-primary);
 }
 
+/* Play Now – primary single-player CTA */
+.play-now-btn {
+  background: linear-gradient(135deg, #ff4d6d 0%, #ff8fab 50%, #c9184a 100%);
+  border: 2px solid rgba(255, 141, 171, 0.5);
+  color: #fff;
+  width: 100%;
+}
+
+.play-now-btn:hover {
+  background: linear-gradient(135deg, #ff5c7c 0%, #ff9fbb 50%, #d91a4d 100%);
+  box-shadow: 0 0 24px rgba(255, 77, 109, 0.4);
+}
+
+/* Multiplayer Mode – Archive link (secondary) */
+.archive-link {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transition: color 0.2s ease;
+}
+
+.archive-link:hover {
+  color: var(--text-secondary);
+}
+
+.archive-buttons {
+  margin-top: 8px;
+}
+
 .btn-icon {
   font-size: 1.2rem;
 }

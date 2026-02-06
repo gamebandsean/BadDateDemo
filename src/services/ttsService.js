@@ -8,12 +8,18 @@ const API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY
 
 // Voice IDs from ElevenLabs
 // You can change these to any voice from your ElevenLabs account
+const NARRATOR_VOICE_ID = import.meta.env.VITE_ELEVENLABS_NARRATOR_VOICE_ID
+
 const VOICES = {
   // Dater (Maya) - expressive, emotional female voice
   dater: 'EXAVITQu4vr4xnSDxMaL', // Bella - young, expressive, emotional
   
   // Avatar - young, energetic male voice
   avatar: 'TX3LPaxmHKxFdv7VOQHJ', // Liam - "young adult with energy and warmth"
+  
+  // Narrator - soothing, soulful voice for "What Happened" plot twist summary
+  // Set VITE_ELEVENLABS_NARRATOR_VOICE_ID in .env to use a different voice (e.g. Hope, Josh, your custom voice)
+  narrator: NARRATOR_VOICE_ID || 'Dkbbg7k9Ir9TNzn5GYLp', // Henry - deep, professional, soothing
 }
 
 // Audio queue to prevent overlapping speech
@@ -112,7 +118,7 @@ export function stopAllAudio() {
  * Convert text to speech using ElevenLabs API
  * Returns a promise that resolves when audio STARTS playing (not when it ends)
  * @param {string} text - The text to speak
- * @param {'dater' | 'avatar'} speaker - Which character is speaking
+ * @param {'dater' | 'avatar' | 'narrator'} speaker - Which character is speaking
  * @param {object} options - Optional settings
  * @param {boolean} options.waitForEnd - If true, promise resolves when audio ENDS instead of starts
  * @returns {Promise<{started: boolean, immediate: boolean, duration?: number}>}
@@ -180,7 +186,7 @@ export async function speak(text, speaker = 'avatar', options = {}) {
  * Speak text and wait for audio to COMPLETE
  * Use this when you need to wait for the full audio before continuing
  * @param {string} text - The text to speak
- * @param {'dater' | 'avatar'} speaker - Which character is speaking
+ * @param {'dater' | 'avatar' | 'narrator'} speaker - Which character is speaking
  * @returns {Promise<{started: boolean, immediate: boolean, duration?: number}>}
  */
 export async function speakAndWait(text, speaker = 'avatar') {
@@ -237,9 +243,9 @@ async function processQueue() {
           text: text,
           model_id: 'eleven_multilingual_v2',
           voice_settings: {
-            stability: speaker === 'dater' ? 0.35 : 0.5, // Lower stability for Maya = more emotion
+            stability: speaker === 'dater' ? 0.35 : speaker === 'narrator' ? 0.7 : 0.5, // Narrator: calmer; Maya: more emotion
             similarity_boost: 0.75,
-            style: speaker === 'dater' ? 0.75 : 0.5, // Higher style for Maya = more expressive
+            style: speaker === 'dater' ? 0.75 : speaker === 'narrator' ? 0.3 : 0.5, // Narrator: restrained, soulful
             use_speaker_boost: true,
           },
         }),
@@ -323,7 +329,7 @@ export function getCharacterCount(text) {
 
 /**
  * Change the voice for a character
- * @param {'dater' | 'avatar'} character 
+ * @param {'dater' | 'avatar' | 'narrator'} character 
  * @param {string} voiceId - ElevenLabs voice ID
  */
 export function setVoice(character, voiceId) {

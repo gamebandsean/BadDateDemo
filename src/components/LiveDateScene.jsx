@@ -145,6 +145,7 @@ function LiveDateScene() {
   const phaseTimerRef = useRef(null)
   const lastPhaseRef = useRef('')
   const allPlotTwistAnsweredRef = useRef(false) // Prevent multiple plot twist auto-advance triggers
+  const narratorSummarySpokenRef = useRef(null)  // Track which summary we've already read with narrator TTS
   
   // Starting Stats question definitions - Players build the Avatar (the dater going on the date)
   const STARTING_STATS_QUESTIONS = [
@@ -726,6 +727,18 @@ function LiveDateScene() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: subscription setup only
   }, [partyClient, roomCode, isHost, setSuggestedAttributes, setCompatibility, setLivePhase, setPhaseTimer, setPlayerChat, setNumberedAttributes, setShowTutorial, setTutorialStep, setPlayers, setPlotTwist])
   
+  // Narrator TTS: read the "What Happened" plot twist summary with a soothing narrator voice
+  useEffect(() => {
+    if (plotTwist?.subPhase !== 'summary' || !plotTwist?.summary) return
+    if (narratorSummarySpokenRef.current === plotTwist.summary) return
+    narratorSummarySpokenRef.current = plotTwist.summary
+    const name = avatar?.name || 'your date'
+    const text = (plotTwist.summary || '')
+      .replace(/\bthe Avatar\b/gi, `the ${name}`)
+      .replace(/\bAvatar\b/g, name)
+    if (text.trim()) speak(text, 'narrator')
+  }, [plotTwist?.subPhase, plotTwist?.summary, avatar?.name])
+
   // Track timer value in a ref for the interval to access
   const phaseTimerValueRef = useRef(phaseTimer)
   useEffect(() => {

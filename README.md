@@ -33,6 +33,19 @@ npm run dev
 npm run build
 ```
 
+## 🎬 Record a video playthrough
+
+To record a full playthrough (host view) as a WebM video:
+
+1. **Install [ffmpeg](https://ffmpeg.org/)** (required for Puppeteer screencast):
+   - macOS: `brew install ffmpeg`
+   - Ubuntu: `sudo apt install ffmpeg`
+2. Run:
+   ```bash
+   npm run record-playthrough
+   ```
+   This runs the automated test agent with 1 host + 2 clients and saves a timestamped `playthrough-*.webm` in the project root. Play with VLC, Chrome, or convert to MP4 with `ffmpeg -i playthrough-123.webm playthrough.mp4`.
+
 ## 🤖 AI-Powered Conversations (Optional)
 
 For dynamic, LLM-powered conversations with Claude, add your Anthropic API key:

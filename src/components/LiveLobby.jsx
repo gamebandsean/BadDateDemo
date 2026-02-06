@@ -22,8 +22,9 @@ function LiveLobby() {
   const setSelectedDater = useGameStore((state) => state.setSelectedDater)
   const setPlayers = useGameStore((state) => state.setPlayers)
   const setPartyClient = useGameStore((state) => state.setPartyClient)
+  const resetGame = useGameStore((state) => state.resetGame)
   const daters = useGameStore((state) => state.daters)
-  const [view, setView] = useState('main') // 'main', 'host', 'join', 'qr-join'
+  const [view, setView] = useState('main') // 'main', 'multiplayer', 'host', 'join', 'qr-join'
   const [availableRooms, setAvailableRooms] = useState([])
   const [username, setUsernameLocal] = useState('')
   const [error, setError] = useState('')
@@ -105,6 +106,14 @@ function LiveLobby() {
     }
   }, [view])
   
+  // Single-player: go to matchmaking (swipe → chat → date)
+  const handlePlayNow = () => {
+    const playerName = username.trim() || `Player${Math.floor(Math.random() * 1000)}`
+    resetGame()
+    setUsername(playerName)
+    setPhase('matchmaking')
+  }
+
   const handleCreate = async () => {
     setIsLoading(true)
     setError('')
@@ -533,8 +542,90 @@ function LiveLobby() {
             </motion.div>
           )}
           
-          {/* Main Action Buttons */}
+          {/* Main Action: Play Now (single-player) */}
           <div className="main-buttons">
+            <motion.button
+              className="mode-btn play-now-btn"
+              onClick={handlePlayNow}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span className="btn-icon">🎮</span>
+              <span className="btn-text">Play Now</span>
+            </motion.button>
+          </div>
+          
+          <button
+            type="button"
+            className="archive-link"
+            onClick={() => setView('multiplayer')}
+          >
+            Multiplayer Mode – Archive
+          </button>
+          
+          <div className="live-info">
+            <div className="info-item">
+              <span className="info-icon">👤</span>
+              <span>Single player</span>
+            </div>
+            <div className="info-item">
+              <span className="info-icon">⏱️</span>
+              <span>~10 min per game</span>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    )
+  }
+
+  // Multiplayer Mode – Archive (Create / Join)
+  if (view === 'multiplayer') {
+    return (
+      <div className="live-lobby">
+        <div className="version-number">v{GAME_VERSION}</div>
+        <motion.div
+          className="live-lobby-card room-browser-card"
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="live-lobby-header">
+            <button
+              className="back-btn"
+              onClick={() => setView('main')}
+            >
+              ← Back
+            </button>
+            <h2 className="live-lobby-title">
+              <span className="title-icon">📺</span>
+              Multiplayer Mode – Archive
+            </h2>
+            <p className="live-lobby-subtitle">Create or join a room (1–20 players)</p>
+          </div>
+          
+          <div className="username-section">
+            <label className="input-label">Your Name</label>
+            <input
+              type="text"
+              className="username-input"
+              placeholder="Enter your name..."
+              value={username}
+              onChange={(e) => setUsernameLocal(e.target.value)}
+              maxLength={15}
+            />
+          </div>
+          
+          {error && (
+            <motion.div
+              className="error-message-inline"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              {error}
+            </motion.div>
+          )}
+          
+          <div className="main-buttons archive-buttons">
             <motion.button
               className="mode-btn create-btn"
               onClick={handleCreate}
@@ -555,17 +646,6 @@ function LiveLobby() {
               <span className="btn-icon">🔗</span>
               <span className="btn-text">Join a Date</span>
             </motion.button>
-          </div>
-          
-          <div className="live-info">
-            <div className="info-item">
-              <span className="info-icon">👥</span>
-              <span>1-20 players</span>
-            </div>
-            <div className="info-item">
-              <span className="info-icon">⏱️</span>
-              <span>~10 min per game</span>
-            </div>
           </div>
         </motion.div>
       </div>
@@ -651,7 +731,7 @@ function LiveLobby() {
           <div className="live-lobby-header">
             <button 
               className="back-btn"
-              onClick={() => setView('main')}
+              onClick={() => setView('multiplayer')}
             >
               ← Back
             </button>
