@@ -9,7 +9,7 @@ import './LiveLobby.css'
 const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999'
 
 // Game version - increment with each deployment
-const GAME_VERSION = '0.02.29'
+const GAME_VERSION = '0.02.30'
 
 // Main game entry screen - Bad Date
 
@@ -22,7 +22,8 @@ function LiveLobby() {
   const setSelectedDater = useGameStore((state) => state.setSelectedDater)
   const setPlayers = useGameStore((state) => state.setPlayers)
   const setPartyClient = useGameStore((state) => state.setPartyClient)
-  const resetGame = useGameStore((state) => state.resetGame)
+  const setLiveMode = useGameStore((state) => state.setLiveMode)
+  const startLiveDate = useGameStore((state) => state.startLiveDate)
   const daters = useGameStore((state) => state.daters)
   const [view, setView] = useState('main') // 'main', 'multiplayer', 'host', 'join', 'qr-join'
   const [availableRooms, setAvailableRooms] = useState([])
@@ -106,12 +107,20 @@ function LiveLobby() {
     }
   }, [view])
   
-  // Single-player: go to matchmaking (swipe → chat → date)
+  // Single-player: start the same live date game as multiplayer, but no lobby (straight into game)
   const handlePlayNow = () => {
     const playerName = username.trim() || `Player${Math.floor(Math.random() * 1000)}`
-    resetGame()
+    const odId = generatePlayerId()
+    const dater = daters.find((d) => d.name === 'Maya') || daters[0]
     setUsername(playerName)
-    setPhase('matchmaking')
+    setSelectedDater(dater)
+    setIsHost(true)
+    setPlayerId(odId)
+    setPlayers([{ id: odId, odId, username: playerName, isHost: true }])
+    setPartyClient(null)
+    setRoomCode(null)
+    setLiveMode(true)
+    startLiveDate(null, false, true) // no tutorial, with starting stats (same as multiplayer)
   }
 
   const handleCreate = async () => {

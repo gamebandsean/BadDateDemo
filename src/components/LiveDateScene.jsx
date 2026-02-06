@@ -903,8 +903,9 @@ function LiveDateScene() {
       return
     }
     
-    if (!partyClient || !roomCode) {
-      console.log('🎲 PartyKit not ready or no room code')
+    // In multiplayer we need PartyKit + room; in solo (Play Now) there is no partyClient
+    if (partyClient && !roomCode) {
+      console.log('🎲 PartyKit room not ready')
       return
     }
     
@@ -979,7 +980,7 @@ function LiveDateScene() {
       if (partyClient) {
         const currentCompatibility = useGameStore.getState().compatibility
         const currentCycleCount = useGameStore.getState().cycleCount
-        partyClient.syncState( { phase: 'phase1', phaseTimer: 45, compatibility: currentCompatibility, cycleCount: currentCycleCount }) // was 30
+        partyClient.syncState( { phase: 'phase1', phaseTimer: 45, compatibility: currentCompatibility, cycleCount: currentCycleCount })
       }
       return
     }
@@ -1005,13 +1006,15 @@ function LiveDateScene() {
     lastActivePlayerRef.current = firstAssignment.playerId
     lastAnswerCountRef.current = 0
     
-    // Sync to PartyKit - always include cycleCount for consistency
-    const currentCycleCount = useGameStore.getState().cycleCount
-    partyClient.syncState( { 
-      startingStats: newStartingStats,
-      phase: 'starting-stats', // Ensure phase is synced
-      cycleCount: currentCycleCount
-    })
+    // Sync to PartyKit when multiplayer (solo has no partyClient)
+    if (partyClient) {
+      const currentCycleCount = useGameStore.getState().cycleCount
+      partyClient.syncState( {
+        startingStats: newStartingStats,
+        phase: 'starting-stats',
+        cycleCount: currentCycleCount
+      })
+    }
     console.log('🎲 Starting Stats initialized:', newStartingStats)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: init once when phase/assignments change
   }, [livePhase, isHost, partyClient, roomCode, players.length, startingStats.questionAssignments?.length])
@@ -1871,7 +1874,7 @@ function LiveDateScene() {
             .map((attr, idx) => ({
               id: idx,
               text: typeof attr === 'string' ? attr : (attr.text || 'Unknown'),
-              submittedBy: attr.username || 'Anonymous'
+              submittedBy: attr.username || attr.suggestedBy || 'Anonymous'
             }))
           startAnswerSelection(answers)
         }
