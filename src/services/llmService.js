@@ -666,7 +666,7 @@ React to what they revealed about themselves!`
  * Call this with the round question and the player's answer so the LLM has full context.
  * @returns {Promise<string|null>} The dater's reaction line (dialogue only).
  */
-export async function getDaterResponseToPlayerAnswer(dater, question, playerAnswer, conversationHistory = [], compatibility = 50, isFinalRound = false) {
+export async function getDaterResponseToPlayerAnswer(dater, question, playerAnswer, conversationHistory = [], _compatibility = 50, isFinalRound = false) {
   const systemPrompt = buildDaterAgentPrompt(dater, 'date')
   const voicePrompt = getVoiceProfilePrompt('maya', null)
   const finalNote = isFinalRound

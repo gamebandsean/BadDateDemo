@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX (motion.div, etc.)
 import { useGameStore } from '../store/gameStore'
-import { getDaterDateResponse, getAvatarDateResponse, getDaterResponseToPlayerAnswer, getDaterResponseToJustification, generateDaterValues, checkAttributeMatch, groupSimilarAnswers, generateBreakdownSentences, generatePlotTwistSummary, getSingleResponseWithTimeout } from '../services/llmService'
+import { getDaterDateResponse, getDaterResponseToPlayerAnswer, getDaterResponseToJustification, generateDaterValues, checkAttributeMatch, groupSimilarAnswers, generateBreakdownSentences, generatePlotTwistSummary, getSingleResponseWithTimeout } from '../services/llmService'
 import { speak, stopAllAudio, waitForAllAudio } from '../services/ttsService'
-import { getMayaPortraitCached, getAvatarPortraitCached, preloadExpressions } from '../services/expressionService'
+import { getMayaPortraitCached, preloadExpressions } from '../services/expressionService'
 import AnimatedText from './AnimatedText'
 import './LiveDateScene.css'
 
@@ -72,9 +72,9 @@ function LiveDateScene() {
   const addPlotTwistAnswer = useGameStore((state) => state.addPlotTwistAnswer)
   
   const [chatInput, setChatInput] = useState('')
-  const [avatarBubble, setAvatarBubble] = useState('')
+  const [_avatarBubble, setAvatarBubble] = useState('')
   const [daterBubble, setDaterBubble] = useState('')
-  const [avatarEmotion, setAvatarEmotion] = useState('neutral') // Avatar's current emotional state
+  const [_avatarEmotion, setAvatarEmotion] = useState('neutral') // Avatar's current emotional state
   const [daterEmotion, setDaterEmotion] = useState('neutral') // Dater's current emotional state
   const [isGenerating, setIsGenerating] = useState(false)
   const [_userVote, setUserVote] = useState(null)
@@ -84,7 +84,6 @@ function LiveDateScene() {
   const [_preGeneratedConvo, _setPreGeneratedConvo] = useState(null)
   const [isPreGenerating, setIsPreGenerating] = useState(false) // eslint-disable-line no-unused-vars -- used in JSX (pre-generating indicator)
   const [usingFallback, setUsingFallback] = useState(false)
-  const [showWinnerPopup, setShowWinnerPopup] = useState(false)
   
   // Track compatibility changes for end-of-game breakdown
   const [compatibilityHistory, setCompatibilityHistory] = useState([])
@@ -94,7 +93,8 @@ function LiveDateScene() {
   // Reaction feedback - shows temporarily when date reacts to an attribute
   const [reactionFeedback, setReactionFeedback] = useState(null)
   const reactionFeedbackTimeout = useRef(null)
-  const [winnerText, setWinnerText] = useState('')
+  const [showDateBeginsOverlay, setShowDateBeginsOverlay] = useState(false)
+  const [questionNarrationComplete, setQuestionNarrationComplete] = useState(true)
   // Timer starts immediately when phase begins (no waiting for submissions)
   const [showPhaseAnnouncement, setShowPhaseAnnouncement] = useState(false)
   const [announcementPhase, setAnnouncementPhase] = useState('')
@@ -112,7 +112,6 @@ function LiveDateScene() {
   // Text-to-Speech state
   const [ttsEnabled] = useState(true) // Enabled by default
   const lastSpokenDater = useRef('')
-  const lastSpokenAvatar = useRef('')
   const [hasSubmittedPlotTwist, setHasSubmittedPlotTwist] = useState(false)
   const plotTwistTimerRef = useRef(null)
   const plotTwistAnimationRef = useRef(null)
@@ -133,7 +132,7 @@ function LiveDateScene() {
   
   // Starting Stats Mode state
   const [startingStatsInput, setStartingStatsInput] = useState('')
-  const [startingStatsTimer, setStartingStatsTimer] = useState(15)
+  const [_startingStatsTimer, setStartingStatsTimer] = useState(15)
   const [hasSubmittedStartingStat, setHasSubmittedStartingStat] = useState(false)
   
   // Current round prompt state (persists during Phase 1)
@@ -154,6 +153,7 @@ function LiveDateScene() {
   const lastPhaseRef = useRef('')
   const allPlotTwistAnsweredRef = useRef(false) // Prevent multiple plot twist auto-advance triggers
   const narratorSummarySpokenRef = useRef(null)  // Track which summary we've already read with narrator TTS
+  const lastNarratedQuestionRef = useRef('')
   
   // Create Your Dater: exactly 3 questions, no timer (single player only)
   const CREATE_YOUR_DATER_QUESTIONS = [
@@ -191,38 +191,6 @@ function LiveDateScene() {
         glowingValues: currentGlowing,
       })
     }
-  }
-  
-  // Helper: Map avatar's emotional traits to animation emotion (baseline)
-  const getAvatarEmotionFromTraits = () => {
-    const emotionalTrait = avatar?.attributes?.find(attr => 
-      /nervous|anxious|scared|shy|timid/i.test(attr)) ? 'nervous' :
-      avatar?.attributes?.find(attr => 
-      /excited|eager|enthusiastic|happy|thrilled/i.test(attr)) ? 'excited' :
-      avatar?.attributes?.find(attr => 
-      /confident|bold|assertive|cocky/i.test(attr)) ? 'confident' :
-      avatar?.attributes?.find(attr => 
-      /angry|furious|mad|irritated/i.test(attr)) ? 'angry' :
-      avatar?.attributes?.find(attr => 
-      /flirty|seductive|romantic|charming/i.test(attr)) ? 'flirty' :
-      avatar?.attributes?.find(attr => 
-      /confused|puzzled|uncertain|unsure/i.test(attr)) ? 'confused' :
-      'neutral'
-    return emotionalTrait
-  }
-  
-  // Helper: Get avatar emotion based on how the dater reacted
-  const getAvatarEmotionFromContext = (daterSentiment) => {
-    if (!daterSentiment) return getAvatarEmotionFromTraits()
-    
-    // Avatar reacts to how the dater responded - MORE DRAMATIC!
-    const emotionMap = {
-      loves: 'excited',      // Date loved it → Avatar EXCITED!!!
-      likes: 'happy',        // Date liked it → Avatar happy!
-      dislikes: 'worried',   // Date didn't like it → Avatar worried...
-      dealbreakers: 'nervous' // Major red flag → Avatar nervous/scared
-    }
-    return emotionMap[daterSentiment] || getAvatarEmotionFromTraits()
   }
   
   // Helper: Get dater emotion based on sentiment AND compatibility
@@ -507,16 +475,6 @@ function LiveDateScene() {
         useGameStore.setState({ cycleCount: state.cycleCount })
       }
       
-      // Sync winning attribute
-      if (state.winningAttribute) {
-        setWinnerText(state.winningAttribute)
-      }
-      
-      // Sync winner popup state (server-controlled)
-      if (typeof state.showWinnerPopup === 'boolean') {
-        setShowWinnerPopup(state.showWinnerPopup)
-      }
-      
       // Sync phase - but don't let server overwrite host's forward progress
       if (state.phase) {
         const currentLocalPhase = useGameStore.getState().livePhase
@@ -745,6 +703,26 @@ function LiveDateScene() {
     if (text.trim()) speak(text, 'narrator')
   }, [plotTwist?.subPhase, plotTwist?.summary, avatar?.name])
 
+  // Narrator TTS: read each round question before player can answer
+  useEffect(() => {
+    if (livePhase !== 'phase1' || !currentRoundPrompt?.subtitle) return
+    if (lastNarratedQuestionRef.current === currentRoundPrompt.subtitle) return
+
+    let cancelled = false
+    const narrateQuestion = async () => {
+      setQuestionNarrationComplete(false)
+      lastNarratedQuestionRef.current = currentRoundPrompt.subtitle
+      speak(currentRoundPrompt.subtitle, 'narrator')
+      await Promise.race([waitForAllAudio(), new Promise(resolve => setTimeout(resolve, 12000))])
+      if (!cancelled) {
+        setQuestionNarrationComplete(true)
+      }
+    }
+
+    narrateQuestion()
+    return () => { cancelled = true }
+  }, [livePhase, currentRoundPrompt?.subtitle])
+
   // Track timer value in a ref for the interval to access
   const phaseTimerValueRef = useRef(phaseTimer)
   useEffect(() => {
@@ -766,7 +744,6 @@ function LiveDateScene() {
   
   // Track which bubbles are ready to show (audio has started or TTS disabled)
   const [daterBubbleReady, setDaterBubbleReady] = useState(true)
-  const [avatarBubbleReady, setAvatarBubbleReady] = useState(true)
   
   // TTS: Handle dater bubble changes - wait for audio to start before showing
   useEffect(() => {
@@ -790,36 +767,12 @@ function LiveDateScene() {
     }
   }, [daterBubble, ttsEnabled])
   
-  // TTS: Handle avatar bubble changes - wait for audio to start before showing
-  useEffect(() => {
-    if (!avatarBubble || avatarBubble === lastSpokenAvatar.current) return
-    
-    lastSpokenAvatar.current = avatarBubble
-    
-    if (ttsEnabled) {
-      // Hide bubble until audio starts
-      setAvatarBubbleReady(false)
-      
-      // Start TTS
-      speak(avatarBubble, 'avatar').then(() => {
-        // Show bubble when audio starts (speak resolves when audio begins)
-        setAvatarBubbleReady(true)
-        console.log('▶️ Avatar bubble shown - audio started')
-      })
-    } else {
-      // TTS disabled - show immediately
-      setAvatarBubbleReady(true)
-    }
-  }, [avatarBubble, ttsEnabled])
-  
   // Stop TTS when phase changes or game ends
   useEffect(() => {
     if (livePhase === 'ended' || livePhase === 'lobby') {
       stopAllAudio()
       lastSpokenDater.current = ''
-      lastSpokenAvatar.current = ''
       setDaterBubbleReady(true)
-      setAvatarBubbleReady(true)
     }
   }, [livePhase])
   
@@ -1286,6 +1239,7 @@ function LiveDateScene() {
     // If no starting stats, fall back to all attributes
     const physicalList = physicalAttrs.length > 0 ? physicalAttrs.join(', ') : attributes.slice(0, 3).join(', ')
     const emotionalList = emotionalAttrs.length > 0 ? emotionalAttrs.join(' and ') : 'seems nervous'
+    const avatarDisplayName = currentAvatar.name || 'your date'
     
     if (attributes.length === 0 && physicalAttrs.length === 0) {
       console.log('No attributes to react to, skipping reaction round')
@@ -1294,33 +1248,31 @@ function LiveDateScene() {
     }
     
     try {
-      // === STEP 1: Dater reacts to PHYSICAL attributes they can SEE ===
-      console.log('👀 Dater reacting to physical attributes:', physicalList)
-      
+      // === COMMENT 1: First impression of physical appearance and name ===
+      const firstImpressionPrompt = `${avatarDisplayName} looks like: ${physicalList}. Name: ${avatarDisplayName}. Give your immediate first impression.`
       const daterReaction1 = await getDaterDateResponse(
         selectedDater,
         currentAvatar,
-        [], // Empty conversation - this is the first message
-        physicalList, // Only physical attributes
+        [],
+        firstImpressionPrompt,
         null,
         { positive: 0, negative: 0 },
         false,
-        true, // isFirstImpressions
-        useGameStore.getState().compatibility // Pass current compatibility
+        true,
+        useGameStore.getState().compatibility
       )
-      
+
       if (daterReaction1) {
-        // Set dater's initial emotion based on first impression
-        // Analyze the physical attributes to guess her reaction
-        const firstImpressionMood = physicalList.toLowerCase().includes('attractive') || 
-                                    physicalList.toLowerCase().includes('handsome') ||
-                                    physicalList.toLowerCase().includes('beautiful') ||
-                                    physicalList.toLowerCase().includes('cute') ? 'attracted' :
-                                    physicalList.toLowerCase().includes('scary') ||
-                                    physicalList.toLowerCase().includes('bloody') ||
-                                    physicalList.toLowerCase().includes('terrifying') ? 'horrified' :
-                                    physicalList.toLowerCase().includes('nervous') ||
-                                    physicalList.toLowerCase().includes('sweaty') ? 'uncomfortable' : 'neutral'
+        const firstImpressionMood = physicalList.toLowerCase().includes('attractive') ||
+          physicalList.toLowerCase().includes('handsome') ||
+          physicalList.toLowerCase().includes('beautiful') ||
+          physicalList.toLowerCase().includes('cute') ? 'attracted'
+          : physicalList.toLowerCase().includes('scary') ||
+            physicalList.toLowerCase().includes('bloody') ||
+            physicalList.toLowerCase().includes('terrifying') ? 'horrified'
+            : physicalList.toLowerCase().includes('nervous') ||
+              physicalList.toLowerCase().includes('sweaty') ? 'uncomfortable' : 'neutral'
+
         setDaterEmotion(firstImpressionMood)
         setDaterBubble(daterReaction1)
         addDateMessage('dater', daterReaction1)
@@ -1328,154 +1280,63 @@ function LiveDateScene() {
         if (partyClient && isHost) {
           partyClient.syncState({ daterEmotion: firstImpressionMood })
         }
-      }
-      
-      // Score physical attributes
-      for (const attr of physicalAttrs) {
-        const matchResult = await checkAttributeMatch(attr, daterValues, selectedDater, daterReaction1)
-        if (matchResult.category) {
-          const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
-          if (wasAlreadyExposed) triggerGlow(matchResult.shortLabel)
-          const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-          const change = Math.round(baseChanges[matchResult.category] * 0.5)
-          if (change !== 0) {
-            const newCompat = adjustCompatibility(change)
-            console.log(`Physical impression: ${change > 0 ? '+' : ''}${change}% (${matchResult.shortLabel})`)
-            if (partyClient) {
-              partyClient.syncState( { compatibility: newCompat })
+
+        for (const attr of physicalAttrs) {
+          const matchResult = await checkAttributeMatch(attr, daterValues, selectedDater, daterReaction1)
+          if (matchResult.category) {
+            const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
+            if (wasAlreadyExposed) triggerGlow(matchResult.shortLabel)
+            const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
+            const change = Math.round(baseChanges[matchResult.category] * 0.5)
+            if (change !== 0) {
+              const newCompat = adjustCompatibility(change)
+              if (partyClient) partyClient.syncState({ compatibility: newCompat })
             }
-            // No reaction feedback during first impressions - only during conversation
           }
         }
       }
+
       await syncConversationToPartyKit(undefined, undefined, true)
-      
-      // SHORTER DELAY - quick back and forth
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      // === STEP 2: Avatar responds, EMPHASIZING their EMOTIONAL state ===
-      console.log('💭 Avatar responding with emotional state:', emotionalList)
-      
-      // Get avatar's starting emotional state for introduction
-      const startingMood = getAvatarEmotionFromTraits()
-      
-      const avatarIntro = await getAvatarDateResponse(
-        currentAvatar,
-        selectedDater,
-        [{ speaker: 'dater', message: daterReaction1 }],
-        emotionalList, // Pass emotional attributes as the focus
-        'introduce-emotional', // Special mode emphasizing emotional state
-        startingMood // Pass current emotional state
-      )
-      
-      if (avatarIntro) {
-        const avatarMood = getAvatarEmotionFromTraits()
-        setAvatarEmotion(avatarMood)
-        setAvatarBubble(avatarIntro)
-        addDateMessage('avatar', avatarIntro)
-        await syncConversationToPartyKit(avatarIntro, undefined, false)
-        if (partyClient && isHost) {
-          partyClient.syncState({ avatarEmotion: avatarMood })
-        }
-      }
-      
-      // Score emotional attributes
-      for (const attr of emotionalAttrs) {
-        const matchResult = await checkAttributeMatch(`emotionally ${attr}`, daterValues, selectedDater, avatarIntro)
-        if (matchResult.category) {
-          const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
-          if (wasAlreadyExposed) triggerGlow(matchResult.shortLabel)
-          const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-          const change = Math.round(baseChanges[matchResult.category] * 0.5)
-          if (change !== 0) {
-            const newCompat = adjustCompatibility(change)
-            console.log(`Emotional impression: ${change > 0 ? '+' : ''}${change}% (${matchResult.shortLabel})`)
-            if (partyClient) {
-              partyClient.syncState( { compatibility: newCompat })
-            }
-            // No reaction feedback during first impressions - only during conversation
-          }
-        }
-      }
-      await syncConversationToPartyKit(undefined, undefined, true)
-      
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // === STEP 3: Dater responds to what the Avatar said (First Impressions - REACT TO CONTENT!) ===
-      console.log('💬 Dater responding to avatar (first impressions - emotional reaction)')
-      
-      // Check sentiment FIRST - how does Maya feel about what the avatar said?
-      const emotionalMatchResult = await checkAttributeMatch(avatarIntro, daterValues, selectedDater, null)
-      const emotionalSentiment = emotionalMatchResult.category || null
-      console.log('🎯 First impressions - Maya\'s emotional reaction to avatar:', emotionalSentiment, emotionalMatchResult.shortLabel)
-      
+      await waitForAllAudio()
+      await new Promise(resolve => setTimeout(resolve, 900))
+
+      // === COMMENT 2: Follow-up that also includes emotional state/attitude ===
+      const followupPrompt = `${avatarDisplayName} says they are feeling: ${emotionalList}. Give a second opening comment that considers their vibe/attitude too.`
       const daterReaction2 = await getDaterDateResponse(
         selectedDater,
         currentAvatar,
-        [
-          { speaker: 'dater', message: daterReaction1 },
-          { speaker: 'avatar', message: avatarIntro }
-        ],
-        avatarIntro, // Pass what the avatar said so Maya can react to it
-        emotionalSentiment, // Pass the sentiment so Maya knows how to react!
+        daterReaction1 ? [{ speaker: 'dater', message: daterReaction1 }] : [],
+        followupPrompt,
+        null,
         reactionStreak,
-        false, // not final round
-        true,  // isFirstImpressions - react, don't ask questions
-        useGameStore.getState().compatibility // Pass current compatibility
+        false,
+        true,
+        useGameStore.getState().compatibility
       )
-      
+
       if (daterReaction2) {
-        // Set dater's emotion based on her reaction to avatar's intro + current compatibility
-        const daterReaction2Mood = getDaterEmotionFromSentiment(emotionalSentiment, useGameStore.getState().compatibility)
-        setDaterEmotion(daterReaction2Mood)
+        setDaterEmotion(getDaterEmotionFromSentiment(null, useGameStore.getState().compatibility))
         setDaterBubble(daterReaction2)
         addDateMessage('dater', daterReaction2)
         await syncConversationToPartyKit(undefined, daterReaction2, false)
-        if (partyClient && isHost) {
-          partyClient.syncState({ daterEmotion: daterReaction2Mood })
-        }
-        
-        // Update avatar's emotion based on how dater reacted
-        const avatarReactionToFeedback = getAvatarEmotionFromContext(emotionalSentiment)
-        setAvatarEmotion(avatarReactionToFeedback)
-        if (partyClient && isHost) {
-          partyClient.syncState({ avatarEmotion: avatarReactionToFeedback })
-        }
-        
-        // Show reaction feedback AND APPLY SCORING if there was a sentiment hit
-        // Show immediately when dater starts speaking (not with delay!)
-        if (emotionalSentiment) {
-          showReactionFeedback(emotionalSentiment, emotionalMatchResult.matchedValue, emotionalMatchResult.shortLabel)
-          
-          // SCORE the dater's first impression reaction!
-          const wasAlreadyExposed = exposeValue(emotionalMatchResult.category, emotionalMatchResult.matchedValue, emotionalMatchResult.shortLabel)
-          if (wasAlreadyExposed) triggerGlow(emotionalMatchResult.shortLabel)
-          
+      }
+
+      for (const attr of emotionalAttrs) {
+        const matchResult = await checkAttributeMatch(`emotionally ${attr}`, daterValues, selectedDater, daterReaction2)
+        if (matchResult.category) {
+          const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
+          if (wasAlreadyExposed) triggerGlow(matchResult.shortLabel)
           const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-          const change = baseChanges[emotionalSentiment] // Full 1.0x multiplier for first impression!
+          const change = Math.round(baseChanges[matchResult.category] * 0.5)
           if (change !== 0) {
             const newCompat = adjustCompatibility(change)
-            console.log(`🎭 First impression reaction: ${change > 0 ? '+' : ''}${change}% (${emotionalMatchResult.shortLabel})`)
-            if (partyClient) {
-              partyClient.syncState({ compatibility: newCompat })
-            }
-            
-            // Record for end-of-game breakdown
-            setCompatibilityHistory(prev => [...prev, {
-              attribute: avatarIntro,
-              topic: emotionalMatchResult.shortLabel || emotionalMatchResult.matchedValue,
-              category: emotionalSentiment,
-              change: change,
-              daterValue: emotionalMatchResult.matchedValue,
-              reason: 'First impression reaction'
-            }])
+            if (partyClient) partyClient.syncState({ compatibility: newCompat })
           }
         }
       }
-      
-      // Brief pause before Phase 1
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      
+
+      await syncConversationToPartyKit(undefined, undefined, true)
+      await waitForAllAudio()
     } catch (error) {
       console.error('Error in reaction round:', error)
     }
@@ -1490,12 +1351,13 @@ function LiveDateScene() {
     
     // Wait for all audio to finish first
     await waitForAllAudio()
-    console.log('✅ Audio complete, waiting 5s before Phase 1...')
-    
-    // Give players 5 seconds to read the conversation before starting Phase 1
-    await new Promise(resolve => setTimeout(resolve, 5000))
-    
-    console.log('⏰ Delay complete, starting Phase 1')
+    console.log('✅ Audio complete, showing "The Date Begins" interstitial...')
+
+    setShowDateBeginsOverlay(true)
+    speak('The Date Begins', 'narrator')
+    await Promise.race([waitForAllAudio(), new Promise(resolve => setTimeout(resolve, 12000))])
+    setShowDateBeginsOverlay(false)
+    console.log('🎬 Narrator complete, starting Round 1 prompt')
     
     // Get round prompt (Title + Question) - shown as interstitial, not asked by dater
     // This is Round 1 (first round after reaction), so use first round prompts
@@ -1509,6 +1371,8 @@ function LiveDateScene() {
     setRoundPromptAnimationComplete(false)
     setLivePhase('phase1')
     setPhaseTimer(0) // No timer: advance when player submits answer
+    setQuestionNarrationComplete(false)
+    lastNarratedQuestionRef.current = ''
     // Don't set dater bubble - the prompt is shown as interstitial instead
     setDaterBubble('')
     setAvatarBubble('')
@@ -1663,6 +1527,7 @@ function LiveDateScene() {
     if (livePhase !== 'plot-twist' || plotTwist?.subPhase !== 'input' || !hasSubmittedPlotTwist || partyClient) return
     const t = setTimeout(() => advancePlotTwistToReveal(), 1500)
     return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- advancePlotTwistToReveal intentionally omitted to avoid re-trigger loops
   }, [livePhase, plotTwist?.subPhase, hasSubmittedPlotTwist, partyClient])
   
   // Round prompts - Title + Subtitle (Question) for each round
@@ -1727,7 +1592,7 @@ function LiveDateScene() {
     return prompt
   }
   
-  const handlePhaseEnd = async () => {
+  const _handlePhaseEnd = async () => {
     if (phaseTimerRef.current) {
       clearInterval(phaseTimerRef.current)
     }
@@ -1818,6 +1683,18 @@ function LiveDateScene() {
         return null
       }
 
+      const priorAnswers = (useGameStore.getState().appliedAttributes || [])
+        .filter((a) => a && a !== playerAnswer)
+        .slice(-6)
+      const memoryContext = priorAnswers.length > 0
+        ? `Follow-up: also consider these earlier things they said about themselves: ${priorAnswers.join(', ')}.`
+        : 'Follow-up: build naturally on what they just said in one more line.'
+      const followupQuestion = `${question}\n${memoryContext}`
+      const followupHistory = [...conversationHistory, { speaker: 'dater', message: daterReaction }]
+      const daterFollowup = await getDaterResponseToPlayerAnswer(
+        selectedDater, followupQuestion, playerAnswer, followupHistory, currentCompat, isFinalRound
+      )
+
       const matchResult = await checkAttributeMatch(playerAnswer, daterValues, selectedDater, daterReaction)
       const sentimentHit = matchResult?.category || null
       const daterMood = getDaterEmotionFromSentiment(sentimentHit, currentCompat)
@@ -1826,15 +1703,26 @@ function LiveDateScene() {
       const preGenData = {
         attribute: playerAnswer,
         isFinalRound,
-        exchanges: [{
-          avatarResponse: null,
-          daterReaction,
-          daterMood,
-          matchResult,
-          sentimentHit,
-          scoringMultiplier: 1.0,
-          needsJustify
-        }],
+        exchanges: [
+          {
+            avatarResponse: null,
+            daterReaction,
+            daterMood,
+            matchResult,
+            sentimentHit,
+            scoringMultiplier: 1.0,
+            needsJustify
+          },
+          {
+            avatarResponse: null,
+            daterReaction: daterFollowup || '',
+            daterMood: getDaterEmotionFromSentiment(null, currentCompat),
+            matchResult: null,
+            sentimentHit: null,
+            scoringMultiplier: 0,
+            needsJustify: false
+          }
+        ].filter(e => e.daterReaction),
         avatarWithNewAttr: { ...avatar, attributes: avatar.attributes.includes(playerAnswer) ? avatar.attributes : [...avatar.attributes, playerAnswer] }
       }
 
@@ -1956,6 +1844,18 @@ function LiveDateScene() {
       if (needsJustify && preGenData?.exchanges?.[0]) {
         setJustifyOriginalAnswer(preGenData.attribute)
         setJustifyDaterReaction(preGenData.exchanges[0].daterReaction)
+        const justifyInviteOptions = [
+          'Would you like to explain that one a little more?',
+          'Do you want to explain that one a little more?',
+          'Can you explain that one a little more for me?'
+        ]
+        const inviteLine = justifyInviteOptions[Math.floor(Math.random() * justifyInviteOptions.length)]
+        addDateMessage('dater', inviteLine)
+        if (ttsEnabled) setDaterBubbleReady(false)
+        setDaterBubble(inviteLine)
+        await syncConversationToPartyKit(undefined, inviteLine, undefined)
+        if (partyClient) partyClient.syncState({ daterBubble: inviteLine })
+        await waitForAllAudio()
         setShowJustifyPrompt(true)
         setIsGenerating(false)
         return
@@ -1987,64 +1887,27 @@ function LiveDateScene() {
 
     console.log('🎬 Starting Wrap-Up Round (Round 6)')
 
-    let sentimentTier, avatarMood, daterMood
+    let sentimentTier, daterMood
     if (compatibilityScore >= 80) {
       sentimentTier = 'falling_in_love'
-      avatarMood = 'excited'
       daterMood = 'excited'
     } else if (compatibilityScore >= 60) {
       sentimentTier = 'want_another_date'
-      avatarMood = 'happy'
       daterMood = 'happy'
     } else if (compatibilityScore >= 40) {
       sentimentTier = 'uncertain'
-      avatarMood = 'neutral'
       daterMood = 'neutral'
     } else if (compatibilityScore >= 20) {
       sentimentTier = 'no_second_date'
-      avatarMood = 'uncomfortable'
       daterMood = 'uncomfortable'
     } else {
       sentimentTier = 'deleting_number'
-      avatarMood = 'worried'
       daterMood = 'horrified'
     }
 
     try {
-      // ===== EXCHANGE 1: Avatar wraps up and asks for another date =====
-      console.log('🎭 Wrap-Up Exchange 1: Avatar summarizes and asks for another date')
-
-      const avatarWrapUpPrompt = `You are ${avatarName} wrapping up a first date with ${daterName}.
-
-YOUR TRAITS REVEALED DURING THE DATE: ${avatarAttributes.join(', ')}
-
-🎯 YOUR TASK: Give a SHORT casual wrap-up and ask if they'd want to do this again.
-
-RULES:
-- Be CONCISE: 1-2 short sentences only (~15-25 words total). Cut filler.
-- Reference one specific thing from the date if you can, briefly
-- Casually ask about seeing them again - one short line
-- NO action descriptors (*smiles*, etc) - dialogue only
-- Sound natural but punchy
-
-Generate ${avatarName}'s wrap-up (brief):`
-
-      const avatarWrapUp = await getSingleResponseWithTimeout(avatarWrapUpPrompt, { maxTokens: 120, timeoutMs: LLM_TIMEOUT_MS })
-        || "So... would you want to do this again sometime?"
-
-      if (ttsEnabled) setAvatarBubbleReady(false)
-      setAvatarEmotion(avatarMood)
-      setAvatarBubble(avatarWrapUp)
-      addDateMessage('avatar', avatarWrapUp)
-      await syncConversationToPartyKit(avatarWrapUp, undefined, undefined)
-      if (partyClient) partyClient.syncState({ avatarEmotion: avatarMood })
-
-      console.log(`💬 Avatar wrap-up: "${avatarWrapUp}"`)
-      await waitForAudioOrTimeout()
-      await new Promise(r => setTimeout(r, 1000))
-
-      // ===== EXCHANGE 2: Dater sums up feelings about the date and the avatar =====
-      console.log('🎭 Wrap-Up Exchange 2: Dater sums up feelings (conversation + compatibility)')
+      // ===== DATER WRAP-UP: Dater sums up feelings about the date and the avatar =====
+      console.log('🎭 Wrap-Up: Dater sums up feelings (conversation + compatibility)')
 
       const conversationAfterAvatar = useGameStore.getState().dateConversation
       const recentConvo = conversationAfterAvatar.slice(-12).map(m => `${m.speaker}: ${m.message}`).join('\n')
@@ -2088,8 +1951,8 @@ Generate ${daterName}'s brief summary:`
       await waitForAudioOrTimeout()
       await new Promise(r => setTimeout(r, 1000))
 
-      // ===== EXCHANGE 3: Dater gives final verdict =====
-      console.log('🎭 Wrap-Up Exchange 3: Dater gives final verdict')
+      // ===== DATER FINAL VERDICT =====
+      console.log('🎭 Wrap-Up: Dater gives final verdict')
 
       const verdictInstructions = {
         falling_in_love: `Say something short and enthusiastic about seeing them again soon. Be flirty, one short line.`,
@@ -2219,6 +2082,8 @@ Generate ${daterName}'s final verdict:`
       setRoundPromptAnimationComplete(false)
       setLivePhase('phase1')
       setPhaseTimer(0) // No timer: advance when player submits
+      setQuestionNarrationComplete(false)
+      lastNarratedQuestionRef.current = ''
       
       // Only host sets up the next round
       if (isHost) {
@@ -2355,18 +2220,11 @@ Generate ${daterName}'s final verdict:`
       answers = [{ odId: 'system', username: 'The Universe', answer: 'Pretend nothing happened' }]
     }
     
-    // Single player: only one answer — skip the wheel, go straight to winner then "What Happened" → dater reaction
+    // Single player: only one answer — skip wheel/winner cards and go straight to "What Happened"
     if (answers.length === 1 && !partyClient) {
       const winner = answers[0]
-      const newPlotTwist = {
-        ...currentPlotTwist,
-        subPhase: 'winner',
-        winningAnswer: winner,
-        animationIndex: 0,
-        answers,
-      }
-      setPlotTwist(newPlotTwist)
-      setTimeout(() => generatePlotTwistSummaryPhase(winner), 3000)
+      setPlotTwist({ ...currentPlotTwist, answers, winningAnswer: winner, animationIndex: 0 })
+      setTimeout(() => generatePlotTwistSummaryPhase(winner), 300)
       return
     }
     
@@ -2492,7 +2350,6 @@ Generate ${daterName}'s final verdict:`
     const currentPlotTwist = useGameStore.getState().plotTwist
     const newPlotTwist = {
       ...currentPlotTwist,
-      subPhase: 'winner',
       winningAnswer: winner,
       animationIndex: winnerIndex,
     }
@@ -2502,10 +2359,10 @@ Generate ${daterName}'s final verdict:`
       partyClient.syncState({ plotTwist: newPlotTwist })
     }
     
-    // Show winner for 3 seconds, then generate summary
+    // No winner popup/card — move directly to summary
     setTimeout(() => {
       generatePlotTwistSummaryPhase(winner)
-    }, 3000)
+    }, 300)
   }
   
   // Generate and show the plot twist summary before the dater's reaction
@@ -2616,40 +2473,6 @@ Generate ${daterName}'s final verdict:`
       
       await waitForAllAudio()
       await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Single player: only the dater speaks; skip avatar response and continue to Round 4
-      if (!partyClient) {
-        setIsGenerating(false)
-        finishPlotTwist()
-        return
-      }
-      
-      // ============ EXCHANGE 2 (multiplayer): Avatar justifies or doubles down, then phase ends ============
-      console.log('🎭 Plot Twist Exchange 2: Avatar justifies or doubles down')
-      const plotTwistAvatarMood = winner.answer.toLowerCase().includes('nothing') ? 'nervous' : 
-                                  winner.answer.toLowerCase().includes('punch') ||
-                                  winner.answer.toLowerCase().includes('fight') ? 'confident' : 'excited'
-      
-      const avatarResponse = await getAvatarDateResponse(
-        avatar,
-        selectedDater,
-        useGameStore.getState().dateConversation || [],
-        { plotTwistAction: winner.answer, daterReaction: daterReaction1 },
-        'plot-twist-respond',
-        plotTwistAvatarMood
-      )
-      
-      setAvatarEmotion(plotTwistAvatarMood)
-      setAvatarBubble(avatarResponse)
-      addDateMessage('avatar', avatarResponse)
-      syncConversationToPartyKit(avatarResponse, undefined)
-      if (partyClient && isHost) {
-        partyClient.syncState({ avatarEmotion: plotTwistAvatarMood })
-      }
-      
-      await waitForAllAudio()
-      await new Promise(resolve => setTimeout(resolve, 2500))
-      
     } catch (error) {
       console.error('Error generating plot twist reaction:', error)
       setDaterBubble("Well, THAT was unexpected! I... I don't even know what to say right now.")
@@ -2686,6 +2509,8 @@ Generate ${daterName}'s final verdict:`
     setRoundPromptAnimationComplete(false)
     setLivePhase('phase1')
     setPhaseTimer(0) // No timer: advance when player submits
+    setQuestionNarrationComplete(false)
+    lastNarratedQuestionRef.current = ''
     
     // Don't set dater bubble - the prompt is shown as interstitial
     setDaterBubble('')
@@ -3051,9 +2876,7 @@ Generate ${daterName}'s final verdict:`
       cancelAnimationFrame(wheelSpinRef.current)
     }
     
-    // Show winner popup and apply the attribute
-    setWinnerText(winningText)
-    setShowWinnerPopup(true)
+    // Apply selected answer and move straight into dater reaction
     applyWinningAttribute()
     setLivePhase('phase3')
     setPhaseTimer(0)
@@ -3072,7 +2895,6 @@ Generate ${daterName}'s final verdict:`
         phase: 'phase3',
         phaseTimer: 0,
         winningAttribute: winningText,
-        showWinnerPopup: true,
         compatibility: currentCompatibility,
         cycleCount: currentCycleCount,
         answerSelection: {
@@ -3086,14 +2908,7 @@ Generate ${daterName}'s final verdict:`
       partyClient.clearVotes()
     }
     
-    // After 3 seconds, hide popup and start conversation
-    setTimeout(() => {
-      setShowWinnerPopup(false)
-      if (partyClient) {
-        partyClient.syncState({ showWinnerPopup: false })
-      }
-      setTimeout(() => generateDateConversation(winningText), 100)
-    }, 3000)
+    setTimeout(() => generateDateConversation(winningText), 100)
   }
   
   // ============================================
@@ -3110,8 +2925,6 @@ Generate ${daterName}'s final verdict:`
       phaseTimerRef.current = null
     }
     applySinglePlayerAnswer(playerAnswer)
-    setWinnerText(playerAnswer)
-    setShowWinnerPopup(true)
     setLivePhase('phase3')
     setPhaseTimer(0)
     setAnswerSelection({ subPhase: 'idle', slices: [], spinAngle: 0, winningSlice: null })
@@ -3120,7 +2933,6 @@ Generate ${daterName}'s final verdict:`
         phase: 'phase3',
         phaseTimer: 0,
         winningAttribute: playerAnswer,
-        showWinnerPopup: true,
         compatibility: currentCompatibility,
         cycleCount: currentCycleCount,
         answerSelection: { subPhase: 'idle', slices: [], spinAngle: 0, winningSlice: null },
@@ -3128,11 +2940,7 @@ Generate ${daterName}'s final verdict:`
       partyClient.clearSuggestions()
       partyClient.clearVotes()
     }
-    setTimeout(() => {
-      setShowWinnerPopup(false)
-      if (partyClient) partyClient.syncState({ showWinnerPopup: false })
-      setTimeout(() => generateDateConversation(playerAnswer), 100)
-    }, 3000)
+    setTimeout(() => generateDateConversation(playerAnswer), 100)
   }
   
   const handleChatSubmit = async (e) => {
@@ -3147,6 +2955,7 @@ Generate ${daterName}'s final verdict:`
     
     // In Phase 1, player's message is the answer for this round (no wheel)
     if (livePhase === 'phase1') {
+      if (!questionNarrationComplete) return
       if (partyClient) {
         partyClient.submitAttribute(message, username, playerId)
         addPlayerChatMessage(username, `💡 ${truncate(message, 35)}`)
@@ -3175,19 +2984,10 @@ Generate ${daterName}'s final verdict:`
     if (!justifyInput.trim() || isSubmittingJustify) return
     const justification = justifyInput.trim()
     setIsSubmittingJustify(true)
-    setShowJustifyPrompt(false) // Dismiss full-screen immediately and return to date view
+    setShowJustifyPrompt(false)
     setJustifyInput('')
     try {
-      // First: dater says canned invite line ("Do you want to explain that a little more?")
-      const inviteLine = "Do you want to explain that a little more?"
-      addDateMessage('dater', inviteLine)
-      if (ttsEnabled) setDaterBubbleReady(false)
-      setDaterBubble(inviteLine)
-      await syncConversationToPartyKit(undefined, inviteLine, undefined)
-      if (partyClient) partyClient.syncState({ daterBubble: inviteLine })
-      await waitForAllAudio()
-
-      // Then: LLM reacts to the justification
+      // Dater reacts to the player's justification
       const conversationHistory = useGameStore.getState().dateConversation
       const daterResponseToJustification = await getDaterResponseToJustification(
         selectedDater, justifyOriginalAnswer, justification, justifyDaterReaction, conversationHistory
@@ -3207,10 +3007,6 @@ Generate ${daterName}'s final verdict:`
       console.error('Justify flow error:', err)
     }
     setIsSubmittingJustify(false)
-  }
-  
-  const formatTime = (seconds) => {
-    return `0:${seconds.toString().padStart(2, '0')}`
   }
   
   const getPhaseTitle = () => {
@@ -3320,6 +3116,27 @@ Generate ${daterName}'s final verdict:`
         )}
       </AnimatePresence>
       
+      {/* Date Begins Overlay */}
+      <AnimatePresence>
+        {showDateBeginsOverlay && (
+          <motion.div
+            className="justify-fullscreen-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="justify-fullscreen-card"
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            >
+              <h2 className="justify-fullscreen-title">The Date Begins</h2>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Starting Stats Mode Overlay */}
       <AnimatePresence>
         {livePhase === 'starting-stats' && (
@@ -3412,25 +3229,6 @@ Generate ${daterName}'s final verdict:`
                   </div>
                 )}
                 
-                {/* Show submitted answers */}
-                {startingStats.answers && startingStats.answers.length > 0 && (
-                  <div className="starting-stats-answers">
-                    <h3 className="answers-title">Avatar So Far:</h3>
-                    <div className="answers-list">
-                      {startingStats.answers.map((answer, i) => (
-                        <div key={i} className={`answer-item answer-${answer.questionType}`}>
-                          <span className="answer-type">
-                            {answer.questionType === 'physical' && '👤'}
-                            {answer.questionType === 'emotional' && '💭'}
-                            {answer.questionType === 'name' && '📛'}
-                          </span>
-                          <span className="answer-text">{answer.answer}</span>
-                          <span className="answer-by">- {answer.playerName}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
             
@@ -3608,23 +3406,6 @@ Generate ${daterName}'s final verdict:`
                   </div>
                 )}
               </div>
-            )}
-            
-            {/* Winner Phase - Announce the winner */}
-            {plotTwist.subPhase === 'winner' && plotTwist.winningAnswer && (
-              <motion.div 
-                className="plot-twist-winner"
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', damping: 10 }}
-              >
-                <div className="winner-confetti">🎉</div>
-                <div className="plot-twist-badge winner">🏆 WINNER!</div>
-                <div className="winner-answer-card">
-                  <span className="winner-answer">"{plotTwist.winningAnswer.answer}"</span>
-                  <span className="winner-by">by {plotTwist.winningAnswer.username}</span>
-                </div>
-              </motion.div>
             )}
             
             {/* Summary Phase - Dramatic narration of what happened */}
@@ -4051,10 +3832,6 @@ Generate ${daterName}'s final verdict:`
                   <h2 className="spinning-text">Spinning...</h2>
                 )}
                 
-                {answerSelection.subPhase === 'winner' && answerSelection.winningSlice && (
-                  <h2 className="winner-text">🎉 {answerSelection.winningSlice.label}!</h2>
-                )}
-                
                 {/* The Wheel */}
                 {answerSelection.slices && answerSelection.slices.length > 0 && (
                   <div className="wheel-container">
@@ -4178,61 +3955,13 @@ Generate ${daterName}'s final verdict:`
                   </div>
                 )}
                 
-                {/* Legend showing grouped answers */}
-                {answerSelection.subPhase === 'winner' && answerSelection.winningSlice && (
-                  <div className="wheel-winner-details">
-                    <p className="winner-contributors">
-                      Submitted by: {answerSelection.winningSlice.originalAnswers.map(a => a.submittedBy).join(', ')}
-                    </p>
-                  </div>
-                )}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
-        {/* Winner Popup - Centered Modal */}
-        <AnimatePresence>
-          {showWinnerPopup && (
-            <motion.div 
-              className="winner-popup-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <motion.div 
-                className="winner-popup"
-                initial={{ scale: 0.5, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.8, opacity: 0 }}
-                transition={{ type: "spring", damping: 15 }}
-              >
-                <span className="winner-emoji">🎉</span>
-                <span className="winner-label">Winner!</span>
-                <span className="winner-text">{winnerText}</span>
-              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
         
         {/* Conversation Bubbles Area - Both bubbles visible */}
         <div className="conversation-bubbles">
-          <div className="bubble-column avatar-column">
-            <AnimatePresence mode="wait">
-              {avatarBubble && avatarBubbleReady && (
-                <motion.div 
-                  key={avatarBubble}
-                  className="speech-bubble avatar-bubble"
-                  initial={{ scale: 0.9, opacity: 0, y: 10 }}
-                  animate={{ scale: 1, opacity: 1, y: 0 }}
-                  exit={{ scale: 0.9, opacity: 0, y: -10 }}
-                >
-                  <AnimatedText text={avatarBubble} emotion={avatarEmotion} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          
           <div className="bubble-column dater-column">
             <AnimatePresence mode="wait">
               {daterBubble && daterBubbleReady && (
@@ -4250,21 +3979,8 @@ Generate ${daterName}'s final verdict:`
           </div>
         </div>
         
-        {/* Characters - portraits change based on emotional state */}
+        {/* Characters - dater only */}
         <div className="characters-container">
-          <div className="character avatar-character">
-            {portraitsReady ? (
-              <img 
-                src={getAvatarPortraitCached(avatarEmotion)}
-                alt="You" 
-                className="character-image"
-              />
-            ) : (
-              <div className="character-image character-loading">🎭</div>
-            )}
-            <span className="character-name">{avatar?.name || 'Your Date'}</span>
-          </div>
-          
           <div className="character dater-character">
             {portraitsReady ? (
               <img 
@@ -4336,10 +4052,13 @@ Generate ${daterName}'s final verdict:`
               <input
                 type="text"
                 className="chat-input"
-                placeholder={livePhase === 'phase1' ? 'Type your answer...' : 'Chat...'}
+                placeholder={livePhase === 'phase1'
+                  ? (questionNarrationComplete ? 'Type your answer...' : 'Listen to the question...')
+                  : 'Chat...'}
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 maxLength={100}
+                disabled={livePhase === 'phase1' && !questionNarrationComplete}
               />
               <button type="submit" className="chat-send-btn">
                 {livePhase === 'phase1' ? '✨' : '💬'}

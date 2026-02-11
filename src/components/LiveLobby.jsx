@@ -9,7 +9,7 @@ import './LiveLobby.css'
 const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999'
 
 // Game version - increment with each deployment
-const GAME_VERSION = '0.02.33'
+const GAME_VERSION = '0.02.34'
 
 // Main game entry screen - Bad Date
 
@@ -23,7 +23,6 @@ function LiveLobby() {
   const setPlayers = useGameStore((state) => state.setPlayers)
   const setPartyClient = useGameStore((state) => state.setPartyClient)
   const setLiveMode = useGameStore((state) => state.setLiveMode)
-  const startLiveDate = useGameStore((state) => state.startLiveDate)
   const daters = useGameStore((state) => state.daters)
   const [view, setView] = useState('main') // 'main', 'multiplayer', 'host', 'join', 'qr-join'
   const [availableRooms, setAvailableRooms] = useState([])
