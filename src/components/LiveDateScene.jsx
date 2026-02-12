@@ -2491,23 +2491,23 @@ Generate ${daterName}'s final verdict:`
     setIsGenerating(true)
     
     try {
-      // Build context: "What Happened" narrative + Maya's attributes so she reacts honestly as herself
+      // Build context: "What Happened" narrative + dater's attributes so they react honestly
       const daterName = selectedDater?.name || 'Maya'
       const daterValues = selectedDater?.values || 'honesty, authenticity'
       const daterDealbreakers = Array.isArray(selectedDater?.dealbreakers) ? selectedDater.dealbreakers.join(', ') : (selectedDater?.dealbreakers || '')
       const daterBackstoryNote = selectedDater?.backstory ? selectedDater.backstory.slice(0, 200) + '...' : ''
-      const storyContext = whatHappenedStory
-        ? `PLOT TWIST SCENARIO - HERE IS WHAT HAPPENED (you must react to this story):\n\nWHAT HAPPENED:\n"${whatHappenedStory}"\n\nYOU ARE ${daterName}. Give a few sentences (2-4) reacting to what just happened in the story above.\n\nYOUR CHARACTER: Values: ${daterValues}. Dealbreakers: ${daterDealbreakers}.${daterBackstoryNote ? ` Backstory (who you are): ${daterBackstoryNote}` : ''}\n\nReact with full emotion, in character. Say how you feel about what happened and what it means to you. The winning action was: "${winner.answer}" — but you are reacting to the NARRATIVE above.`
-        : `PLOT TWIST SCENARIO: Someone else hit on ${daterName}. Your date's response (action): "${winner.answer}". You are ${daterName}. Give a few sentences (2-4) reacting honestly, as yourself. Values: ${daterValues}. Dealbreakers: ${daterDealbreakers}.`
-      
-      // ============ EXCHANGE 1: Dater reacts with a few sentences to what happened ============
-      console.log('🎭 Plot Twist Exchange 1: Dater reacts to what happened (few sentences)')
+      const narrativeText = whatHappenedStory || `Someone else hit on ${daterName}. Your date's response: "${winner.answer}".`
+
+      // ============ COMMENT 1: Dater's immediate gut reaction to what they just witnessed ============
+      const comment1Prompt = `PLOT TWIST — HERE IS WHAT JUST HAPPENED ON YOUR DATE:\n\n"${narrativeText}"\n\nYOU ARE ${daterName}.\nYOUR VALUES: ${daterValues}. DEALBREAKERS: ${daterDealbreakers}.${daterBackstoryNote ? ` BACKSTORY: ${daterBackstoryNote}` : ''}\n\n🎯 YOUR TASK: Give your IMMEDIATE gut reaction to what you just witnessed. How did it make you feel? Were you impressed, horrified, turned on, embarrassed?\n\nRULES:\n- React to what HAPPENED in the story, not to the player's action in isolation.\n- Have a strong OPINION — don't just describe what happened, say how it made you FEEL and why.\n- Ground your reaction in your personality and values.\n- Exactly 2 sentences, dialogue only. No actions or asterisks.`
+
+      console.log('🎭 Plot Twist Comment 1: Dater immediate gut reaction')
       const plotTwistCompat = useGameStore.getState().compatibility
       const daterReaction1 = await getDaterDateResponse(
         selectedDater,
         avatar,
         useGameStore.getState().dateConversation || [],
-        storyContext,
+        comment1Prompt,
         null,
         { positive: 0, negative: 0 },
         false,
@@ -2515,7 +2515,7 @@ Generate ${daterName}'s final verdict:`
         plotTwistCompat
       )
       
-      // Dater is probably shocked/excited during plot twist!
+      // Determine dater mood from player action context
       const plotTwistDaterMood = winner.answer.toLowerCase().includes('punch') ||
                                  winner.answer.toLowerCase().includes('fight') ||
                                  winner.answer.toLowerCase().includes('hit') ? 'horrified' :
@@ -2532,7 +2532,31 @@ Generate ${daterName}'s final verdict:`
       }
       
       await waitForAllAudio()
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      // ============ COMMENT 2: Dater tells the avatar how she felt about what she witnessed ============
+      const comment2Prompt = `PLOT TWIST FOLLOW-UP — You just reacted to this story:\n"${narrativeText}"\n\nYour first reaction was: "${daterReaction1}"\n\nYOU ARE ${daterName}.\nYOUR VALUES: ${daterValues}. DEALBREAKERS: ${daterDealbreakers}.\n\n🎯 YOUR TASK: Now speak DIRECTLY to your date about how what just happened makes you feel about THEM. Does it change how you see them? Are you more attracted, more nervous, more skeptical?\n\nRULES:\n- Address your date directly — this is you talking TO them, not narrating.\n- Connect what happened to how you feel about the date going forward.\n- Have a clear opinion — are you impressed? Worried? Falling harder?\n- Exactly 2 sentences, dialogue only. No actions or asterisks.`
+
+      console.log('🎭 Plot Twist Comment 2: Dater tells avatar how she feels')
+      const daterReaction2 = await getDaterDateResponse(
+        selectedDater,
+        avatar,
+        [...(useGameStore.getState().dateConversation || [])],
+        comment2Prompt,
+        null,
+        { positive: 0, negative: 0 },
+        false,
+        false,
+        plotTwistCompat
+      )
+
+      if (daterReaction2) {
+        setDaterBubble(daterReaction2)
+        addDateMessage('dater', daterReaction2)
+        syncConversationToPartyKit(undefined, daterReaction2)
+        await waitForAllAudio()
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
     } catch (error) {
       console.error('Error generating plot twist reaction:', error)
       setDaterBubble("Well, THAT was unexpected! I... I don't even know what to say right now.")

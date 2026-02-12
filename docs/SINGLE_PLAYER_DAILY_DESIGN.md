@@ -92,9 +92,12 @@ After the dater's response to **Round 3**, the game inserts a **Plot Twist** bea
 2. **Input** – A single text input. The player types what they would do (e.g. "Challenge them to a dance-off," "Politely ask them to leave") and submits.
 3. **Outcome** – The game uses the player's answer as the outcome (no wheel).
 4. **"What Happened"** – A short narrative is generated (or selected) describing what happened based on that action. The player sees this summary (e.g. in a "What Happened" card).
-5. **Dater reaction** – The **dater** reacts to that story in a few sentences (in character), then the game continues to **Round 4**.
+5. **Dater reaction (two comments)** – The **dater** reacts with **two separate comments**, matching the standard two-comment pattern used during date rounds:
+   - **Comment 1 — Gut reaction:** The LLM receives the full "What Happened" narrative and the dater's personality/values. The dater gives their immediate gut reaction to what they just witnessed — how it made them feel and why. Exactly 2 sentences.
+   - **Comment 2 — Reflection to the avatar:** The dater speaks directly to the avatar about how what happened changes (or reinforces) how they feel about them and the date going forward. Exactly 2 sentences.
+   After both comments, the game continues to **Round 4**.
 
-So: Round 3 response → Plot Twist (interstitial → input → What Happened → dater reaction) → Round 4.
+So: Round 3 response → Plot Twist (interstitial → input → What Happened → dater Comment 1 → dater Comment 2) → Round 4.
 
 ## 1.7 Game characteristics
 
@@ -107,7 +110,7 @@ So: Round 3 response → Plot Twist (interstitial → input → What Happened �
 - **Play** – Entry; no name entry.
 - **Dater Bio Page** – Image + age, gender, occupation, hobbies; **START THE DATE** button.
 - **Create Your Avatar** – 3 questions (look, feeling, name); player answers only, no timer.
-- **Date** – First impressions (dater) → 6 rounds: [game asks] → [player answers] → [dater responds with two comments]. After Round 3, **Plot Twist** (interstitial → input → What Happened → dater reaction) then Round 4. No chat window; no timers.
+- **Date** – First impressions (dater) → 6 rounds: [game asks] → [player answers] → [dater responds with two comments]. After Round 3, **Plot Twist** (interstitial → input → What Happened → dater Comment 1 → dater Comment 2) then Round 4. No chat window; no timers.
 - **Wrap-up** – Dater sums up the date and their impression.
 - **Date Review** – Highlights and lowlights; what the dater thought.
 - **Score** – Compatibility percentage.
@@ -252,7 +255,7 @@ These can be generated or hand-tuned per dater. The LLM (or a separate step) che
 
 ## 4.1 Plot Twist
 
-After Round 3, a **Plot Twist** runs (see 1.6.2). Progression is by player action or "Continue" when ready. TTS/narrator can read Plot Twist text (and optional phase intros).
+After Round 3, a **Plot Twist** runs (see 1.6.2). The dater reacts with **two comments**: first a gut reaction to the "What Happened" narrative, then a direct statement to the avatar about how it affects their feelings about the date. Progression is by player action or "Continue" when ready. TTS/narrator can read Plot Twist text (and optional phase intros).
 
 ## 4.2 Wrap-up
 
