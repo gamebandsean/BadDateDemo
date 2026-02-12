@@ -55,6 +55,21 @@ REMEMBER: Dialogue only. Keep it SHORT. No actions.
 ═══════════════════════════════════════════════════════════════
 `
 
+// Single-player override: the dater is the ONLY one speaking, so responses need room
+// to express real opinions. This goes AFTER PROMPT_07_RULES to relax length constraints.
+const SINGLE_PLAYER_LENGTH_OVERRIDE = `
+═══════════════════════════════════════════════════════════════
+📏 SINGLE-PLAYER LENGTH OVERRIDE (replaces the 1-2 sentence rule above)
+═══════════════════════════════════════════════════════════════
+
+Because YOU are the only one speaking on this date, you have more room:
+- 2-4 sentences per response. Use the space to express a REAL opinion.
+- Each sentence can be a full thought (not limited to 5-12 words).
+- Still dialogue only — no actions, no asterisks, no narration.
+- Still no filler words (Well, So, I mean, Oh).
+- The goal is SUBSTANCE: say what you think and WHY you think it.
+`
+
 /**
  * Strip ALL action descriptions from responses
  * We want pure dialogue only - no asterisks at all
@@ -672,23 +687,99 @@ export async function getDaterResponseToPlayerAnswer(dater, question, playerAnsw
   const finalNote = isFinalRound
     ? '\n\n🏁 This is the final round — your reaction should have a sense of conclusion or final judgment.'
     : ''
+
+  // Classify what the player said — visible (physical) or inferred (personality/preference)
+  const isVisible = isVisibleAttribute(playerAnswer)
+  const perceptionPrompt = isVisible
+    ? PROMPT_04_DATER_VISIBLE
+        .replace(/\{\{attribute\}\}/g, playerAnswer)
+        .replace(/\{\{avatarLastMessage\}\}/g, playerAnswer)
+        .replace(/\{\{allVisibleAttributes\}\}/g, `- ${playerAnswer}`)
+    : PROMPT_05_DATER_INFER
+        .replace(/\{\{attribute\}\}/g, playerAnswer)
+        .replace(/\{\{avatarLastMessage\}\}/g, playerAnswer)
+
   const taskPrompt = `
-🎯 YOUR TASK: React to what your date just said.
+🎯 YOUR TASK: Give your IMMEDIATE, STRONG reaction to what your date just said.
 
 📋 THE QUESTION THAT WAS ASKED: "${question}"
 
 💬 WHAT THEY ANSWERED: "${playerAnswer}"
 
-React naturally to their answer. You are the dater on a first date. Be in character — show interest, concern, delight, or discomfort based on what they said and your personality. You're the only one speaking, so you can be a bit more expressive when it fits: 2–4 sentences is fine when natural; keep it dialogue only, no actions or asterisks.
+CRITICAL RULES FOR YOUR REACTION:
+- You MUST have an OPINION. Never just say something is "weird" or "strange" or "interesting" without explaining WHY you feel that way based on your personality, your values, and your life experience.
+- React with EMOTION. If you love it, say why it excites you personally. If you hate it, say what specifically about it clashes with who you are. If it confuses you, explain what part doesn't sit right and what you'd prefer instead.
+- Be SPECIFIC. Reference what they actually said and connect it to something about yourself — your values, your past, your dealbreakers, what you find attractive.
+- 2–4 sentences. Dialogue only, no actions or asterisks. You're the only one speaking so be expressive.
 ${finalNote}
 `
-  const fullPrompt = systemPrompt + voicePrompt + taskPrompt + '\n\n' + PROMPT_07_RULES + LLM_RESPONSE_CHECKLIST
+  const fullPrompt = systemPrompt + voicePrompt + '\n\n' + perceptionPrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + SINGLE_PLAYER_LENGTH_OVERRIDE
 
   const historyMessages = conversationHistory.slice(-12).map(msg => ({
     role: msg.speaker === 'dater' ? 'assistant' : 'user',
     content: msg.message
   }))
-  const userContent = `[The date was asked: "${question}". They answered: "${playerAnswer}". React to what they said.]`
+  const userContent = `[The date was asked: "${question}". They answered: "${playerAnswer}". Give your strong, opinionated reaction.]`
+  const messages = historyMessages.length
+    ? [...historyMessages, { role: 'user', content: userContent }]
+    : [{ role: 'user', content: userContent }]
+  if (messages[messages.length - 1]?.role === 'assistant') {
+    messages.push({ role: 'user', content: userContent })
+  }
+
+  const response = await getChatResponse(messages, fullPrompt)
+  return response ? stripActionDescriptions(response) : null
+}
+
+/**
+ * Dater gives a FOLLOW-UP comment that connects the current answer with things the avatar said earlier.
+ * This is the second of two comments per round.
+ * @param {object} dater - The dater profile
+ * @param {string} question - The round question
+ * @param {string} playerAnswer - What the player just said
+ * @param {string} firstReaction - The dater's first comment (just generated)
+ * @param {string[]} priorAnswers - 1-5 things the avatar previously said (from earlier rounds)
+ * @param {Array} conversationHistory - Full conversation so far
+ * @param {boolean} isFinalRound
+ * @returns {Promise<string|null>}
+ */
+export async function getDaterFollowupComment(dater, question, playerAnswer, firstReaction, priorAnswers = [], conversationHistory = [], isFinalRound = false) {
+  const systemPrompt = buildDaterAgentPrompt(dater, 'date')
+  const voicePrompt = getVoiceProfilePrompt('maya', null)
+  const finalNote = isFinalRound
+    ? '\n\n🏁 This is the final round — your follow-up should have a sense of conclusion.'
+    : ''
+
+  const priorContext = priorAnswers.length > 0
+    ? `Earlier in the date, they also said these things about themselves:\n${priorAnswers.map((a, i) => `${i + 1}. "${a}"`).join('\n')}`
+    : 'This is early in the date, so you don\'t have much history yet. Build naturally on what they just said.'
+
+  const taskPrompt = `
+🎯 YOUR TASK: Give a FOLLOW-UP comment. You already reacted to their answer; now connect it to the bigger picture of who this person is.
+
+📋 THE QUESTION WAS: "${question}"
+💬 THEY ANSWERED: "${playerAnswer}"
+💭 YOUR FIRST REACTION WAS: "${firstReaction}"
+
+${priorContext}
+
+CRITICAL RULES:
+- CONNECT their current answer to 1-3 things they said earlier. How does this new answer change or reinforce your impression of them?
+- Have a CLEAR OPINION. Do you like this person more now? Less? Are you seeing a pattern you love or a red flag forming? SAY IT.
+- Never just observe that something is "weird" or "interesting" — explain WHY it matters to you personally based on your values and personality.
+- Be honest and in character. If you're starting to fall for them, show it. If you're getting worried, say why.
+- 2-3 sentences. Dialogue only, no actions or asterisks.
+${finalNote}
+`
+  const fullPrompt = systemPrompt + voicePrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + SINGLE_PLAYER_LENGTH_OVERRIDE
+
+  const historyMessages = [...conversationHistory, { speaker: 'dater', message: firstReaction }]
+    .slice(-12)
+    .map(msg => ({
+      role: msg.speaker === 'dater' ? 'assistant' : 'user',
+      content: msg.message
+    }))
+  const userContent = `[Follow up on your reaction. Connect "${playerAnswer}" to what they've said before and share your evolving opinion of them.]`
   const messages = historyMessages.length
     ? [...historyMessages, { role: 'user', content: userContent }]
     : [{ role: 'user', content: userContent }]
@@ -714,9 +805,12 @@ What they originally said: "${originalAnswer}"
 Your reaction to that was: "${daterReactionToAnswer}"
 What they just said to justify it: "${justification}"
 
-Respond in character. You might be slightly mollified, still unimpressed, or even more put off. One or two short sentences, dialogue only. No actions or asterisks.
+Respond in character. You might be slightly mollified, still unimpressed, or even more put off.
+- Have an OPINION on whether their justification actually changes anything for you.
+- If they made it worse, say WHY based on your values. If they redeemed themselves, say what specifically won you over.
+- 2-3 sentences, dialogue only. No actions or asterisks.
 `
-  const fullPrompt = systemPrompt + voicePrompt + taskPrompt + '\n\n' + PROMPT_07_RULES + LLM_RESPONSE_CHECKLIST
+  const fullPrompt = systemPrompt + voicePrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + SINGLE_PLAYER_LENGTH_OVERRIDE
   const historyMessages = conversationHistory.slice(-8).map(msg => ({
     role: msg.speaker === 'dater' ? 'assistant' : 'user',
     content: msg.message

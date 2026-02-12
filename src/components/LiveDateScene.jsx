@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX (motion.div, etc.)
 import { useGameStore } from '../store/gameStore'
-import { getDaterDateResponse, getDaterResponseToPlayerAnswer, getDaterResponseToJustification, generateDaterValues, checkAttributeMatch, groupSimilarAnswers, generateBreakdownSentences, generatePlotTwistSummary, getSingleResponseWithTimeout } from '../services/llmService'
+import { getDaterDateResponse, getDaterResponseToPlayerAnswer, getDaterFollowupComment, getDaterResponseToJustification, generateDaterValues, checkAttributeMatch, groupSimilarAnswers, generateBreakdownSentences, generatePlotTwistSummary, getSingleResponseWithTimeout } from '../services/llmService'
 import { speak, stopAllAudio, waitForAllAudio, onTTSStatus } from '../services/ttsService'
 import { getMayaPortraitCached, preloadExpressions } from '../services/expressionService'
 import AnimatedText from './AnimatedText'
@@ -1701,14 +1701,9 @@ function LiveDateScene() {
 
       const priorAnswers = (useGameStore.getState().appliedAttributes || [])
         .filter((a) => a && a !== playerAnswer)
-        .slice(-6)
-      const memoryContext = priorAnswers.length > 0
-        ? `Follow-up: also consider these earlier things they said about themselves: ${priorAnswers.join(', ')}.`
-        : 'Follow-up: build naturally on what they just said in one more line.'
-      const followupQuestion = `${question}\n${memoryContext}`
-      const followupHistory = [...conversationHistory, { speaker: 'dater', message: daterReaction }]
-      const daterFollowup = await getDaterResponseToPlayerAnswer(
-        selectedDater, followupQuestion, playerAnswer, followupHistory, currentCompat, isFinalRound
+        .slice(-5)
+      const daterFollowup = await getDaterFollowupComment(
+        selectedDater, question, playerAnswer, daterReaction, priorAnswers, conversationHistory, isFinalRound
       )
 
       const matchResult = await checkAttributeMatch(playerAnswer, daterValues, selectedDater, daterReaction)
