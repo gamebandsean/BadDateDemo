@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line no-unused-vars -- motion used as JSX (motion.div, etc.)
 import { useGameStore } from '../store/gameStore'
 import { getDaterDateResponse, getDaterResponseToPlayerAnswer, getDaterResponseToJustification, generateDaterValues, checkAttributeMatch, groupSimilarAnswers, generateBreakdownSentences, generatePlotTwistSummary, getSingleResponseWithTimeout } from '../services/llmService'
-import { speak, stopAllAudio, waitForAllAudio } from '../services/ttsService'
+import { speak, stopAllAudio, waitForAllAudio, onTTSStatus } from '../services/ttsService'
 import { getMayaPortraitCached, preloadExpressions } from '../services/expressionService'
 import AnimatedText from './AnimatedText'
 import './LiveDateScene.css'
@@ -95,6 +95,7 @@ function LiveDateScene() {
   const reactionFeedbackTimeout = useRef(null)
   const [showDateBeginsOverlay, setShowDateBeginsOverlay] = useState(false)
   const [questionNarrationComplete, setQuestionNarrationComplete] = useState(true)
+  const [ttsStatusNote, setTtsStatusNote] = useState('')
   // Timer starts immediately when phase begins (no waiting for submissions)
   const [showPhaseAnnouncement, setShowPhaseAnnouncement] = useState(false)
   const [announcementPhase, setAnnouncementPhase] = useState('')
@@ -775,6 +776,21 @@ function LiveDateScene() {
       setDaterBubbleReady(true)
     }
   }, [livePhase])
+
+  // Show a small status note when ElevenLabs fails and fallback voice is used
+  useEffect(() => {
+    const unsubscribe = onTTSStatus((status) => {
+      if (!status?.code) return
+      if (status.code === 'ELEVENLABS_OK') {
+        setTtsStatusNote('')
+        return
+      }
+      if (status.code === 'ELEVENLABS_FAILED' || status.code === 'BROWSER_TTS_UNAVAILABLE') {
+        setTtsStatusNote(status.message || 'ElevenLabs audio failed; using browser voice fallback.')
+      }
+    })
+    return unsubscribe
+  }, [])
   
   // Generate LLM breakdown sentences when game ends
   useEffect(() => {
@@ -4067,6 +4083,10 @@ Generate ${daterName}'s final verdict:`
           </>
         )}
       </div>
+
+      {ttsStatusNote && (
+        <div className="tts-status-note">{ttsStatusNote}</div>
+      )}
     </div>
   )
 }

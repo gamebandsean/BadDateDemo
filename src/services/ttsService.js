@@ -33,6 +33,7 @@ let ttsEnabled = true // Enabled by default
 // Callbacks for audio events
 let onAudioStartCallbacks = []
 let onAudioEndCallbacks = []
+let onTTSStatusCallbacks = []
 
 // Track pending audio completion promises (reserved for future use)
 let _currentAudioEndResolve = null
@@ -56,6 +57,17 @@ export function onAudioEnd(callback) {
   onAudioEndCallbacks.push(callback)
   return () => {
     onAudioEndCallbacks = onAudioEndCallbacks.filter(cb => cb !== callback)
+  }
+}
+
+/**
+ * Register a callback for TTS provider status updates
+ * @param {function} callback - Called with {code, message, level}
+ */
+export function onTTSStatus(callback) {
+  onTTSStatusCallbacks.push(callback)
+  return () => {
+    onTTSStatusCallbacks = onTTSStatusCallbacks.filter(cb => cb !== callback)
   }
 }
 
@@ -85,6 +97,16 @@ function notifyAudioEnd(text, speaker) {
   })
 }
 
+function notifyTTSStatus(status) {
+  onTTSStatusCallbacks.forEach(cb => {
+    try {
+      cb(status)
+    } catch (e) {
+      console.error('Error in TTS status callback:', e)
+    }
+  })
+}
+
 /**
  * Enable or disable TTS
  */
@@ -110,6 +132,9 @@ export function stopAllAudio() {
     currentAudio.pause()
     currentAudio = null
   }
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    window.speechSynthesis.cancel()
+  }
   audioQueue = []
   isPlaying = false
 }
@@ -128,11 +153,6 @@ export async function speak(text, speaker = 'avatar', options = {}) {
   
   if (!ttsEnabled) {
     console.log('🔇 TTS disabled, skipping speech')
-    return { started: false, immediate: true }
-  }
-  
-  if (!API_KEY) {
-    console.warn('⚠️ ElevenLabs API key not configured')
     return { started: false, immediate: true }
   }
   
@@ -171,6 +191,7 @@ export async function speak(text, speaker = 'avatar', options = {}) {
       text: cleanText, 
       voiceId, 
       speaker,
+      useBrowserTTS: !API_KEY,
       onStart: waitForEnd ? null : () => resolve({ started: true, immediate: false }),
       onEnd: waitForEnd ? (duration) => resolve({ started: true, immediate: false, duration }) : null
     })
@@ -224,9 +245,72 @@ async function processQueue() {
   }
   
   isPlaying = true
-  const { text, voiceId, speaker, onStart, onEnd } = audioQueue.shift()
+  const { text, voiceId, speaker, useBrowserTTS, onStart, onEnd } = audioQueue.shift()
   
   let startTime = null
+
+  const fallbackToBrowserTTS = (reason = 'ElevenLabs audio failed; using browser voice fallback.') => {
+    notifyTTSStatus({
+      code: 'ELEVENLABS_FAILED',
+      level: 'warning',
+      message: reason,
+    })
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      console.warn('⚠️ No browser speech synthesis available')
+      notifyTTSStatus({
+        code: 'BROWSER_TTS_UNAVAILABLE',
+        level: 'error',
+        message: 'ElevenLabs audio failed and browser speech is unavailable.',
+      })
+      if (onStart) onStart()
+      if (onEnd) onEnd(0)
+      processQueue()
+      return
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text)
+    const allVoices = window.speechSynthesis.getVoices()
+    const preferred = allVoices.find((v) =>
+      speaker === 'narrator'
+        ? /narrator|daniel|david|james|matthew|oliver|serena|samantha|victoria/i.test(v.name)
+        : speaker === 'dater'
+          ? /samantha|victoria|karen|zira|ava|allison|emma/i.test(v.name)
+          : /david|daniel|matthew|alex|tom/i.test(v.name)
+    )
+    if (preferred) utterance.voice = preferred
+
+    utterance.rate = speaker === 'narrator' ? 0.95 : 1.0
+    utterance.pitch = speaker === 'narrator' ? 0.95 : speaker === 'dater' ? 1.05 : 1.0
+    utterance.volume = 1
+
+    utterance.onstart = () => {
+      startTime = Date.now()
+      notifyAudioStart(text, speaker)
+      if (onStart) onStart()
+    }
+    utterance.onend = () => {
+      const duration = startTime ? Date.now() - startTime : 0
+      notifyAudioEnd(text, speaker)
+      if (onEnd) onEnd(duration)
+      processQueue()
+    }
+    utterance.onerror = (err) => {
+      console.error('❌ Browser TTS error:', err)
+      if (onStart) onStart()
+      if (onEnd) onEnd(0)
+      processQueue()
+    }
+
+    // Required in some browsers before speaking queued utterances
+    window.speechSynthesis.cancel()
+    window.speechSynthesis.speak(utterance)
+  }
+
+  if (useBrowserTTS) {
+    console.warn('⚠️ ElevenLabs key missing, using browser TTS fallback')
+    fallbackToBrowserTTS('ElevenLabs audio unavailable (missing API key); using browser voice fallback.')
+    return
+  }
   
   try {
     console.log(`🎙️ Speaking as ${speaker}:`, text.substring(0, 50) + '...')
@@ -255,11 +339,7 @@ async function processQueue() {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('❌ ElevenLabs API error:', response.status, errorText)
-      // Resolve the promises so caller knows it failed
-      if (onStart) onStart()
-      if (onEnd) onEnd(0)
-      // Continue to next item in queue
-      processQueue()
+      fallbackToBrowserTTS(`ElevenLabs audio failed (${response.status}); using browser voice fallback.`)
       return
     }
     
@@ -295,6 +375,7 @@ async function processQueue() {
     currentAudio.onplay = () => {
       startTime = Date.now()
       console.log(`▶️ Audio started for ${speaker}`)
+      notifyTTSStatus({ code: 'ELEVENLABS_OK', level: 'ok', message: '' })
       notifyAudioStart(text, speaker)
       if (onStart) onStart()
     }
@@ -303,11 +384,7 @@ async function processQueue() {
     
   } catch (error) {
     console.error('❌ TTS error:', error)
-    // Resolve the promises so caller knows it failed
-    if (onStart) onStart()
-    if (onEnd) onEnd(0)
-    // Continue to next item in queue
-    processQueue()
+    fallbackToBrowserTTS('ElevenLabs audio failed; using browser voice fallback.')
   }
 }
 

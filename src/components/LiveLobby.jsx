@@ -9,7 +9,7 @@ import './LiveLobby.css'
 const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999'
 
 // Game version - increment with each deployment
-const GAME_VERSION = '0.02.34'
+const GAME_VERSION = '0.02.35'
 
 // Main game entry screen - Bad Date
 
@@ -525,20 +525,6 @@ function LiveLobby() {
               </motion.div>
             )}
           </AnimatePresence>
-          
-          {/* Username Input */}
-          <div className="username-section">
-            <label className="input-label">Your Name</label>
-            <input
-              type="text"
-              className="username-input"
-              placeholder="Enter your name..."
-              value={username}
-              onChange={(e) => setUsernameLocal(e.target.value)}
-              maxLength={15}
-              autoFocus
-            />
-          </div>
           
           {error && (
             <motion.div 
