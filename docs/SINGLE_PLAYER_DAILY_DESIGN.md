@@ -65,16 +65,17 @@ Only the dater speaks; no avatar dialogue.
 
 ## 1.6 Date: round structure (6 rounds)
 
-Each round:
+Each round follows this timing:
 
 1. **Game asks a question** – The **game** (system/narrator) shows a **Date Question**; the dater does not ask it. Question is **random** from a pool (per round or round index).
 2. **Player answers in a single input** – The UI shows **one text input field** (and submit) for the player to give their answer. **Whatever the player submits is the answer** — no voting, no wheel, no "correct" answer.
-3. **Player submits** – On submit, the answer is sent; **no timer**. Progression is turn-based only.
-4. **Dater reacts (two comments)** – The **dater** responds with **two separate comments.** Only the dater speaks; the avatar never has dialogue.
-   - **Comment 1 — Immediate Reaction:** The dater gives their gut reaction to the player's answer, tested against their personality, values, and attributes. They must have a clear opinion — never just calling something "weird" or "strange" — and explain *why* they feel that way.
-   - **Comment 2 — Follow-up with Memory:** The dater connects the current answer with 1–5 things the player said earlier in the date. This builds a running impression: do they like this person more now? Less? Is a pattern forming? The dater states their evolving opinion and explains why.
+3. **Player submits** – The answer appears in a **small oval beneath the question**. The **narrator reads the answer aloud** while the LLM generates the dater's response in parallel.
+4. **Dater reacts (two comments)** – Once the narrator finishes and the LLM response is ready, the **dater** responds with **two separate comments,** each shown as text and spoken via VO simultaneously. Only the dater speaks; the avatar never has dialogue.
+   - **Comment 1 — Immediate Reaction:** The dater gives their gut reaction to the player's answer, tested against their personality, values, and attributes. They must have a clear opinion — never just calling something "weird" or "strange" — and explain *why* they feel that way. 1–2 sentences.
+   - **Comment 2 — Follow-up with Memory:** The dater connects the current answer with 1–5 things the player said earlier in the date. This builds a running impression: do they like this person more now? Less? Is a pattern forming? The dater states their evolving opinion and explains why. 1–2 sentences.
    See Part 2 and Part 3 for how reactions and compatibility work.
-5. **Next round** – When the dater's reaction is done, the next round starts.
+5. **Wait 4 seconds** – After the dater finishes speaking, the game holds for 4 seconds so the player can read the reaction.
+6. **Next round** – The next question is shown.
 
 After **6 rounds**, the game moves into the **wrap-up** (see 1.1 steps 6–8).
 
@@ -172,7 +173,7 @@ The dater gives their gut-level response to the player's answer. The LLM receive
 
 - The dater **must have a clear opinion.** They should never just say something is "weird" or "strange" — they must explain *why* they feel the way they do, grounded in their personality, values, and life experience.
 - The reaction should be **specific**: reference what the player actually said and connect it to something about the dater (their values, past, dealbreakers, what they find attractive).
-- 2–4 sentences, dialogue only.
+- 1–2 sentences, dialogue only.
 
 ### Comment 2 — Follow-up with Memory
 
@@ -181,7 +182,7 @@ After the immediate reaction, the dater connects the current answer with **1–5
 - The dater **connects the dots:** how does this new answer change or reinforce their impression? Is a pattern forming that they love or a red flag emerging?
 - They state their **evolving opinion** and explain why — are they falling for this person, getting worried, or starting to see a type?
 - Again, never just observe that something is "interesting" — explain what it means to them.
-- 2–3 sentences, dialogue only.
+- 1–2 sentences, dialogue only.
 
 ### Intensity
 

@@ -96,6 +96,7 @@ function LiveDateScene() {
   const [showDateBeginsOverlay, setShowDateBeginsOverlay] = useState(false)
   const [questionNarrationComplete, setQuestionNarrationComplete] = useState(true)
   const [ttsStatusNote, setTtsStatusNote] = useState('')
+  const [submittedAnswer, setSubmittedAnswer] = useState('') // Shown in oval beneath the question
   // Timer starts immediately when phase begins (no waiting for submissions)
   const [showPhaseAnnouncement, setShowPhaseAnnouncement] = useState(false)
   const [announcementPhase, setAnnouncementPhase] = useState('')
@@ -1451,7 +1452,7 @@ function LiveDateScene() {
   // Show phase announcement when phase changes
   useEffect(() => {
     // Don't show announcement for starting-stats, phase1 (has round prompt banner), or ended
-    const skipAnnouncement = ['starting-stats', 'ended', 'waiting', 'phase1']
+    const skipAnnouncement = ['starting-stats', 'ended', 'waiting', 'phase1', 'phase3']
     if (livePhase && livePhase !== lastPhaseRef.current && !skipAnnouncement.includes(livePhase)) {
       lastPhaseRef.current = livePhase
       setAnnouncementPhase(livePhase)
@@ -1850,6 +1851,10 @@ function LiveDateScene() {
       await waitForAllAudio()
       console.log('✅ All audio complete')
 
+      // Wait 4 seconds after dater finishes reacting so player can read the response
+      console.log('⏳ Holding for 4 seconds before next question...')
+      await new Promise(r => setTimeout(r, 4000))
+
       // If dater had a strong negative (dealbreaker), ask player to justify instead of next question
       const needsJustify = preGenData?.exchanges?.[0]?.needsJustify
       if (needsJustify && preGenData?.exchanges?.[0]) {
@@ -2053,6 +2058,7 @@ Generate ${daterName}'s final verdict:`
       // Date must run this before ending — we never skip to "ended" before wrap-up
       console.log('🎬 Starting Round 6: Wrap-Up Round')
       
+      setSubmittedAnswer('') // Clear answer oval
       setLivePhase('phase3')
       setCurrentRoundPrompt({ title: 'WRAP UP', subtitle: 'The date is ending...' })
       setDaterBubble('')
@@ -2091,6 +2097,7 @@ Generate ${daterName}'s final verdict:`
     } else {
       // Start new round - show round prompt interstitial (not dater question)
       setRoundPromptAnimationComplete(false)
+      setSubmittedAnswer('') // Clear previous answer oval
       setLivePhase('phase1')
       setPhaseTimer(0) // No timer: advance when player submits
       setQuestionNarrationComplete(false)
@@ -2927,7 +2934,8 @@ Generate ${daterName}'s final verdict:`
   // ============================================
   
   // Single-player: accept whatever the player types as the answer; no wheel, no timer
-  const submitPhase1AnswerDirect = (playerAnswer) => {
+  // New flow: show answer oval → narrator reads answer (parallel with LLM gen) → dater text+VO → wait 4s → next question
+  const submitPhase1AnswerDirect = async (playerAnswer) => {
     if (!isHost) return
     const currentCompatibility = useGameStore.getState().compatibility
     const currentCycleCount = useGameStore.getState().cycleCount
@@ -2936,6 +2944,10 @@ Generate ${daterName}'s final verdict:`
       phaseTimerRef.current = null
     }
     applySinglePlayerAnswer(playerAnswer)
+    
+    // Show the answer in an oval beneath the question
+    setSubmittedAnswer(playerAnswer)
+    
     setLivePhase('phase3')
     setPhaseTimer(0)
     setAnswerSelection({ subPhase: 'idle', slices: [], spinAngle: 0, winningSlice: null })
@@ -2951,7 +2963,17 @@ Generate ${daterName}'s final verdict:`
       partyClient.clearSuggestions()
       partyClient.clearVotes()
     }
-    setTimeout(() => generateDateConversation(playerAnswer), 100)
+    
+    // Narrator reads the answer aloud IN PARALLEL with LLM generating the dater response
+    const narratorPromise = speak(playerAnswer, 'narrator')
+    const llmPromise = new Promise(resolve => {
+      setTimeout(() => resolve(generateDateConversation(playerAnswer)), 100)
+    })
+    
+    // Wait for narrator to finish reading the answer before dater speaks
+    // (generateDateConversation handles dater VO internally after LLM resolves)
+    await narratorPromise
+    await llmPromise
   }
   
   const handleChatSubmit = async (e) => {
@@ -3811,6 +3833,19 @@ Generate ${daterName}'s final verdict:`
               <div className="round-prompt-content">
                 <h2 className="round-prompt-title">{currentRoundPrompt.title}</h2>
                 <p className="round-prompt-subtitle">{currentRoundPrompt.subtitle}</p>
+                <AnimatePresence>
+                  {submittedAnswer && (
+                    <motion.div
+                      className="submitted-answer-oval"
+                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, y: -5 }}
+                      transition={{ duration: 0.4, ease: 'easeOut' }}
+                    >
+                      &ldquo;{submittedAnswer}&rdquo;
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           )}

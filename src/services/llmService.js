@@ -55,21 +55,6 @@ REMEMBER: Dialogue only. Keep it SHORT. No actions.
 ═══════════════════════════════════════════════════════════════
 `
 
-// Single-player override: the dater is the ONLY one speaking, so responses need room
-// to express real opinions. This goes AFTER PROMPT_07_RULES to relax length constraints.
-const SINGLE_PLAYER_LENGTH_OVERRIDE = `
-═══════════════════════════════════════════════════════════════
-📏 SINGLE-PLAYER LENGTH OVERRIDE (replaces the 1-2 sentence rule above)
-═══════════════════════════════════════════════════════════════
-
-Because YOU are the only one speaking on this date, you have more room:
-- 2-4 sentences per response. Use the space to express a REAL opinion.
-- Each sentence can be a full thought (not limited to 5-12 words).
-- Still dialogue only — no actions, no asterisks, no narration.
-- Still no filler words (Well, So, I mean, Oh).
-- The goal is SUBSTANCE: say what you think and WHY you think it.
-`
-
 /**
  * Strip ALL action descriptions from responses
  * We want pure dialogue only - no asterisks at all
@@ -710,10 +695,10 @@ CRITICAL RULES FOR YOUR REACTION:
 - You MUST have an OPINION. Never just say something is "weird" or "strange" or "interesting" without explaining WHY you feel that way based on your personality, your values, and your life experience.
 - React with EMOTION. If you love it, say why it excites you personally. If you hate it, say what specifically about it clashes with who you are. If it confuses you, explain what part doesn't sit right and what you'd prefer instead.
 - Be SPECIFIC. Reference what they actually said and connect it to something about yourself — your values, your past, your dealbreakers, what you find attractive.
-- 2–4 sentences. Dialogue only, no actions or asterisks. You're the only one speaking so be expressive.
+- 1-2 sentences. Dialogue only, no actions or asterisks.
 ${finalNote}
 `
-  const fullPrompt = systemPrompt + voicePrompt + '\n\n' + perceptionPrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + SINGLE_PLAYER_LENGTH_OVERRIDE
+  const fullPrompt = systemPrompt + voicePrompt + '\n\n' + perceptionPrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + LLM_RESPONSE_CHECKLIST
 
   const historyMessages = conversationHistory.slice(-12).map(msg => ({
     role: msg.speaker === 'dater' ? 'assistant' : 'user',
@@ -768,10 +753,10 @@ CRITICAL RULES:
 - Have a CLEAR OPINION. Do you like this person more now? Less? Are you seeing a pattern you love or a red flag forming? SAY IT.
 - Never just observe that something is "weird" or "interesting" — explain WHY it matters to you personally based on your values and personality.
 - Be honest and in character. If you're starting to fall for them, show it. If you're getting worried, say why.
-- 2-3 sentences. Dialogue only, no actions or asterisks.
+- 1-2 sentences. Dialogue only, no actions or asterisks.
 ${finalNote}
 `
-  const fullPrompt = systemPrompt + voicePrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + SINGLE_PLAYER_LENGTH_OVERRIDE
+  const fullPrompt = systemPrompt + voicePrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + LLM_RESPONSE_CHECKLIST
 
   const historyMessages = [...conversationHistory, { speaker: 'dater', message: firstReaction }]
     .slice(-12)
@@ -808,9 +793,9 @@ What they just said to justify it: "${justification}"
 Respond in character. You might be slightly mollified, still unimpressed, or even more put off.
 - Have an OPINION on whether their justification actually changes anything for you.
 - If they made it worse, say WHY based on your values. If they redeemed themselves, say what specifically won you over.
-- 2-3 sentences, dialogue only. No actions or asterisks.
+- 1-2 sentences, dialogue only. No actions or asterisks.
 `
-  const fullPrompt = systemPrompt + voicePrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + SINGLE_PLAYER_LENGTH_OVERRIDE
+  const fullPrompt = systemPrompt + voicePrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + LLM_RESPONSE_CHECKLIST
   const historyMessages = conversationHistory.slice(-8).map(msg => ({
     role: msg.speaker === 'dater' ? 'assistant' : 'user',
     content: msg.message
