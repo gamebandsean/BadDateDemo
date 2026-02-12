@@ -130,7 +130,7 @@ EXAMPLE REACTIONS:
 WHAT YOU CAN CURRENTLY SEE ABOUT YOUR DATE:
 {{allVisibleAttributes}}
 
-Remember: Keep it to 1-2 sentences, but make them COUNT.
+Remember: Exactly 2 sentences, and make them COUNT.
 React based on YOUR personality and values.
 `
 
@@ -187,7 +187,7 @@ REACT BASED ON YOUR PERSONALITY:
 - If you're anxious, voice your concerns directly
 - If you're adventurous, express your excitement
 
-Keep it to 1-2 sentences. React genuinely and add YOUR voice to the conversation.
+Exactly 2 sentences. React genuinely and add YOUR voice to the conversation.
 `
 
 // =============================================================================
@@ -372,10 +372,9 @@ const PROMPT_07_RULES = `
 ⚠️ STRICT RULES - FOLLOW EXACTLY ⚠️
 ═══════════════════════════════════════════════════════════════
 
-📏 LENGTH - BE EXTREMELY CONCISE:
-- 1 SHORT sentence is ideal
-- 2 sentences ONLY if absolutely necessary
-- Each sentence should be 5-12 words MAX
+📏 LENGTH:
+- Always exactly 2 sentences
+- Each sentence should be 5-15 words
 - This is snappy banter, not a speech
 - If you can cut words, CUT THEM
 

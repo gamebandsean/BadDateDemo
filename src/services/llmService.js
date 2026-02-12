@@ -24,9 +24,8 @@ const LLM_RESPONSE_CHECKLIST = `
 ═══════════════════════════════════════════════════════════════
 
 📏 LENGTH RULES:
-- 1 sentence is IDEAL
-- 2 sentences ONLY if absolutely necessary
-- Each sentence: 5-12 words MAX
+- Always exactly 2 sentences
+- Each sentence: 5-15 words
 - CUT unnecessary words ruthlessly
 
 ⛔ ABSOLUTELY FORBIDDEN:
@@ -43,13 +42,13 @@ const LLM_RESPONSE_CHECKLIST = `
 
 Examples:
 ❌ WRONG: *laughs nervously* "Oh wow, that's... interesting! I've never heard that before."
-✅ RIGHT: "Wait, seriously?"
+✅ RIGHT: "Wait, seriously? That caught me off guard."
 
 ❌ WRONG: "That's amazing! *leans forward* Tell me more about yourself and how you got into that!"
-✅ RIGHT: "That's incredible."
+✅ RIGHT: "That's incredible. I need to hear more about that."
 
 ❌ WRONG: *raises an eyebrow* "Well, I have to say, that's quite a unique perspective you have there."
-✅ RIGHT: "Huh. That's new."
+✅ RIGHT: "Huh, that's new. I genuinely don't know what to say."
 
 REMEMBER: Dialogue only. Keep it SHORT. No actions.
 ═══════════════════════════════════════════════════════════════
@@ -232,7 +231,7 @@ Based on your personality, values, and preferences:
 ❌ DON'T:
 - Ask a direct question and wait for an answer
 - Be generic - share YOUR specific perspective based on your character
-- Be too long - just 1-2 sentences to open the topic
+- Be too long - exactly 2 sentences to open the topic
 
 Your response should invite your date to share their perspective too!`
 
@@ -309,7 +308,7 @@ This is the FIRST IMPRESSIONS phase - your FIRST reaction matters!
 - "I see..."
 - "Well, hello there."
 
-DO NOT ask questions - just REACT with emotion. Keep it 1-2 sentences.`
+DO NOT ask questions - just REACT with emotion. Exactly 2 sentences.`
   }
   
   // SENTIMENT-DRIVEN REACTION: Tell the Dater how to feel based on what category was hit
@@ -552,7 +551,7 @@ A normal person + scary thing = scared reaction (even if they try to be polite a
   // Special instruction if a new attribute was just added - USING MODULAR PROMPT CHAIN
   let latestAttrContext = ''
   if (customInstruction) {
-    latestAttrContext = `\n\n🎯 YOUR TASK FOR THIS RESPONSE:\n${customInstruction}\n\nKeep your tone consistent with how the date is going. 1-2 sentences, dialogue only. No action descriptions (*smiles*, etc).`
+    latestAttrContext = `\n\n🎯 YOUR TASK FOR THIS RESPONSE:\n${customInstruction}\n\nKeep your tone consistent with how the date is going. Exactly 2 sentences, dialogue only. No action descriptions (*smiles*, etc).`
   } else if (latestAttribute) {
     // Check if this is a PLOT TWIST scenario (special handling)
     const isPlotTwist = (typeof latestAttribute === 'string' ? latestAttribute : latestAttribute?.answer || '').includes('PLOT TWIST SCENARIO')
@@ -706,7 +705,7 @@ CRITICAL RULES FOR YOUR REACTION:
 - You MUST have an OPINION. Never just say something is "weird" or "strange" or "interesting" without explaining WHY you feel that way based on your personality, your values, and your life experience.
 - React with EMOTION. If you love it, say why it excites you personally. If you hate it, say what specifically about it clashes with who you are. If it confuses you, explain what part doesn't sit right and what you'd prefer instead.
 - Be SPECIFIC. Reference what they actually said and connect it to something about yourself — your values, your past, your dealbreakers, what you find attractive.
-- 1-2 sentences. Dialogue only, no actions or asterisks.
+- Exactly 2 sentences. Dialogue only, no actions or asterisks.
 ${finalNote}
 `
   const fullPrompt = systemPrompt + voicePrompt + '\n\n' + perceptionPrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + LLM_RESPONSE_CHECKLIST
@@ -764,7 +763,7 @@ CRITICAL RULES:
 - Have a CLEAR OPINION. Do you like this person more now? Less? Are you seeing a pattern you love or a red flag forming? SAY IT.
 - Never just observe that something is "weird" or "interesting" — explain WHY it matters to you personally based on your values and personality.
 - Be honest and in character. If you're starting to fall for them, show it. If you're getting worried, say why.
-- 1-2 sentences. Dialogue only, no actions or asterisks.
+- Exactly 2 sentences. Dialogue only, no actions or asterisks.
 ${finalNote}
 `
   const fullPrompt = systemPrompt + voicePrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + LLM_RESPONSE_CHECKLIST
@@ -804,7 +803,7 @@ What they just said to justify it: "${justification}"
 Respond in character. You might be slightly mollified, still unimpressed, or even more put off.
 - Have an OPINION on whether their justification actually changes anything for you.
 - If they made it worse, say WHY based on your values. If they redeemed themselves, say what specifically won you over.
-- 1-2 sentences, dialogue only. No actions or asterisks.
+- Exactly 2 sentences, dialogue only. No actions or asterisks.
 `
   const fullPrompt = systemPrompt + voicePrompt + taskPrompt + '\n\n' + PROMPT_05B_DATER_REACTION_STYLE + '\n\n' + PROMPT_07_RULES + LLM_RESPONSE_CHECKLIST
   const historyMessages = conversationHistory.slice(-8).map(msg => ({
@@ -1137,11 +1136,11 @@ ${emotionalInstructions}
 What you did in the plot twist: "${plotTwistAction}"
 Your date (${dater.name}) just reacted: "${lastDaterMessage}"
 
-🎯 YOUR TASK (one short response, 1-2 sentences):
+🎯 YOUR TASK (exactly 2 sentences):
 - If they DID NOT like what you did → JUSTIFY your actions. Explain why you did it, defend yourself briefly. Do not apologize away; give a real reason.
 - If they DID like what you did → DOUBLE DOWN. Show you're glad you did it, maybe get a little more intense or romantic about it.
 
-Keep it to 1-2 sentences. Dialogue only. No action descriptions (*smiles*, etc).
+Exactly 2 sentences. Dialogue only. No action descriptions (*smiles*, etc).
 
 ${emotionalInstructions}
 

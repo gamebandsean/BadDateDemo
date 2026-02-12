@@ -71,8 +71,8 @@ Each round follows this timing:
 2. **Player answers in a single input** – The UI shows **one text input field** (and submit) for the player to give their answer. **Whatever the player submits is the answer** — no voting, no wheel, no "correct" answer.
 3. **Player submits** – The answer appears in a **small oval beneath the question**. The **narrator reads the answer aloud** while the LLM generates the dater's response in parallel.
 4. **Dater reacts (two comments)** – Once the narrator finishes and the LLM response is ready, the **dater** responds with **two separate comments,** each shown as text and spoken via VO simultaneously. Only the dater speaks; the avatar never has dialogue.
-   - **Comment 1 — Immediate Reaction:** The dater gives their gut reaction to the player's answer, tested against their personality, values, and attributes. They must have a clear opinion — never just calling something "weird" or "strange" — and explain *why* they feel that way. 1–2 sentences.
-   - **Comment 2 — Follow-up with Memory:** The dater connects the current answer with 1–5 things the player said earlier in the date. This builds a running impression: do they like this person more now? Less? Is a pattern forming? The dater states their evolving opinion and explains why. 1–2 sentences.
+   - **Comment 1 — Immediate Reaction:** The dater gives their gut reaction to the player's answer, tested against their personality, values, and attributes. They must have a clear opinion — never just calling something "weird" or "strange" — and explain *why* they feel that way. Exactly 2 sentences.
+   - **Comment 2 — Follow-up with Memory:** The dater connects the current answer with 1–5 things the player said earlier in the date. This builds a running impression: do they like this person more now? Less? Is a pattern forming? The dater states their evolving opinion and explains why. Exactly 2 sentences. **The reaction feedback (sentiment tag: loves/likes/dislikes/dealbreakers) appears when Comment 2 begins**, not during Comment 1.
    See Part 2 and Part 3 for how reactions and compatibility work.
 5. **Wait 4 seconds** – After the dater finishes speaking, the game holds for 4 seconds so the player can read the reaction.
 6. **Next round** – The next question is shown.
@@ -152,7 +152,7 @@ The game uses a **modular prompt system** (defined in `prompts/` and `src/servic
 - **Prompt 05 (Infer Reaction)** — Used when the answer is non-physical. The dater analyzes the player's words, infers meaning, and reacts with their own personality-driven opinion (statements over questions).
 - **Prompt 05B (Reaction Style)** — The core "authenticity enforcer." Requires the dater to react to **content, not delivery** (e.g. charming admission of murder is still murder), exaggerate reactions based on personality type, go big on loves/dealbreakers, and never reward bad content with "I appreciate your honesty."
 - **Prompt 07 (Response Rules)** — Formatting: dialogue only, no asterisks/actions, no filler words.
-- **Single-Player Length Override** — Relaxes the multiplayer brevity constraint (1-2 sentences) to **2-4 sentences**, giving the dater room to express real opinions since they're the only one speaking.
+- **Length Rule** — Every dater comment is exactly **2 sentences**, keeping reactions punchy and opinionated.
 
 All five prompts are chained together for every dater response in the single-player daily mode.
 

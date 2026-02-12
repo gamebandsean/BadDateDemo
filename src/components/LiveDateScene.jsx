@@ -1327,7 +1327,7 @@ RULES:
 - Have a clear opinion — do you think this date has potential, or are you already worried?
 - You can make a lighthearted prediction: "I have a feeling this is going to be..." or "Something tells me..."
 - Ground it in what you see (their looks) and what you sense (their emotional state).
-- 1-2 sentences, dialogue only. No actions or asterisks.`
+- Exactly 2 sentences, dialogue only. No actions or asterisks.`
       const daterReaction2 = await getDaterDateResponse(
         selectedDater,
         currentAvatar,
@@ -1768,6 +1768,9 @@ RULES:
     console.log('▶️ PLAYING BACK pre-generated conversation (dater only)...')
     const { attribute, exchanges } = preGenData
 
+    // Defer reaction feedback: store from exchange[0], show when exchange[1] starts
+    let deferredFeedback = null
+
     for (let i = 0; i < exchanges.length; i++) {
       const exchange = exchanges[i]
       // No avatar: only play dater reaction to the player's answer
@@ -1779,24 +1782,32 @@ RULES:
         await syncConversationToPartyKit(undefined, exchange.daterReaction, undefined)
         if (partyClient) partyClient.syncState({ daterEmotion: exchange.daterMood || 'neutral' })
 
+        // On the FIRST comment: store the reaction data but don't show it yet
         if (exchange.sentimentHit && exchange.matchResult) {
-          showReactionFeedback(exchange.sentimentHit, exchange.matchResult.matchedValue, exchange.matchResult.shortLabel)
-          const wasAlreadyExposed = exposeValue(exchange.matchResult.category, exchange.matchResult.matchedValue, exchange.matchResult.shortLabel)
-          if (wasAlreadyExposed) triggerGlow(exchange.matchResult.shortLabel)
+          deferredFeedback = { sentimentHit: exchange.sentimentHit, matchResult: exchange.matchResult, scoringMultiplier: exchange.scoringMultiplier || 1 }
+        }
+
+        // On the SECOND comment (i > 0): now show the deferred reaction feedback
+        if (i > 0 && deferredFeedback) {
+          const { sentimentHit, matchResult, scoringMultiplier } = deferredFeedback
+          showReactionFeedback(sentimentHit, matchResult.matchedValue, matchResult.shortLabel)
+          const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
+          if (wasAlreadyExposed) triggerGlow(matchResult.shortLabel)
           const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-          const change = Math.round(baseChanges[exchange.sentimentHit] * (exchange.scoringMultiplier || 1))
+          const change = Math.round(baseChanges[sentimentHit] * scoringMultiplier)
           if (change !== 0) {
             const newCompat = adjustCompatibility(change)
             if (partyClient) partyClient.syncState({ compatibility: newCompat })
             setCompatibilityHistory(prev => [...prev, {
               attribute,
-              topic: exchange.matchResult.shortLabel || exchange.matchResult.matchedValue,
-              category: exchange.sentimentHit,
+              topic: matchResult.shortLabel || matchResult.matchedValue,
+              category: sentimentHit,
               change,
-              daterValue: exchange.matchResult.matchedValue,
-              reason: exchange.matchResult.reason || ''
+              daterValue: matchResult.matchedValue,
+              reason: matchResult.reason || ''
             }])
           }
+          deferredFeedback = null
         }
 
         await syncConversationToPartyKit(undefined, undefined, true)
@@ -1805,6 +1816,28 @@ RULES:
         if (i < exchanges.length - 1) {
           await new Promise(r => setTimeout(r, 1000))
         }
+      }
+    }
+
+    // Safety: if there was only one exchange, show the deferred feedback now
+    if (deferredFeedback) {
+      const { sentimentHit, matchResult, scoringMultiplier } = deferredFeedback
+      showReactionFeedback(sentimentHit, matchResult.matchedValue, matchResult.shortLabel)
+      const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
+      if (wasAlreadyExposed) triggerGlow(matchResult.shortLabel)
+      const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
+      const change = Math.round(baseChanges[sentimentHit] * scoringMultiplier)
+      if (change !== 0) {
+        const newCompat = adjustCompatibility(change)
+        if (partyClient) partyClient.syncState({ compatibility: newCompat })
+        setCompatibilityHistory(prev => [...prev, {
+          attribute,
+          topic: matchResult.shortLabel || matchResult.matchedValue,
+          category: sentimentHit,
+          change,
+          daterValue: matchResult.matchedValue,
+          reason: matchResult.reason || ''
+        }])
       }
     }
     
@@ -1947,12 +1980,12 @@ ${recentConvo}
 THINGS ${avatarName.toUpperCase()} REVEALED ABOUT THEMSELVES:
 ${avatarAttributes.map(a => `- ${a}`).join('\n')}
 
-🎯 YOUR TASK: Sum up your feelings in 1-2 SHORT sentences (~15-25 words total). Be concise.
+🎯 YOUR TASK: Sum up your feelings in exactly 2 sentences. Be concise.
 
 RULES:
 - Base your summary on what was said and how you felt. Your tone should match ${compatibilityScore}%: ${sentimentTier.replace(/_/g, ' ')}
 - Reference one specific thing they said or revealed if you can, briefly
-- 1-2 sentences only. NO action descriptors - dialogue only. Don't mention percentages. Cut filler.
+- Exactly 2 sentences. NO action descriptors - dialogue only. Don't mention percentages. Cut filler.
 
 ${sentimentTier === 'falling_in_love' ? 'You are TOTALLY SMITTEN. Sum up why you loved the date and them.' :
   sentimentTier === 'want_another_date' ? 'You had a great time. Sum up what you liked and that you\'d see them again.' :
