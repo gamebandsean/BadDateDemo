@@ -1317,8 +1317,17 @@ function LiveDateScene() {
       await waitForAllAudio()
       await new Promise(resolve => setTimeout(resolve, 900))
 
-      // === COMMENT 2: Follow-up that also includes emotional state/attitude ===
-      const followupPrompt = `${avatarDisplayName} says they are feeling: ${emotionalList}. Give a second opening comment that considers their vibe/attitude too.`
+      // === COMMENT 2: First impression statement — looks + emotional state → prediction about the date ===
+      const followupPrompt = `You've just gotten a look at ${avatarDisplayName}. They look like: ${physicalList}. Their emotional state: ${emotionalList}.
+
+🎯 YOUR TASK: State your FIRST IMPRESSION of this person based on how they look and their attitude. Then make a quick prediction or gut feeling about how this date might go.
+
+RULES:
+- DO NOT ask any questions. This is a statement, not a conversation starter.
+- Have a clear opinion — do you think this date has potential, or are you already worried?
+- You can make a lighthearted prediction: "I have a feeling this is going to be..." or "Something tells me..."
+- Ground it in what you see (their looks) and what you sense (their emotional state).
+- 1-2 sentences, dialogue only. No actions or asterisks.`
       const daterReaction2 = await getDaterDateResponse(
         selectedDater,
         currentAvatar,
