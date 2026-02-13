@@ -157,7 +157,7 @@ function LiveDateScene() {
   const narratorSummarySpokenRef = useRef(null)  // Track which summary we've already read with narrator TTS
   const lastNarratedQuestionRef = useRef('')
   
-  // Create Your Dater: exactly 3 questions, no timer (single player only)
+  // Who Are You?: exactly 3 questions, no timer (single player only)
   const CREATE_YOUR_DATER_QUESTIONS = [
     { type: 'physical', question: 'How do you look?' },
     { type: 'emotional', question: 'How are you feeling?' },
@@ -3148,7 +3148,7 @@ Generate ${daterName}'s final verdict:`
             transition={{ duration: 0.2 }}
           >
             <div className="justify-fullscreen-content">
-              <h1 className="justify-fullscreen-title">Justify Your Opinion</h1>
+              <h1 className="justify-fullscreen-title">Justify Your Answer</h1>
               <p className="justify-fullscreen-hint">The dater had a strong reaction. Explain yourself.</p>
               <form className="justify-fullscreen-form" onSubmit={handleJustifySubmit}>
                 <input
@@ -3261,7 +3261,7 @@ Generate ${daterName}'s final verdict:`
             ) : (
               <div className="starting-stats-container">
                 <div className="starting-stats-header">
-                  <h1 className="starting-stats-title">🎲 Create Your Dater</h1>
+                  <h1 className="starting-stats-title">🎲 Who Are You?</h1>
                   <div className="starting-stats-progress">
                     Question {(startingStats.questionAssignments?.findIndex(
                       a => a.playerId === startingStats.activePlayerId && 
@@ -3270,7 +3270,7 @@ Generate ${daterName}'s final verdict:`
                   </div>
                 </div>
                 
-                {/* No timer: Create Your Dater advances on submit only */}
+                {/* No timer: Who Are You? advances on submit only */}
                 
                 {/* Show who's answering and the question */}
                 <div className="starting-stats-question-area">
