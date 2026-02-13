@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line n
 import { useGameStore } from '../store/gameStore'
 import { getDaterDateResponse, getDaterResponseToPlayerAnswer, getDaterFollowupComment, getDaterResponseToJustification, generateDaterValues, checkAttributeMatch, groupSimilarAnswers, generateBreakdownSentences, generatePlotTwistSummary, getSingleResponseWithTimeout } from '../services/llmService'
 import { speak, stopAllAudio, waitForAllAudio, onTTSStatus } from '../services/ttsService'
-import { getMayaPortraitCached, preloadExpressions } from '../services/expressionService'
+import { getDaterPortrait, preloadDaterImages } from '../services/expressionService'
 import AnimatedText from './AnimatedText'
 import './LiveDateScene.css'
 
@@ -383,19 +383,18 @@ function LiveDateScene() {
   // Track if portrait images are preloaded
   const [portraitsReady, setPortraitsReady] = useState(false)
   
-  // Preload character expressions on mount - wait for all to load
+  // Preload dater reaction images on mount - supports custom portraits or DiceBear fallback
   useEffect(() => {
     const loadPortraits = async () => {
       console.log('🖼️ Starting portrait preload...')
-      await Promise.all([
-        preloadExpressions('maya'),
-        preloadExpressions('avatar')
-      ])
+      if (selectedDater) {
+        await preloadDaterImages(selectedDater)
+      }
       console.log('✅ All portraits preloaded')
       setPortraitsReady(true)
     }
     loadPortraits()
-  }, [])
+  }, [selectedDater])
   
   // Check if API key is available
   useEffect(() => {
@@ -4094,16 +4093,16 @@ Generate ${daterName}'s final verdict:`
         {/* Characters - dater only */}
         <div className="characters-container">
           <div className="character dater-character">
-            {portraitsReady ? (
+            {portraitsReady && selectedDater ? (
               <img 
-                src={getMayaPortraitCached(daterEmotion)}
-                alt={selectedDater?.name || 'Maya'} 
+                src={getDaterPortrait(selectedDater, daterEmotion)}
+                alt={selectedDater.name} 
                 className="character-image"
               />
             ) : (
               <div className="character-image character-loading">💕</div>
             )}
-            <span className="character-name">{selectedDater?.name || 'Maya'}</span>
+            <span className="character-name">{selectedDater?.name || 'Dater'}</span>
           </div>
         </div>
         

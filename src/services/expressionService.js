@@ -335,6 +335,102 @@ export function getAvatarPortraitCached(emotion = 'neutral') {
 }
 
 /**
+ * Map any emotion string to the closest reactionImages category.
+ * Daters with custom portraits have 5 images: neutral, loves, likes, dislikes, dealbreakers.
+ * This maps the full range of game emotions to one of those 5.
+ */
+const EMOTION_TO_REACTION_CATEGORY = {
+  // Direct matches
+  neutral: 'neutral',
+  loves: 'loves',
+  likes: 'likes',
+  dislikes: 'dislikes',
+  dealbreakers: 'dealbreakers',
+  // Positive emotions → likes
+  happy: 'likes',
+  excited: 'likes',
+  interested: 'likes',
+  curious: 'likes',
+  confident: 'likes',
+  flirty: 'likes',
+  attracted: 'loves',
+  // Negative-mild → dislikes
+  uncomfortable: 'dislikes',
+  uncertain: 'dislikes',
+  confused: 'dislikes',
+  nervous: 'dislikes',
+  sad: 'dislikes',
+  disappointed: 'dislikes',
+  // Negative-strong → dealbreakers
+  angry: 'dealbreakers',
+  furious: 'dealbreakers',
+  scared: 'dealbreakers',
+  horrified: 'dealbreakers',
+  shocked: 'dislikes',
+}
+
+/**
+ * Get the portrait URL for ANY dater based on their current emotion.
+ * - If the dater has `reactionImages` (custom portraits), maps the emotion to the
+ *   nearest category (neutral/loves/likes/dislikes/dealbreakers) and returns that image.
+ * - Otherwise, falls back to the DiceBear expression system.
+ *
+ * @param {object} dater - The full dater object from daters.js
+ * @param {string} emotion - Current emotional state
+ * @returns {string} - Image URL for the dater's current expression
+ */
+export function getDaterPortrait(dater, emotion = 'neutral') {
+  // If the dater has custom reaction images, use them
+  if (dater?.reactionImages) {
+    const category = EMOTION_TO_REACTION_CATEGORY[emotion] || 'neutral'
+    return dater.reactionImages[category] || dater.reactionImages.neutral || dater.photo
+  }
+
+  // Fallback: DiceBear system for legacy daters
+  const characterKey = dater?.name?.toLowerCase() || 'maya'
+  if (CHARACTER_SEEDS[characterKey]) {
+    return getCachedPortrait(characterKey, emotion)
+  }
+
+  // Last resort: return the dater's static photo
+  return dater?.photo || getCachedPortrait('maya', emotion)
+}
+
+/**
+ * Preload a dater's reaction images (for daters with custom portraits).
+ * Loads all 5 reaction images into the browser cache.
+ *
+ * @param {object} dater - The full dater object
+ * @returns {Promise<void>}
+ */
+export async function preloadDaterImages(dater) {
+  if (!dater?.reactionImages) {
+    // No custom images — use the DiceBear preload path
+    const key = dater?.name?.toLowerCase() || 'maya'
+    if (CHARACTER_SEEDS[key]) {
+      return preloadExpressions(key)
+    }
+    return
+  }
+
+  const urls = Object.values(dater.reactionImages)
+  console.log(`🖼️ Preloading ${urls.length} reaction images for ${dater.name}...`)
+
+  const loadPromises = urls.map(url => new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => { resolve(url) }
+    img.onerror = () => {
+      console.error(`❌ Failed to preload ${url}`)
+      resolve(url)
+    }
+    img.src = url
+  }))
+
+  await Promise.all(loadPromises)
+  console.log(`✅ All reaction images preloaded for ${dater.name}`)
+}
+
+/**
  * Get all available emotions
  * @returns {string[]} - List of emotion names
  */

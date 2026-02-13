@@ -9,12 +9,12 @@
 
 .dater-bio-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 480px;
   text-align: center;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 77, 109, 0.2);
   border-radius: 20px;
-  padding: 28px 24px;
+  padding: 32px 28px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
@@ -29,13 +29,14 @@
 }
 
 .dater-bio-image-wrap {
-  width: 140px;
-  height: 140px;
-  margin: 0 auto 16px;
-  border-radius: 50%;
+  width: 280px;
+  height: 280px;
+  margin: 0 auto 20px;
+  border-radius: 18px;
   overflow: hidden;
-  border: 3px solid rgba(255, 77, 109, 0.4);
+  border: 4px solid rgba(255, 77, 109, 0.5);
   background: var(--bg-card);
+  box-shadow: 0 8px 40px rgba(255, 77, 109, 0.3);
 }
 
 .dater-bio-image {
