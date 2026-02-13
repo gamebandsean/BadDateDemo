@@ -1299,12 +1299,12 @@ function LiveDateScene() {
         }
 
         for (const attr of physicalAttrs) {
-          const matchResult = await checkAttributeMatch(attr, daterValues, selectedDater, daterReaction1)
+          const matchResult = await checkAttributeMatch(attr, daterValues, selectedDater, daterReaction1, useGameStore.getState().compatibility)
           if (matchResult.category) {
             const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
             if (wasAlreadyExposed) triggerGlow(matchResult.shortLabel)
-            const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-            const change = Math.round(baseChanges[matchResult.category] * 0.5)
+            const baseChanges = { loves: 20, likes: 5, dislikes: -5, dealbreakers: -20 }
+            const change = baseChanges[matchResult.category]
             if (change !== 0) {
               const newCompat = adjustCompatibility(change)
               if (partyClient) partyClient.syncState({ compatibility: newCompat })
@@ -1348,12 +1348,12 @@ RULES:
       }
 
       for (const attr of emotionalAttrs) {
-        const matchResult = await checkAttributeMatch(`emotionally ${attr}`, daterValues, selectedDater, daterReaction2)
+        const matchResult = await checkAttributeMatch(`emotionally ${attr}`, daterValues, selectedDater, daterReaction2, useGameStore.getState().compatibility)
         if (matchResult.category) {
           const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
           if (wasAlreadyExposed) triggerGlow(matchResult.shortLabel)
-          const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-          const change = Math.round(baseChanges[matchResult.category] * 0.5)
+          const baseChanges = { loves: 20, likes: 5, dislikes: -5, dealbreakers: -20 }
+          const change = baseChanges[matchResult.category]
           if (change !== 0) {
             const newCompat = adjustCompatibility(change)
             if (partyClient) partyClient.syncState({ compatibility: newCompat })
@@ -1716,7 +1716,7 @@ RULES:
         selectedDater, question, playerAnswer, daterReaction, priorAnswers, conversationHistory, isFinalRound
       )
 
-      const matchResult = await checkAttributeMatch(playerAnswer, daterValues, selectedDater, daterReaction)
+      const matchResult = await checkAttributeMatch(playerAnswer, daterValues, selectedDater, daterReaction, currentCompat)
       const sentimentHit = matchResult?.category || null
       const daterMood = getDaterEmotionFromSentiment(sentimentHit, currentCompat)
       const needsJustify = sentimentHit === 'dealbreakers'
@@ -1789,12 +1789,12 @@ RULES:
 
         // On the SECOND comment (i > 0): now show the deferred reaction feedback
         if (i > 0 && deferredFeedback) {
-          const { sentimentHit, matchResult, scoringMultiplier } = deferredFeedback
+          const { sentimentHit, matchResult } = deferredFeedback
           showReactionFeedback(sentimentHit, matchResult.matchedValue, matchResult.shortLabel)
           const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
           if (wasAlreadyExposed) triggerGlow(matchResult.shortLabel)
-          const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-          const change = Math.round(baseChanges[sentimentHit] * scoringMultiplier)
+          const baseChanges = { loves: 20, likes: 5, dislikes: -5, dealbreakers: -20 }
+          const change = baseChanges[sentimentHit]
           if (change !== 0) {
             const newCompat = adjustCompatibility(change)
             if (partyClient) partyClient.syncState({ compatibility: newCompat })
@@ -1821,12 +1821,12 @@ RULES:
 
     // Safety: if there was only one exchange, show the deferred feedback now
     if (deferredFeedback) {
-      const { sentimentHit, matchResult, scoringMultiplier } = deferredFeedback
+      const { sentimentHit, matchResult } = deferredFeedback
       showReactionFeedback(sentimentHit, matchResult.matchedValue, matchResult.shortLabel)
       const wasAlreadyExposed = exposeValue(matchResult.category, matchResult.matchedValue, matchResult.shortLabel)
       if (wasAlreadyExposed) triggerGlow(matchResult.shortLabel)
-      const baseChanges = { loves: 25, likes: 10, dislikes: -10, dealbreakers: -25 }
-      const change = Math.round(baseChanges[sentimentHit] * scoringMultiplier)
+      const baseChanges = { loves: 20, likes: 5, dislikes: -5, dealbreakers: -20 }
+      const change = baseChanges[sentimentHit]
       if (change !== 0) {
         const newCompat = adjustCompatibility(change)
         if (partyClient) partyClient.syncState({ compatibility: newCompat })

@@ -215,41 +215,47 @@ The system can also trigger a **Justify** step when the dater rates their reacti
 
 # Part 3: Compatibility System
 
-## 3.1 Five factors
+## 3.1 The compatibility meter
 
-Compatibility is computed from **5 factors** (each 0–100, default 50):
+Compatibility is a **single number** from 0 to 100, starting at **50** (neutral). It moves up or down after each dater reaction based on which sentiment category the answer lands in:
 
-- **physicalAttraction** – Looks, appearance, physical traits.
-- **similarInterests** – Hobbies, activities, passions.
-- **similarValues** – Moral beliefs, life priorities.
-- **similarTastes** – Preferences, styles, aesthetics.
-- **similarIntelligence** – Mental connection, wit, depth.
+| Category | Change | Meaning |
+|----------|--------|---------|
+| **Love** | **+20** | The dater adored what was said — hits a core Love trait |
+| **Like** | **+5** | The dater enjoyed it — hits a Like trait |
+| **Dislike** | **-5** | The dater didn't like it — hits a Dislike trait |
+| **Dealbreaker** | **-20** | The dater hated it — hits a Nope/Dealbreaker trait |
 
-Each factor can be **activated** (has been "discussed" in the conversation). **Unactivated factors contribute only 10%** to the overall score so that only topics that came up matter.
+The meter is clamped between 0 and 100. There are no sub-factors, no weighting, and no activation system — just a flat additive score that rises and falls with each reaction.
 
-## 3.2 How the overall score is calculated
-
-- **Weighting:** Physical attraction is weighted **higher at the start** of the date; over time (e.g. by conversation turn), weights equalize. Unactivated factors use 10% of their weight.
-- **Drop lowest:** The **lowest** of the five (weighted) factor scores is dropped; the other four are combined into a single 0–100 **compatibility** score. So one bad area doesn't tank the whole score.
-- **Recalculation:** After each dater reaction that updates a factor, overall compatibility is recalculated from the five factors (with activation and weighting).
-
-## 3.3 When compatibility changes
+## 3.2 When compatibility changes
 
 - **Only when the dater reacts.** The player's raw answer does not change the score; the **dater's reaction** (and its sentiment/category) drives updates.
-- **Factor updates:** Sentiment hits (loves/likes/dislikes/dealbreakers) map to **which factor** to update (e.g. physical, interests, values, tastes, intelligence) and by how much (positive or negative change).
-- **First activation:** The first time a factor is activated, it can be initialized from the **current overall compatibility** so that the first update in that category moves the score in the right direction (positive change raises it, negative lowers it).
-- **Compatibility reason:** When the score changes, a short **reason** can be shown in the UI (e.g. "+5 interests", "-3 values") and then cleared after a delay.
+- After each reaction, the system applies the corresponding change (+20, +5, -5, or -20) directly to the meter.
+- The player sees the **reaction tag** (sentiment category + matched trait) when the dater's second comment begins, but the raw number is only shown at the end of the date.
+
+## 3.3 Tie-breaking: when both a Like and Dislike apply
+
+Sometimes a player's answer could trigger both a positive and a negative trait. For example, "I love skydiving" might hit the dater's Like for "adventure" *and* their Dislike for "extreme sports." When this happens:
+
+- **Love or Dealbreaker always wins outright.** If the strongest match is a Love or Dealbreaker trait, that category is used regardless of the compatibility meter.
+- **Like vs Dislike → check the meter.** If the ambiguity is between a Like and a Dislike:
+  - **Compatibility above 50%:** The dater gives the player the benefit of the doubt → **Like** (+5).
+  - **Compatibility below 50%:** The dater is more skeptical → **Dislike** (-5).
+  - **Compatibility at exactly 50%:** Coin flip (random).
+
+This means the meter has a subtle momentum effect: a date that's going well tends to stay positive on borderline answers, while a date that's going poorly tends to snowball. But strong reactions (Love/Dealbreaker) always override this — a dealbreaker is a dealbreaker even on a great date.
 
 ## 3.4 Dater values (hidden)
 
 Each dater has **hidden values** (not shown to the player) used to interpret reactions and sentiment:
 
-- **loves** – Strong positive triggers.
-- **likes** – Positive triggers.
-- **dislikes** – Negative triggers.
-- **dealbreakers** – Strong negative triggers.
+- **loves** – Strong positive triggers (+20).
+- **likes** – Positive triggers (+5).
+- **dislikes** – Negative triggers (-5).
+- **dealbreakers** – Strong negative triggers (-20).
 
-These can be generated or hand-tuned per dater. The LLM (or a separate step) checks the player's answer and the dater's reaction against these to decide sentiment category and compatibility deltas.
+These can be generated or hand-tuned per dater. The LLM (or a separate step) checks the player's answer and the dater's reaction against these to decide sentiment category and compatibility changes.
 
 ---
 
@@ -295,4 +301,4 @@ When the LLM is unavailable, fallback logic can use simple rules (e.g. question 
 - **First impressions:** Dater opens the date by reacting to the avatar's physical description, name, and (to a lesser degree) emotional state.
 - **Justify:** Full-screen "Justify Your Opinion" takeover; player types one justification; return to date with dater saying something like "Do you want to explain that a little more?" then continue.
 - **Reactions:** Dater responds via LLM using full personality, visible vs inferred context, reaction intensity, and "stuck on date" constraint. Sentiment from the reaction (loves/likes/dislikes/dealbreakers) drives compatibility updates.
-- **Compatibility:** 5 factors, activation, weighted aggregate, drop lowest. Updated only when the dater reacts; optional compatibility reason in UI. Hidden dater values steer sentiment and factor deltas.
+- **Compatibility:** Single meter (0–100, starts at 50). Love +20, Like +5, Dislike -5, Dealbreaker -20. Updated only when the dater reacts. Tie-breaking on ambiguous answers uses the current meter state (above 50 = benefit of doubt, below 50 = skepticism). Love and Dealbreaker always override.

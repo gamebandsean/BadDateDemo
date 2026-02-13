@@ -1912,9 +1912,16 @@ Return ONLY valid JSON in this exact format:
  * Returns { category: 'loves'|'likes'|'dislikes'|'dealbreakers', matchedValue: string, shortLabel: string }
  * NOTE: This function ALWAYS returns a match - every attribute affects the score!
  */
-export async function checkAttributeMatch(attribute, daterValues, dater, daterReaction = null) {
+export async function checkAttributeMatch(attribute, daterValues, dater, daterReaction = null, currentCompatibility = 50) {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
   const daterName = dater?.name || 'the dater'
+  
+  // Determine tie-break direction based on compatibility meter
+  const getTieBreakDirection = () => {
+    if (currentCompatibility > 50) return 'like'
+    if (currentCompatibility < 50) return 'dislike'
+    return Math.random() < 0.5 ? 'like' : 'dislike' // coin flip at exactly 50
+  }
   
   // Fallback: analyze the reaction text to determine Good/Great/Bad/Awful, then pick a trait
   const getFallbackMatch = (reaction) => {
@@ -1935,13 +1942,25 @@ export async function checkAttributeMatch(attribute, daterValues, dater, daterRe
     const isGood = goodWords.some(w => lower.includes(w))
     
     let category, traitList
+    // Loves and Dealbreakers always win outright
     if (isAwful) {
       category = 'dealbreakers'
       traitList = daterValues.dealbreakers
     } else if (isGreat) {
       category = 'loves'
       traitList = daterValues.loves
-    } else if (isBad && !isGood) {
+    } else if (isBad && isGood) {
+      // Both positive and negative signals — tie-break using compatibility
+      const direction = getTieBreakDirection()
+      console.log(`🎲 Tie-break (fallback): both good+bad signals, compat=${currentCompatibility}% → ${direction}`)
+      if (direction === 'like') {
+        category = 'likes'
+        traitList = daterValues.likes
+      } else {
+        category = 'dislikes'
+        traitList = daterValues.dislikes
+      }
+    } else if (isBad) {
       category = 'dislikes'
       traitList = daterValues.dislikes
     } else if (isGood) {
@@ -1964,6 +1983,17 @@ export async function checkAttributeMatch(attribute, daterValues, dater, daterRe
     return getFallbackMatch(daterReaction)
   }
 
+  // Build tie-break instruction for the LLM
+  let tieBreakInstruction = ''
+  const direction = getTieBreakDirection()
+  if (currentCompatibility > 50) {
+    tieBreakInstruction = `\n\nTIE-BREAK RULE: The date is currently going WELL (compatibility: ${currentCompatibility}%). If both a LIKE trait and a DISLIKE trait apply to what they said, lean toward GOOD (Like). Give them the benefit of the doubt. However, this does NOT apply to LOVE or DEALBREAKER — those always win outright regardless of how the date is going.`
+  } else if (currentCompatibility < 50) {
+    tieBreakInstruction = `\n\nTIE-BREAK RULE: The date is currently going POORLY (compatibility: ${currentCompatibility}%). If both a LIKE trait and a DISLIKE trait apply to what they said, lean toward BAD (Dislike). You're less inclined to give them the benefit of the doubt. However, this does NOT apply to LOVE or DEALBREAKER — those always win outright regardless of how the date is going.`
+  } else {
+    tieBreakInstruction = `\n\nTIE-BREAK RULE: The date is at exactly 50% compatibility — you're on the fence. If both a LIKE trait and a DISLIKE trait apply, go with whichever feels more natural to your character in this moment. However, LOVE or DEALBREAKER always win outright.`
+  }
+
   const systemPrompt = `You are ${daterName} rating your OWN reaction to what your date just said.
 
 YOUR TRAITS AND VALUES:
@@ -1979,23 +2009,29 @@ YOUR REACTION WAS: "${daterReaction || '(no reaction yet)'}"
 🎯 YOUR TASK: Judge your OWN reaction. How did what they said make you feel?
 
 STEP 1 — Rate your reaction:
-- GREAT → You loved it. It excited, attracted, or delighted you.
+- GREAT → You loved it. It excited, attracted, or delighted you. (ALWAYS wins — not influenced by how the date is going)
 - GOOD → You liked it. It was pleasant, interesting, or promising.
 - BAD → You didn't like it. It bothered, concerned, or disappointed you.
-- AWFUL → You hated it. It horrified, disgusted, or infuriated you.
+- AWFUL → You hated it. It horrified, disgusted, or infuriated you. (ALWAYS wins — not influenced by how the date is going)
 
-STEP 2 — Pick the specific trait from YOUR values that justifies your rating:
+STEP 2 — Check if BOTH a positive and negative trait apply:
+Sometimes what a person says could trigger both a Like and a Dislike trait. For example, "I love skydiving" might hit both a Like for adventure AND a Dislike for recklessness. When this happens, use the tie-break rule below to decide.
+${tieBreakInstruction}
+
+STEP 3 — Pick the specific trait from YOUR values that justifies your rating:
 - If GREAT → pick one of your LOVE traits: ${daterValues.loves.join(', ')}
 - If GOOD → pick one of your LIKE traits: ${daterValues.likes.join(', ')}
 - If BAD → pick one of your DISLIKE traits: ${daterValues.dislikes.join(', ')}
 - If AWFUL → pick one of your NOPE traits: ${daterValues.dealbreakers.join(', ')}
 
-Pick the trait that BEST explains why you reacted the way you did. The trait should be the underlying reason for your opinion.
+Pick the trait that BEST explains why you reacted the way you did.
 
 CRITICAL RULES:
-- Your rating MUST match the tone of your reaction. If you sounded happy/excited → GREAT or GOOD. If you sounded upset/scared → BAD or AWFUL.
-- You MUST pick a trait from the correct list. GREAT = LOVE traits only. GOOD = LIKE traits only. BAD = DISLIKE traits only. AWFUL = NOPE traits only.
-- The shortLabel should be 1-2 words explaining the core reason (e.g. "creativity", "danger", "warmth", "chaos").
+- GREAT (Love) and AWFUL (Dealbreaker) always override the tie-break rule. If the answer clearly hits a Love or Dealbreaker trait, that rating wins regardless of compatibility.
+- For GOOD vs BAD: if both apply, use the tie-break rule above.
+- Your rating MUST match the tone of your reaction.
+- You MUST pick a trait from the correct list.
+- The shortLabel should be 1-2 words explaining the core reason.
 
 Return ONLY valid JSON:
 {
@@ -2045,7 +2081,7 @@ Return ONLY valid JSON:
           shortLabel: parsed.shortLabel,
           reason: parsed.reason || ''
         }
-        console.log(`🎯 Dater self-rated: ${parsed.rating?.toUpperCase()} → ${category} (trait: "${result.matchedValue}", label: "${result.shortLabel}")`)
+        console.log(`🎯 Dater self-rated: ${parsed.rating?.toUpperCase()} → ${category} (trait: "${result.matchedValue}", label: "${result.shortLabel}") [compat: ${currentCompatibility}%]`)
         return result
       }
     }

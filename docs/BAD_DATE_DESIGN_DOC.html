@@ -4,100 +4,225 @@
   <meta charset="UTF-8">
   <title>Bad Date — Game Design Document</title>
   <style>
-    body { font-family: Georgia, serif; max-width: 700px; margin: 40px auto; padding: 0 24px; line-height: 1.6; color: #1a1a1a; }
+    body { font-family: Georgia, serif; max-width: 720px; margin: 40px auto; padding: 0 24px; line-height: 1.7; color: #1a1a1a; }
     h1 { font-size: 28px; margin-top: 0; border-bottom: 2px solid #333; padding-bottom: 8px; }
-    h2 { font-size: 20px; margin-top: 32px; color: #333; }
-    h3 { font-size: 17px; margin-top: 24px; color: #444; }
-    p { margin: 12px 0; text-align: left; }
+    h2 { font-size: 21px; margin-top: 40px; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+    h3 { font-size: 17px; margin-top: 28px; color: #444; }
+    p { margin: 14px 0; text-align: left; }
     strong { font-weight: 700; }
+    em { font-style: italic; }
     .note { font-size: 14px; color: #666; font-style: italic; margin: 8px 0; }
+    .callout { background: #f7f7f5; border-left: 3px solid #999; padding: 12px 16px; margin: 16px 0; font-size: 15px; }
     ul { margin: 12px 0; padding-left: 24px; }
     li { margin: 6px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+    th, td { border: 1px solid #ccc; padding: 8px 12px; text-align: left; font-size: 15px; }
+    th { background: #f0f0f0; font-weight: 700; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 40px 0; }
   </style>
 </head>
 <body>
 
 <h1>Bad Date — Game Design Document</h1>
-<p><em>Single-player date simulation. Current build (as of this document).</em></p>
+<p><em>A single-player, AI-driven date simulation.</em></p>
 
 <h2>1. Overview</h2>
-<p><strong>Bad Date</strong> is a single-player, text-driven date simulation. You press Play, meet today’s date on a short bio screen, answer three quick questions about yourself (how you look, how you’re feeling, and your name), then go on a six-round “date” where the game asks questions and you type answers. Your date—a character with a full personality and hidden likes and dealbreakers—reacts to everything you say via an AI (LLM). There are no timers and no right answers: whatever you type is your answer, and the date responds in character. At the end you get a compatibility score, a wrap-up from the date, and a short “what happened” review of highlights and lowlights. Optionally, a mid-date “Plot Twist” asks how you’d react if someone else hit on your date, and the date reacts to that too. The experience is designed for mobile-first play using only text input—no voice, no multiple choice—so the focus is on writing and reading the date’s reactions.</p>
+
+<p><strong>Bad Date</strong> is a single-player dating game where the player goes on a blind date with an AI-powered character. The entire experience is driven by freeform text input: the player types whatever they want, and the date responds in real time with a personality, opinions, and feelings that evolve over the course of the conversation. There are no right answers, no multiple-choice menus, and no timers. The fun comes from seeing how a fully realized character reacts to whatever you throw at them — whether that's sincere, absurd, romantic, or deeply unsettling.</p>
+
+<p>The game is built around a simple loop: the game asks a question, the player types an answer, and the date reacts with two spoken comments — an immediate gut reaction and a follow-up that goes deeper. Behind the scenes, a large language model (LLM) generates every response using the date's complete personality profile, hidden values, and the running history of the conversation. A compatibility score tracks how well the date is going, updated after every reaction, and at the end the player receives a final score along with a highlight reel of the best and worst moments.</p>
+
+<p>A typical session will last roughly ten to fifteen minutes: the player meets their date, answers a few questions about themselves, plays through six rounds of questions and reactions, navigates a mid-date Plot Twist, and then sees how the whole thing shook out. The experience is designed to be replayable — different answers produce genuinely different reactions — and mobile-first, so the entire game can be played with a phone keyboard and a bit of imagination.</p>
+
+<div class="callout">
+<strong>A note on terminology:</strong> Throughout this document, the <strong>Avatar</strong> refers to the player's character — the person the player creates at the start of the date. The <strong>Dater</strong> refers to the AI character the player is going on a date with. The Avatar is defined by the player's answers; the Dater is a pre-built character with a deep personality, backstory, values, and hidden preferences that drive every reaction in the game.
+</div>
 
 <h2>2. How to Play</h2>
-<p>The game is played <strong>exclusively using text input</strong>. There is no name field before Play (you can use a nickname later if you like). From the moment you leave the title screen, every meaningful choice is typed:</p>
-<ul>
-  <li>On <strong>Create Your Avatar</strong>, you type three freeform answers: how you look, how you’re feeling, and your name.</li>
-  <li>During the date, the game displays a <strong>Date Question</strong> (e.g. “What’s your guilty pleasure?”). You see a single text field; you type whatever you want—a word, a sentence, or a paragraph—and submit. That is your answer for that round.</li>
-  <li>If the date strongly dislikes or is confused by something you said, a <strong>Justify</strong> screen appears: a full-screen “Justify Your Opinion” prompt with one text field. You type an explanation and submit. The date then responds (e.g. “Do you want to explain that a little more?”) and the game continues.</li>
-  <li>During the <strong>Plot Twist</strong>, you type what you would do (e.g. “Challenge them to a dance-off”) and submit; the game then reveals a narrative and the date reacts.</li>
-</ul>
-<p>There is no chat window or message history during the date—only the current question, the date’s last response, and one input field. Progression is turn-based: you submit, the date reacts (with optional text-to-speech), and when the reaction is done you move to the next question or the next phase. No timers, no voting, no wheel.</p>
+
+<p>Bad Date will be played <strong>exclusively through text input</strong>. From the moment the player leaves the title screen, every meaningful choice in the game is something they type. There are no dialogue trees, no multiple-choice prompts, and no button-based responses. The player's keyboard is their only tool, and whatever they type becomes canon for that date. This design choice is deliberate: it gives the player complete creative freedom and makes every date feel unpredictable, because the AI has to respond to whatever the player actually said rather than choosing from a set of pre-written options.</p>
+
+<p>During the date itself, the player will see the current question, a single text input field, and a submit button. They can type a single word, a full sentence, or something completely unexpected — the system will accept it. After submitting, the player's answer will appear in a small oval beneath the question, and then the Dater will respond. There is no chat log or scrolling message history; the screen shows only the current question and the Dater's most recent reaction. This keeps the focus tight and conversational, like actually being on a date where you're paying attention to the person in front of you.</p>
+
+<p>There are three moments where the player types beyond the standard question-and-answer rounds. First, during <strong>Create Your Avatar</strong>, the player will answer three questions about their character (appearance, mood, and name). Second, during the <strong>Plot Twist</strong>, the player will type how they'd handle a surprise scenario. Third, if the Dater has a strongly negative reaction, a <strong>Justify</strong> screen will appear — a full-screen takeover asking the player to explain themselves in one more typed response. In every case, the mechanic is the same: type what you want, submit, and see what happens.</p>
+
+<p>The game has no timers at any point. The player can take as long as they want to think about their answer, and the game will not advance until the Dater's full reaction (including voice-over, if enabled) has finished playing. Progression is entirely turn-based: the player acts, the Dater reacts, and then the next round begins. This pacing is intentional — it lets the player read and absorb the Dater's response before moving on, which is especially important given how specific and personality-driven those responses will be.</p>
 
 <h2>3. Game Phases (Outline)</h2>
+
 <ul>
-  <li><strong>Title Screen / Lobby</strong> — Main menu: Play Now (single player), Create Room, Join Room. Optional name field; no name required to press Play.</li>
-  <li><strong>Dater Bio Page</strong> — After Play, you see today’s date: photo, age, gender, occupation, tagline. One button: <strong>START THE DATE</strong>.</li>
-  <li><strong>Create Your Avatar (3 Questions)</strong> — Three questions in order: “How do you look?”, “How are you feeling?”, “What is your name?” You answer one by one with text; no timer.</li>
-  <li><strong>First Impressions</strong> — The date opens the date by reacting to your avatar: physical description, name, and (to a lesser degree) emotional state. Only the date speaks.</li>
-  <li><strong>Date Rounds 1–6</strong> — Each round: the game shows a Date Question, you type and submit an answer, the date responds. Rounds 1–3 and 4–5 are question rounds; after Round 3 a Plot Twist may occur. Round 6 is the Wrap Up.</li>
-  <li><strong>Plot Twist (optional, after Round 3)</strong> — “Another person hit on your date!” You type what you’d do. The game picks an outcome, shows a short “What Happened” story, and the date reacts. You then continue to Round 4.</li>
-  <li><strong>Justify (when triggered)</strong> — If the date has a strong negative or confused reaction, a full-screen “Justify Your Opinion” appears; you type one justification and the date responds before the round continues.</li>
-  <li><strong>Wrap Up</strong> — The date sums up how the date went and their impression of you.</li>
-  <li><strong>Date Review</strong> — Highlights and lowlights of the date and what the date thought (LLM-generated “what happened” sentences).</li>
-  <li><strong>Score</strong> — Compatibility percentage (0–100) is shown. You can share or play again.</li>
+  <li><strong>Title Screen</strong> — Main menu with a single <strong>Play Now</strong> button. No name entry required.</li>
+  <li><strong>Dater Bio Page</strong> — The player sees today's date: portrait, name, age, gender, occupation, and hobbies. One button: <strong>START THE DATE</strong>. A narrator will announce the Dater's name.</li>
+  <li><strong>Create Your Avatar (3 Questions)</strong> — Three questions in order: "How do you look?", "How are you feeling?", "What is your name?" The player answers each with freeform text. No timer.</li>
+  <li><strong>First Impressions</strong> — The Dater opens the date by reacting to the Avatar's appearance, name, and emotional state. Two spoken comments: a gut reaction and a prediction about how the date will go. Only the Dater speaks.</li>
+  <li><strong>Date Rounds 1–6</strong> — Each round: the game shows a question, the player types and submits an answer, and the Dater responds with two comments. After Round 3, a Plot Twist interrupts before Round 4 continues.</li>
+  <li><strong>Plot Twist (after Round 3)</strong> — "Another person hit on your date! What do you do?" The player types a response. The game generates a short "What Happened" narrative, and the Dater reacts with two comments.</li>
+  <li><strong>Justify (when triggered)</strong> — If the Dater has a strongly negative reaction, a full-screen "Justify Your Opinion" prompt appears. The player types one explanation; the Dater responds.</li>
+  <li><strong>Wrap Up</strong> — The Dater sums up how the date went and shares their final impression.</li>
+  <li><strong>Date Review</strong> — A highlight reel: short sentences summarizing the best and worst moments and what the Dater thought of them.</li>
+  <li><strong>Score</strong> — The final compatibility percentage (0–100) is displayed.</li>
 </ul>
 
 <h2>4. Detailed Overview</h2>
 
-<h3>A. Title Screen / Lobby</h3>
-<p>When you open the game, you see the main lobby. You can enter a display name if you want, but you don’t have to—the game will use a default if you leave it blank. The main action for single-player is <strong>Play Now</strong>. Tapping it takes you straight to the Dater Bio Page (no room code, no waiting). Other options—Create Room and Join Room—support multiplayer with PartyKit; those flows lead to a game lobby where the host can start the date with the same Dater Bio and 3-questions flow for everyone.</p>
-<p>What you see: a clear title, the Play Now button, and optionally fields for name and room code depending on path. The goal is to get you into the date quickly with minimal friction.</p>
+<h3>A. Title Screen</h3>
+
+<p>When the player opens Bad Date, they will land on a clean, minimal title screen. The primary action is a single <strong>Play Now</strong> button, prominently placed, that launches the game immediately. There is no name entry field, no account creation, and no login. The goal is to get the player into a date as quickly as possible with zero friction — one tap and they're meeting someone.</p>
+
+<p>The title screen will also display the game's version number and, if applicable, links to multiplayer options (Create Room, Join Room) for future modes. However, the single-player daily mode is the default and primary experience. The visual tone of the title screen will set the mood for the rest of the game: dark, modern, and a little playful, with clear typography and simple layout that reads well on a phone.</p>
+
+<p>There is no tutorial or onboarding screen. The game is simple enough that the player will learn by doing: they see a question, they type an answer, and the date reacts. The design philosophy is that the first few moments of the date <em>are</em> the tutorial — the Create Your Avatar questions ease the player into the text-input mechanic before the stakes of the actual date begin.</p>
 
 <h3>B. Dater Bio Page</h3>
-<p>Right after Play Now, you land on the <strong>Dater Bio Page</strong>. This screen shows who you’re going on a date with. All content is pulled from that character’s personality data: a portrait image, name, age, pronouns (gender), a short line that acts as occupation or role (e.g. from their archetype or the first line of their description), and a tagline. There are no timers or extra steps—just one button: <strong>START THE DATE</strong>.</p>
-<p>When you tap START THE DATE, the game transitions into the date flow and immediately shows the first of the three Create Your Avatar questions. So the flow is: see your date → tap start → answer the three questions about yourself → then the date begins.</p>
+
+<p>After tapping Play Now, the player is taken directly to the <strong>Dater Bio Page</strong>. This is their first look at the character they're about to go on a date with. The screen will display the Dater's portrait image, their name, age, gender, occupation, and a handful of hobbies or interests. All of this information is pulled from the Dater's personality profile — the same data that drives their AI-generated responses later in the game. A narrator will announce the Dater by name ("Your date today is Maya"), giving the moment a bit of ceremony.</p>
+
+<p>The purpose of this screen is to build anticipation and give the player just enough information to form a first impression. They'll know what their date looks like, what they do for a living, and what they're into — but they won't know the Dater's hidden values, dealbreakers, or personality quirks. Those will reveal themselves organically through the date itself. The screen has one action: a <strong>START THE DATE</strong> button that transitions the player into the Create Your Avatar flow.</p>
+
+<p>In production, the Dater shown on this page will rotate on a daily schedule — a "daily date" model where each day features a different character. During development and testing, a debug menu will allow any of the five to six available Daters to be selected manually. Either way, the player always meets one Dater per session, and that character's full personality drives the entire date experience.</p>
 
 <h3>C. Create Your Avatar (3 Questions)</h3>
-<p>Before the date “starts,” the game asks you three questions about yourself. These answers define your avatar—the person the date is meeting. The questions are always the same and in order: <strong>“How do you look?”</strong>, <strong>“How are you feeling?”</strong>, and <strong>“What is your name?”</strong> You type a freeform answer for each and submit. There’s no timer and no second chances; whatever you type is what the game uses.</p>
-<p>Your first answer (look) is used as the avatar’s physical description—the date will “see” this when they give first impressions. The second (feeling) is the avatar’s emotional state, which the date may reference a bit less strongly. The third (name) is the name the date will use for you. After the third answer, the game has everything it needs to run the first-impressions reaction and the rest of the date.</p>
+
+<p>Once the player taps START THE DATE, the game transitions into a brief character-creation sequence. Rather than a traditional avatar builder with sliders and presets, Bad Date will ask the player <strong>three open-ended questions</strong> about the person they're bringing to the date. The questions are always the same and always in the same order: <strong>"How do you look?"</strong>, <strong>"How are you feeling?"</strong>, and <strong>"What is your name?"</strong> Each answer is a single freeform text input — the player can type anything from "tall with glasses" to "a sentient cloud of bees" and the game will accept it.</p>
+
+<p>These answers directly shape how the Dater perceives the Avatar for the rest of the game. The first answer — appearance — becomes the Avatar's physical description, and the Dater will "see" this during their first impression. If the player says they look like a pirate, the Dater will react to a pirate. The second answer — feeling — becomes the Avatar's emotional state, which the Dater may reference more subtly. The third answer — name — is what the Dater will call the player throughout the date. Together, these three answers give the AI everything it needs to treat the Avatar as a specific person with a look, a vibe, and a name.</p>
+
+<p>There are no timers during Create Your Avatar, and the player can take as long as they want on each question. This is intentional: the character-creation phase is meant to feel low-pressure and playful, encouraging the player to have fun with their answers before the date begins. The questions also serve as a gentle warm-up for the text-input mechanic — by the time the first real date question appears, the player is already comfortable typing responses.</p>
+
+<p>After the third answer is submitted, the game has all the Avatar data it needs. The transition into the date is immediate: the screen shifts to the date view, and the Dater delivers their first impressions.</p>
 
 <h3>D. First Impressions (Date Begins)</h3>
-<p>When the date “begins,” the date speaks first. This is the <strong>first impressions</strong> moment. The AI is given your physical description, your name, and your emotional state (with physical and name weighted more). The date then generates a short reaction as if they’ve just met you—commenting on how you look, using your name, and maybe nodding to how you said you’re feeling. Only the date speaks; your avatar doesn’t have dialogue. This sets the tone and makes it clear the date “knows” who they’re meeting before the first question round.</p>
+
+<p>The date begins with the Dater speaking first. This is the <strong>First Impressions</strong> moment — the Dater's initial reaction to seeing the Avatar for the first time. The AI is given the Avatar's physical description and name as primary inputs, with the Avatar's emotional state as a secondary factor. Using this information plus the Dater's full personality profile, the AI generates two spoken comments that set the tone for the entire date.</p>
+
+<p>The first comment will be the Dater's immediate, unfiltered reaction to the Avatar's appearance. If the player described themselves as "covered in tattoos with a leather jacket," the Dater might be intrigued, intimidated, or attracted — depending entirely on who they are as a character. The second comment will be the Dater stating their first impression more broadly: what they think of this person based on how they look and their energy, and a gut-feeling prediction about how the date might go. This second comment is a statement, not a question — the Dater isn't interviewing the Avatar, they're sizing them up.</p>
+
+<p>Only the Dater speaks during First Impressions; the Avatar has no dialogue at any point in the game. Both comments will be displayed as text and spoken aloud via text-to-speech, giving the player time to read and hear the Dater's reaction. This moment is designed to make the player feel like their Avatar choices mattered — the Dater is reacting to <em>them</em>, not delivering a generic opening line. Depending on what the player typed during Create Your Avatar, the Dater's opening could be warm, skeptical, surprised, or horrified.</p>
 
 <h3>E. Date Rounds 1–6 (Questions and Answers)</h3>
-<p>After first impressions, the game enters the main date loop. Each round follows the same pattern. The <strong>game</strong> (not the date) displays a Date Question—for example “What’s something small that makes you think ‘this person gets it’?” or “What’s your most controversial opinion about dating?” The question is chosen from a pool (with some reserved for the first round). You see the question, a single text input, and a submit control (e.g. a button or Enter). You type whatever you want—could be one word, could be a few sentences—and submit. There’s no timer and no “correct” answer; the game accepts whatever you typed as your official answer for that round.</p>
-<p>As soon as you submit, that answer (together with the round question) is sent to the AI. The date’s response is generated based on their personality, their hidden likes and dealbreakers, the current compatibility state, and the full context of the question plus your answer. For short answers like “Cheese,” the game always sends both the question (e.g. “What’s your guilty pleasure?”) and “Cheese” so the date can react in context. The date’s reply is shown in the UI (and optionally read aloud with text-to-speech). When that’s done, the next round starts: another question, another text input, another response. This repeats for six rounds total. In the current build, Round 6 is reserved for the Wrap Up (no new question); Rounds 1–5 are the main Q&amp;A, with an optional Plot Twist after Round 3.</p>
 
-<h3>F. How the Game Interprets Your Answers and the Date Responds (Under the Hood)</h3>
-<p>When you type an answer and hit submit, several things happen before you see the date’s reply. First, your raw text is stored as the “player answer” for that round, and the round’s Date Question is stored alongside it. Both are always passed together into the response pipeline—so the AI never sees “Cheese” without “What’s your guilty pleasure?” (or whatever the question was). That pairing is critical for single-word or very short answers so the date can react appropriately.</p>
-<p>Next, the game builds a prompt for the AI. The prompt includes the date’s full personality (from their character data: values, dealbreakers, backstory, tone), the recent conversation history (so the date can refer back to earlier answers), the current compatibility score (so reactions can be a bit warmer or cooler depending on how the date is going), and the specific task: “Here’s the question that was asked; here’s what the player said; respond in character as the date, in dialogue only, and keep it to a few sentences.” The AI is instructed to stay in character, avoid stage directions or action tags, and to react naturally—whether that’s delighted, put off, curious, or confused. The model returns a short dialogue line, which is then cleaned (e.g. stripping any leftover action descriptions) and shown as the date’s reply.</p>
-<p>In parallel, the game tries to figure out how your answer “landed” with the date. Each date has hidden values: things they love, like, dislike, or consider dealbreakers. The system compares your answer (and sometimes the date’s reply) against those values to assign a sentiment category—loves, likes, dislikes, or dealbreakers. That sentiment is then mapped to a compatibility factor (e.g. physical attraction, similar interests, similar values). The five factors are combined (with weighting and “drop the lowest” rules) into a single 0–100 compatibility score. So the date’s reply is driven by personality and context, while the score is driven by how well your answer aligned with their hidden preferences. The player doesn’t see the raw values; they only see the date’s reaction and, at the end, the overall score and the Date Review.</p>
-<p>If the sentiment is strongly negative (e.g. dealbreaker), the game may trigger the <strong>Justify</strong> flow: the screen is replaced by a full-screen “Justify Your Opinion” prompt, you type one justification, and the date responds again (e.g. “Do you want to explain that a little more?”) before the round is considered complete. That second response is also generated by the AI, using your original answer, the date’s first reaction, and your justification.</p>
-<p>All of this is designed so that the date feels consistent and reactive: they “hear” the full question and your full answer, they respond in character, and their hidden preferences quietly shape both the tone of the response and your compatibility score without the player having to think in terms of right or wrong answers.</p>
+<p>After First Impressions, the game enters its main loop: <strong>six rounds of questions and answers</strong>. Each round follows the same rhythm. The game — not the Dater — will display a <strong>Date Question</strong> on screen. Questions are drawn from a curated pool and cover a range of topics: guilty pleasures, controversial opinions, deal-makers and deal-breakers, hypothetical scenarios, and personal revelations. The player sees the question, a single text input field, and a submit button. They type whatever they want and hit submit.</p>
 
-<h3>G. Plot Twist (Optional, After Round 3)</h3>
-<p>After the date’s response to Round 3, the game can trigger a <strong>Plot Twist</strong>. The idea: “Another person hit on your date! What do you do?” You see a short interstitial, then a text input. You type what you’d do (e.g. “Challenge them to a dance-off” or “Politely ask them to leave”). You submit, and the game uses that (and optionally other players’ answers in multiplayer) to pick an outcome. A “What Happened” narrative is generated or selected, and the date then reacts to that story—so you get a few sentences of the date responding to the scenario. After that, the game continues to Round 4. So the Plot Twist doesn’t change the total number of question rounds; it inserts a narrative beat and a date reaction in the middle of the date.</p>
+<p>Once the player submits, their answer appears in a small oval beneath the question so they can see what they wrote. Simultaneously, two things happen in parallel: a <strong>narrator</strong> reads the player's answer aloud (so the player hears their own words spoken back), and behind the scenes the game begins generating the Dater's response. This overlap is intentional — it fills the brief generation time with something the player can listen to, so there's no dead air.</p>
 
-<h3>H. Justify (When the Date Hates or Is Confused)</h3>
-<p>If the date has a strong negative or confused reaction to something you said, the game may pause the round and show a <strong>Justify</strong> screen. The rest of the UI is replaced by a full-screen takeover: a title like “Justify Your Opinion,” a short hint, and a single text field. You type an explanation and submit. The overlay dismisses and you’re back on the date screen. The date then says something like “Do you want to explain that a little more?” (or a similar in-character line), and the AI generates a follow-up response to your justification. Once that’s done, the round completes and the game moves on. So Justify is a one-time chance to clarify; there’s no timer and no penalty beyond the date’s reaction.</p>
+<p>When the Dater's response is ready, they will deliver <strong>two separate comments</strong>, each spoken aloud and displayed as text. The first comment is the Dater's immediate gut reaction — their honest, in-character response to what the player just said, tested against their personality, values, and preferences. The second comment goes deeper: the Dater will look for one thing the player said earlier in the date that naturally connects to the current answer. If a genuine connection exists ("Wait, earlier you said you love animals, and now you're telling me this?"), they'll mention it. If nothing connects, they won't force it — they'll simply share more of their opinion about the current answer. Both comments are exactly two sentences each, keeping the dialogue punchy and opinionated.</p>
 
-<h3>I. Wrap Up</h3>
-<p>After Round 6 (or after the last question round, depending on how rounds are counted), the game enters the <strong>Wrap Up</strong>. The date delivers a short summary of how the date went and their impression of you. This is generated by the AI using the conversation history and the final compatibility score, so it can reference things you said and tie them to a “verdict” (interested, on the fence, or not a match). Only the date speaks; there’s no further input from the player in this phase.</p>
+<p>After both comments finish, a <strong>reaction tag</strong> appears on screen — a brief label showing the sentiment category the Dater landed on (loves, likes, dislikes, or dealbreakers) and the specific trait that triggered it. This tag appears when the second comment begins, not during the first, so the player hears the full reaction before seeing the mechanical result. Then the game holds for four seconds, giving the player time to absorb everything, before the next question appears.</p>
 
-<h3>J. Date Review</h3>
-<p>Right after the wrap-up, the game shows the <strong>Date Review</strong>. This is a list of short, conversational sentences that summarize what happened during the date—highlights and lowlights, and what the date thought of them. These sentences are generated by the AI from the compatibility history (which factors and sentiments were triggered, and how the score moved). So you might see lines like “They loved that you mentioned X” or “They were put off when you said Y.” The goal is to give you a readable recap without exposing the raw rules or hidden values.</p>
-
-<h3>K. Score and End Screen</h3>
-<p>The final screen shows your <strong>compatibility percentage</strong> (0–100). That number is the same one that was updated under the hood after each date reaction; here it’s presented as the “result” of the date. You may also see options to share the result or play again. No more text input—the date is over.</p>
-
-<h3>L. Look and Feel</h3>
-<p>The current build is a 2D web app: React-based UI with a conversational layout. The main date screen shows the date’s portrait and speech bubble, the current round label (e.g. “Round 2/6”), the Date Question when it’s your turn to answer, and a single text input with a submit button. There’s no chat log—just the current question and the date’s last line. Compatibility is shown as a score (and optionally a brief “reason” when it changes). The overall look is dark, modern, and mobile-friendly, with clear typography and touch targets so that typing and reading feel natural on a phone.</p>
-<p>The product roadmap includes a <strong>3D date scene</strong> (e.g. using Three.js) where the date and environment are rendered in 3D and the player might sit across from the date at a table. In that vision, the 2D UI—questions, text input, and date dialogue—would sit as overlays or panels on top of the 3D view, so the experience stays text-driven while the atmosphere becomes more immersive. As of this document, the shipped experience is 2D; the 3D scene is planned for a later phase. Screenshots of the current game can be added here (e.g. Dater Bio Page, Create Your Avatar, Date screen with question and input, Date Review, Score screen) for posting on Linear or in a Google Doc.</p>
-
-<p class="note">[You can insert screenshots of the Title Screen, Dater Bio Page, Create Your Avatar, Date screen, Justify screen, Plot Twist, Date Review, and Score screen here when exporting to Google Docs or Linear.]</p>
+<p>This loop repeats for six rounds. After Round 3, a <strong>Plot Twist</strong> interrupts the flow (see below), and after Round 6 the game transitions into the Wrap Up. The player is never rushed — there are no timers on any input, and the game won't advance until the Dater's full reaction has finished playing. The pacing is meant to feel like an actual conversation: speak, listen, react, pause, next topic.</p>
 
 <hr>
-<p><em>End of design document. Bad Date — single-player date simulation, text input only, no timers, AI-driven date reactions and compatibility.</em></p>
+
+<h2>5. How Your Answers Become the Date's Reactions</h2>
+
+<p><em>This section explains, in plain language, what happens behind the scenes when the player types an answer and the Dater responds. No technical background is required to follow along.</em></p>
+
+<h3>Step 1: The Player's Answer Meets the Question</h3>
+
+<p>When the player types an answer and hits submit, the very first thing the game does is pair that answer with the question that was asked. This might sound obvious, but it's a critical step. If the question was "What's your guilty pleasure?" and the player typed "Cheese," the system doesn't just send "Cheese" to the AI — it sends the full context: <em>the question was "What's your guilty pleasure?" and the player answered "Cheese."</em> This pairing ensures that the Dater always understands what the player was responding to, even if the answer is a single word or something cryptic. Without this context, "Cheese" could mean anything; with it, the Dater knows it's a guilty pleasure and can react accordingly.</p>
+
+<p>Along with the question-and-answer pair, the game also attaches the <strong>conversation history</strong> — a running log of what the player and Dater have said so far. This means the Dater can reference earlier moments in the date ("Wait, you also said you hate mornings — this is starting to make sense"). The history is trimmed to the most recent exchanges to keep things manageable, but it's always present, so the Dater's responses can build on the conversation rather than treating each answer in isolation.</p>
+
+<h3>Step 2: Building the Dater's "Brain" — The Personality Prompt</h3>
+
+<p>Before the AI can generate a response, the game needs to tell it <em>who the Dater is</em>. This is done through a detailed instruction set — think of it as a briefing that describes the Dater's entire personality. Every Dater in the game has a rich character profile: their backstory, values, beliefs, sense of humor, communication style, what they find attractive, and what they absolutely cannot stand. The game compiles all of this into a single set of instructions that essentially says: "You are Maya. Here is who you are, what you believe, how you talk, and what matters to you. Now react to what this person just said."</p>
+
+<p>The personality prompt also includes behavioral rules — things the Dater should always or never do. For instance, the Dater is instructed to always speak in dialogue (no narration or stage directions), to always have a clear opinion (never just saying "that's interesting"), and to keep each comment to exactly two sentences. These rules ensure that no matter what the player says, the Dater's response feels like something a real person would say on a date — opinionated, concise, and emotionally honest. The Dater can be charmed, repulsed, excited, confused, or scared, but they can never be bland.</p>
+
+<p>On top of the base personality, the game layers in <strong>context-specific instructions</strong> based on what the player said. If the player's answer describes something physical — like "I'm seven feet tall" or "I have a third arm" — the system tells the Dater to treat it as something they can literally <em>see</em>, and to react with heightened intensity. If the answer is more abstract — like "I value honesty above everything" — the system tells the Dater to infer what the player means and react based on their own values and perspective. This distinction between "visible" and "inferred" content keeps the Dater's reactions grounded: they react to what they'd actually notice on a date.</p>
+
+<h3>Step 3: The AI Generates a Response</h3>
+
+<p>With the question, the answer, the conversation history, and the full personality prompt assembled, the game sends everything to the AI (a large language model). The AI's job is straightforward: read the instructions, get into character, and generate the Dater's spoken response to what the player just said. The response comes back as pure dialogue — two sentences that the Dater would actually say out loud on this date.</p>
+
+<p>The game generates <strong>two separate responses</strong> for each player answer. The first is the Dater's immediate gut reaction — their honest, unfiltered first thought. The second is a follow-up where the Dater either connects the current answer to something the player said earlier (if a genuine connection exists) or simply shares more of their own opinion. Each response is generated independently, which allows the Dater to shift tone between comments — surprised at first, then reflective, or amused at first, then a little concerned.</p>
+
+<p>Before either comment is shown to the player, the game cleans up the text. Any stray action descriptions (like "*laughs nervously*") are stripped out, since the Dater is supposed to express emotion through words alone. The cleaned text is then displayed on screen and, if text-to-speech is enabled, spoken aloud in the Dater's voice. The result is a response that feels spontaneous and personal — as if the Dater is actually sitting across from the player, hearing what they said, and reacting in the moment.</p>
+
+<h3>Step 4: How the Game Knows If the Dater Liked It</h3>
+
+<p>While the player sees the Dater's spoken reaction, something else is happening behind the scenes: the game is figuring out <em>how</em> the Dater felt about what was said. Every Dater has a set of <strong>hidden values</strong> — things they love, things they like, things they dislike, and things that are absolute dealbreakers. The player never sees these lists directly, but they drive the mechanical side of the game.</p>
+
+<p>After the Dater's response is generated, the game asks the AI to do a quick self-assessment: based on the reaction it just gave, how did the Dater actually feel? The system uses a four-tier rating scale — <strong>Great, Good, Bad,</strong> or <strong>Awful</strong> — and requires the AI to pick a specific trait from the Dater's hidden values that justifies the rating. So if the Dater reacted enthusiastically, the system might rate it "Great" and connect it to a "Love" trait like "creativity." If the Dater reacted with visible discomfort, it might rate it "Bad" and connect it to a "Dislike" trait like "recklessness." The rating always matches the tone of the spoken reaction, which keeps the mechanical outcome aligned with what the player actually heard.</p>
+
+<p>This rating is then translated into a <strong>compatibility score change</strong>. A "Great" (Love) reaction raises the meter by 20 points; a "Good" (Like) gives a 5-point boost; "Bad" (Dislike) lowers it by 5; and "Awful" (Dealbreaker) drops it by 20. These changes accumulate over the course of the date on a single compatibility meter that runs from 0 to 100. The player sees the overall compatibility percentage at the end, along with a breakdown of what went well and what didn't — but during the date, the only feedback they get is the Dater's words and the reaction tag that appears on the second comment.</p>
+
+<h3>Step 5: When Things Go Really Wrong — The Justify Mechanic</h3>
+
+<p>If the Dater rates their own reaction as "Awful" — meaning the player hit a dealbreaker — the game may trigger a special <strong>Justify</strong> moment. Instead of moving to the next question, the screen is taken over by a full-screen prompt that says <strong>"Justify Your Opinion."</strong> The player gets one chance to type an explanation: why did they say what they said? What did they actually mean? The Dater then responds to the justification with a follow-up reaction, which can soften the blow, make it worse, or land somewhere in between. After that, the round is complete and the date continues.</p>
+
+<p>The Justify mechanic serves two purposes. First, it creates a dramatic moment — the date has gone sideways, and the player has to think on their feet. Second, it gives the AI a chance to generate a more nuanced reaction: the Dater isn't just reacting to the original answer anymore, they're reacting to the explanation, the original answer, and their own first reaction all at once. This often produces some of the most entertaining and character-revealing moments in the game.</p>
+
+<hr>
+
+<h2>6. The Compatibility System</h2>
+
+<p>Behind every date in Bad Date, there will be a compatibility system that quietly tracks how well things are going. The player won't see the raw numbers during the date — they'll feel it through the Dater's tone, their body language in the 3D scene, and the reaction tags that appear after each response. Under the hood, a single <strong>compatibility meter</strong> runs from 0 to 100, starting at 50 (neutral). After every Dater reaction, the meter moves up or down based on how the answer landed. At the end of the date, the final number becomes the player's compatibility score.</p>
+
+<p>Every player answer is sorted into one of four categories: <strong>Love</strong>, <strong>Like</strong>, <strong>Dislike</strong>, or <strong>Dealbreaker</strong>. Each category has a fixed impact on the meter. A Love reaction — meaning the player said something that genuinely excited or delighted the Dater — raises compatibility by <strong>20 points</strong>. A Like gives a smaller <strong>5-point</strong> boost. A Dislike drops the meter by <strong>5 points</strong>, while hitting a Dealbreaker — something that horrified or disgusted the Dater — drops it by a full <strong>20 points</strong>. The math is simple and transparent: say things the Dater loves and the meter climbs fast; hit a dealbreaker and it craters.</p>
+
+<p>What makes the system interesting is the <strong>tie-breaking mechanic</strong>. Sometimes a player's answer could trigger both a positive and a negative trait. For example, saying "I love skydiving" might hit the Dater's Like for "adventure" and their Dislike for "extreme sports" at the same time. When this happens, the game checks the current state of the compatibility meter to decide which way the Dater leans. If the date is going well (meter above 50%), the Dater gives the player the benefit of the doubt and it counts as a Like. If the date is going poorly (meter below 50%), the Dater is more skeptical and it counts as a Dislike. At exactly 50%, it's a coin flip. This creates a subtle momentum effect: good dates tend to stay good on borderline answers, and bad dates tend to snowball.</p>
+
+<p>Critically, <strong>Love and Dealbreaker always override</strong> the tie-breaking mechanic. If the player says something that clearly hits one of the Dater's core Love traits, it's a Love reaction (+20) regardless of how the date is going. If they hit a Dealbreaker, it's a Dealbreaker (-20) no matter what. The tie-breaking only applies when the answer is genuinely ambiguous between a Like and a Dislike. This means the player can always recover from a bad date with a great answer, and a great date can always be derailed by a truly terrible one.</p>
+
+<p>Each Dater has their own set of <strong>hidden values</strong> — specific things they love, like, dislike, or consider absolute dealbreakers. These values are never shown to the player, but they're the engine that drives the scoring. When the AI rates the Dater's reaction, it identifies which specific value was triggered and which category it falls into. The player doesn't need to know any of this — they just need to be themselves and see how the date plays out.</p>
+
+<h2>7. Plot Twist</h2>
+
+<p>After the Dater's response to <strong>Round 3</strong>, the game will insert a narrative interruption called the <strong>Plot Twist</strong>. The date pauses, and the player sees a dramatic interstitial: "Another person just hit on your date! What do you do?" A text input appears, and the player types their response — anything from "politely ask them to leave" to "challenge them to a dance-off" to "pretend I don't notice." Whatever they type becomes their action.</p>
+
+<p>The game then takes the player's action and generates a short <strong>"What Happened" narrative</strong> — a few sentences describing what played out based on what the player said they'd do. This narrative is shown on screen as a dramatic story beat, giving the player a moment to read and enjoy the scenario before the Dater weighs in. The narrative is generated by the AI, so it can be funny, tense, romantic, or awkward depending on the player's action and the context of the date so far.</p>
+
+<p>After the narrative, the Dater will react with <strong>two comments</strong>, matching the standard two-comment pattern used during regular date rounds. The first comment is the Dater's immediate gut reaction to what they just witnessed — how it made them feel and why, grounded in their personality and values. The second comment is directed at the Avatar: the Dater speaks to them about how what just happened changes (or reinforces) their feelings about the date going forward. Both comments are exactly two sentences and are spoken aloud via text-to-speech.</p>
+
+<p>The Plot Twist does not add an extra question round — the total remains six rounds. It's a narrative beat that sits between Round 3 and Round 4, adding variety and drama to the middle of the date. It also gives the player a moment to do something other than answer a question — they get to <em>act</em>, and then see how their date feels about the kind of person they revealed themselves to be. After the Dater's reaction, the game continues seamlessly into Round 4.</p>
+
+<h2>8. Justify</h2>
+
+<p>Sometimes the player will say something that genuinely upsets the Dater — hitting a dealbreaker, saying something confusing, or crossing a line. When this happens, the game may trigger the <strong>Justify</strong> mechanic. The regular date UI is replaced by a full-screen takeover with a clear prompt: <strong>"Justify Your Opinion."</strong> The player sees a single text input and is given one chance to explain themselves. There's no timer; they can take as long as they need to craft their response.</p>
+
+<p>Once the player submits their justification, the screen returns to the date view and the Dater responds. The Dater's reaction to the justification is generated by the AI using the full context: the original question, the player's original answer, the Dater's initial reaction, and the justification itself. This means the Dater isn't just hearing the explanation in a vacuum — they're weighing it against everything they already know. The response might be mollified ("Okay, that actually makes more sense"), still unimpressed ("Yeah, that doesn't make it better"), or something entirely unexpected.</p>
+
+<p>Justify is designed to be a high-stakes, high-drama moment. It breaks the rhythm of the date intentionally — the player has to stop, think, and defend themselves in writing. It's also one of the few moments where the Dater reacts to the player <em>trying to convince them of something</em>, rather than just answering a question. This often produces some of the most memorable exchanges in the game, because the player is emotionally invested in the outcome. After the Dater responds to the justification, the round completes and the date moves on.</p>
+
+<h2>9. Wrap Up</h2>
+
+<p>After the sixth and final round, the game transitions into the <strong>Wrap Up</strong>. The question-and-answer loop is over; now the Dater has the floor. Using the full conversation history and the current compatibility score, the AI generates a short summary — the Dater's honest assessment of how the date went and their impression of the Avatar. If compatibility is high, the Dater might be warm, flirty, and eager to see the player again. If it's low, they might be polite but clearly ready to leave. If it's somewhere in the middle, the Dater will express genuine uncertainty.</p>
+
+<p>The Wrap Up serves as the narrative conclusion to the date. The Dater will reference specific things the player said — moments that stood out, answers that surprised them, patterns they noticed. This callback to earlier conversation makes the Wrap Up feel personal and earned rather than generic. The Dater may also deliver a <strong>final verdict line</strong> — a single, punchy sentence that captures their bottom-line feeling about whether they'd see this person again.</p>
+
+<p>Only the Dater speaks during the Wrap Up; the player has no further input. The comments are displayed as text and spoken aloud, matching the pacing and presentation of the rest of the date. After the Wrap Up finishes, the game transitions to the Date Review.</p>
+
+<h2>10. Date Review</h2>
+
+<p>The <strong>Date Review</strong> is a highlight reel of the date — a series of short, conversational sentences that recap the best and worst moments. These are generated by the AI using the compatibility history: which traits were triggered, how the score moved, and what the Dater thought of each exchange. A typical Date Review might include lines like "They loved that you mentioned painting" or "They were put off when you said you don't believe in dessert" or "The Plot Twist really impressed them."</p>
+
+<p>The purpose of the Date Review is to give the player a readable, entertaining summary without exposing the raw mechanics. The player doesn't see factor scores or sentiment categories — they see the date's reactions translated into plain language. Each line is designed to feel like something a friend might say when debriefing after a date: "Oh, she definitely liked that part" or "Yeah, that was the moment things went south." The review is meant to provoke a reaction — laughter, surprise, or the urge to play again and try a different approach.</p>
+
+<p>The Date Review will appear as a series of animated text entries, each fading in with a short delay. This presentation gives each highlight its own moment, letting the player absorb one piece of feedback before seeing the next. After the review finishes, the game transitions to the final Score screen.</p>
+
+<h2>11. Score and End Screen</h2>
+
+<p>The final screen displays the player's <strong>compatibility percentage</strong> — a single number from 0 to 100 that represents how well the date went according to the Dater's personality and values. This is the same score that was being updated behind the scenes after every reaction; here it's presented as the definitive result. The score is accompanied by the Dater's final reaction to it — a short line that reflects whether they're thrilled, satisfied, indifferent, or relieved it's over.</p>
+
+<p>The end screen may also include options to <strong>share the result</strong> (e.g. a screenshot or link) or <strong>play again</strong>. Playing again with the same Dater and different answers will produce genuinely different reactions and a different score, since the AI responds to the specific content of each answer. Playing with a different Dater (on a different day or via the debug menu) will produce an entirely different personality, different hidden values, and different reactions to the same answers. The replayability comes from the AI's responsiveness: two dates are never the same.</p>
+
+<p>No further input is required on the end screen — the date is over. The player can exit, share, or jump back in.</p>
+
+<h2>12. Look and Feel</h2>
+
+<p>Bad Date will feature a <strong>3D date scene</strong> built with Three.js, rendering the Dater as a fully modeled character sitting across from the player in a first-person perspective. The player will see the date from their own point of view — as if they're actually sitting at a table, looking at the person across from them. The environment will be a stylized date setting (a restaurant, a café, a rooftop bar) with ambient lighting, subtle background animation, and a mood that shifts based on how the date is going. The 3D scene provides atmosphere and immersion while the core gameplay remains text-driven.</p>
+
+<p>The Dater's 3D model will feature <strong>big, expressive animated reactions</strong> triggered by their spoken responses. When the Dater is delighted, they might lean forward with wide eyes and a grin. When they're horrified, they might recoil, cover their mouth, or stare in disbelief. When they're falling for the player, subtle animations — a hair tuck, a lingering look, a laugh that catches them off guard — will sell the emotion. These reactions will be tied directly to the sentiment category of the Dater's response: loves trigger enthusiastic animations, dealbreakers trigger dramatic ones. The goal is for the player to <em>see</em> the Dater's feelings as clearly as they hear them.</p>
+
+<p>The 2D UI elements — the question display, the text input, the Dater's speech text, the reaction tags, and the compatibility indicator — will sit as overlays on top of the 3D scene. The layout will be clean and uncluttered, with the question and input near the bottom of the screen (optimized for thumb-typing on mobile) and the Dater's dialogue near the top. The design will prioritize readability: clear fonts, high contrast, and enough spacing that the player can read the Dater's response comfortably while the 3D scene provides visual context behind it.</p>
+
+<p>The overall visual identity will be dark, modern, and slightly cinematic — think moody lighting with warm accent colors, smooth camera movements, and a UI that feels like it belongs in a premium mobile game. Sound design will include ambient restaurant/bar noise, subtle music shifts tied to compatibility changes, and the Dater's text-to-speech voice as the primary audio element. The combination of 3D atmosphere, animated character reactions, and tight text-driven gameplay is designed to create an experience that feels significantly more immersive than a typical text game while keeping the player's creative freedom intact.</p>
+
+<p>Every visual and audio element in the game serves the same goal: making the Dater feel like a real person with real opinions. The 3D scene, the animated reactions, the voice, and the written dialogue all work together to sell the illusion that the player is on an actual date with someone who is genuinely reacting to what they say. That illusion — and the comedy, drama, and surprise it produces — is the core of Bad Date.</p>
+
+<hr>
+<p><em>End of design document. Bad Date — a single-player, AI-driven date simulation where every answer matters and every date is different.</em></p>
 
 </body>
 </html>

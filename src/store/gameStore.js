@@ -153,26 +153,12 @@ export const useGameStore = create((set, get) => ({
   // Live Mode state
   ...initialLiveState,
   
-  // 5-factor compatibility system
-  compatibilityFactors: {
-    physicalAttraction: 50, // Neutral baseline - rises/falls based on conversation
-    similarInterests: 50,
-    similarValues: 50,
-    similarTastes: 50,
-    similarIntelligence: 50,
-  },
-  // Track which factors have been "activated" (discussed in conversation)
-  // Unactivated factors contribute only 10% to the overall calculation
-  factorsActivated: {
-    physicalAttraction: false,
-    similarInterests: false,
-    similarValues: false,
-    similarTastes: false,
-    similarIntelligence: false,
-  },
-  // Computed overall compatibility (calculated from factors)
+  // Simple compatibility meter (0-100, starts at 50)
+  // Love: +20, Like: +5, Dislike: -5, Dealbreaker: -20
   compatibility: 50,
-  // Brief explanation of last compatibility change (fades out in UI)
+  // Legacy stubs (kept for DateScene.jsx compatibility)
+  compatibilityFactors: { physicalAttraction: 50, similarInterests: 50, similarValues: 50, similarTastes: 50, similarIntelligence: 50 },
+  factorsActivated: { physicalAttraction: false, similarInterests: false, similarValues: false, similarTastes: false, similarIntelligence: false },
   compatibilityReason: null,
   
   // Attribute submission & voting
@@ -386,161 +372,17 @@ export const useGameStore = create((set, get) => ({
   },
   
   // Compatibility - 5-factor system with dynamic weighting
-  /**
-   * Calculate overall compatibility from the 5 factors
-   * - Drops the lowest factor (so one bad area is okay)
-   * - Weights physical attraction higher at start, equalizes over time
-   * - Unactivated factors (never discussed) contribute only 10%
-   */
-  calculateCompatibility: () => {
-    const { compatibilityFactors, factorsActivated, conversationTurns } = get()
-    const { physicalAttraction, similarInterests, similarValues, similarTastes, similarIntelligence } = compatibilityFactors
-    
-    // Calculate dynamic weights based on conversation progress
-    // At turn 0: physical = 2.5, others = 0.625 each
-    // By turn 10+: all weights equal at 1.0
-    const progressFactor = Math.min(conversationTurns / 10, 1) // 0 to 1 over 10 turns
-    
-    const basePhysicalWeight = 2.5 - (1.5 * progressFactor) // 2.5 -> 1.0
-    const baseOtherWeight = 0.625 + (0.375 * progressFactor) // 0.625 -> 1.0
-    
-    // Apply activation multiplier: unactivated factors get only 10% weight
-    const getWeight = (baseWeight, factorName) => {
-      return factorsActivated[factorName] ? baseWeight : baseWeight * 0.1
-    }
-    
-    // Apply weights with activation consideration
-    const weightedScores = [
-      { name: 'physicalAttraction', value: physicalAttraction, weight: getWeight(basePhysicalWeight, 'physicalAttraction'), activated: factorsActivated.physicalAttraction },
-      { name: 'similarInterests', value: similarInterests, weight: getWeight(baseOtherWeight, 'similarInterests'), activated: factorsActivated.similarInterests },
-      { name: 'similarValues', value: similarValues, weight: getWeight(baseOtherWeight, 'similarValues'), activated: factorsActivated.similarValues },
-      { name: 'similarTastes', value: similarTastes, weight: getWeight(baseOtherWeight, 'similarTastes'), activated: factorsActivated.similarTastes },
-      { name: 'similarIntelligence', value: similarIntelligence, weight: getWeight(baseOtherWeight, 'similarIntelligence'), activated: factorsActivated.similarIntelligence },
-    ]
-    
-    // Sort by weighted value to find the lowest
-    weightedScores.sort((a, b) => (a.value * a.weight) - (b.value * b.weight))
-    
-    // Drop the lowest, sum the rest
-    const topFour = weightedScores.slice(1) // Remove lowest
-    const totalWeight = topFour.reduce((sum, s) => sum + s.weight, 0)
-    const weightedSum = topFour.reduce((sum, s) => sum + (s.value * s.weight), 0)
-    
-    // Calculate weighted average (handle edge case of all weights being 0)
-    const compatibility = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 50
-    
-    return Math.max(0, Math.min(100, compatibility))
+  // Legacy stubs for DateScene.jsx compatibility
+  calculateCompatibility: () => get().compatibility,
+  updateCompatibilityFactor: (factor, change, _reason = null) => {
+    // Legacy: just forward to adjustCompatibility
+    const newCompat = get().adjustCompatibility(change)
+    return { factor, oldValue: 0, newValue: 0, overallCompat: newCompat, isFirstActivation: false }
   },
-  
-  /**
-   * Update a specific compatibility factor
-   * @param {string} factor - One of: 'physical', 'interests', 'values', 'tastes', 'intelligence', or 'random'
-   * @param {number} change - Positive or negative change amount
-   * @param {string} reason - Optional descriptive reason sentence for the change
-   */
-  updateCompatibilityFactor: (factor, change, reason = null) => {
-    const { compatibilityFactors, factorsActivated, compatibility: currentCompatibility } = get()
-    
-    // Map short names to full names
-    const factorMap = {
-      'physical': 'physicalAttraction',
-      'interests': 'similarInterests',
-      'values': 'similarValues',
-      'tastes': 'similarTastes',
-      'intelligence': 'similarIntelligence',
-    }
-    
-    // If 'random', pick a random factor
-    let targetFactor = factorMap[factor]
-    if (factor === 'random' || !targetFactor) {
-      const factors = Object.keys(factorMap)
-      targetFactor = factorMap[factors[Math.floor(Math.random() * factors.length)]]
-    }
-    
-    const wasActivated = factorsActivated[targetFactor]
-    const isFirstActivation = !wasActivated
-    
-    // Get the starting value for this factor
-    let startingValue = compatibilityFactors[targetFactor]
-    
-    // KEY FIX: When a factor is activated for the FIRST time,
-    // start it from the CURRENT COMPATIBILITY (not 50) so positive changes
-    // can only raise the score, never lower it.
-    if (isFirstActivation) {
-      // First activation - start from current compatibility level
-      // This ensures positive changes raise the score, negative changes lower it
-      startingValue = currentCompatibility
-    }
-    
-    // Calculate new value
-    const newValue = Math.max(0, Math.min(100, startingValue + change))
-    const newFactors = { ...compatibilityFactors, [targetFactor]: newValue }
-    
-    // Mark this factor as activated (it's now been discussed)
-    const newActivated = { ...factorsActivated, [targetFactor]: true }
-    
-    set({ 
-      compatibilityFactors: newFactors,
-      factorsActivated: newActivated,
-    })
-    
-    // Recalculate overall compatibility
-    let newCompat = get().calculateCompatibility()
-    
-    // SAFETY: If this was a POSITIVE change on first activation, 
-    // ensure the compatibility didn't drop (edge case protection)
-    if (isFirstActivation && change > 0 && newCompat < currentCompatibility) {
-      // Force the factor value higher to maintain at least current compatibility
-      const boostedValue = Math.min(100, newValue + (currentCompatibility - newCompat + 1))
-      const boostedFactors = { ...newFactors, [targetFactor]: boostedValue }
-      set({ compatibilityFactors: boostedFactors })
-      newCompat = get().calculateCompatibility()
-    }
-    
-    // Set compatibility reason - use provided sentence or generate fallback
-    const actualChange = newCompat - currentCompatibility
-    if (actualChange !== 0) {
-      // Use provided reason if available, otherwise generate a short fallback
-      let displayReason = reason
-      if (!displayReason) {
-        const factorLabels = {
-          'physicalAttraction': 'looks',
-          'similarInterests': 'interests',
-          'similarValues': 'values',
-          'similarTastes': 'taste',
-          'similarIntelligence': 'connection',
-        }
-        const label = factorLabels[targetFactor] || 'vibe'
-        displayReason = actualChange > 0 
-          ? `+${actualChange} ${label} ✨`
-          : `${actualChange} ${label}`
-      }
-      set({ compatibility: newCompat, compatibilityReason: displayReason })
-    } else {
-      set({ compatibility: newCompat })
-    }
-    
-    return { factor: targetFactor, oldValue: startingValue, newValue, overallCompat: newCompat, isFirstActivation }
-  },
-  
-  // Clear the compatibility reason (called after fade-out)
-  clearCompatibilityReason: () => {
-    set({ compatibilityReason: null })
-  },
-  
-  // Increment conversation turn counter (called after each exchange)
+  clearCompatibilityReason: () => set({ compatibilityReason: null }),
   incrementConversationTurn: () => {
-    const { conversationTurns, compatibility: currentCompatibility } = get()
+    const { conversationTurns } = get()
     set({ conversationTurns: conversationTurns + 1 })
-    // Recalculate compatibility with new weights
-    const newCompat = get().calculateCompatibility()
-    // PROTECTION: Only update if the new compatibility is higher or equal
-    // Weight changes shouldn't cause drops - only explicit negative sentiment should
-    // Allow small drops (up to 2 points) for natural fluctuation
-    if (newCompat >= currentCompatibility - 2) {
-      set({ compatibility: newCompat })
-    }
-    // If it would drop more than 2 points, keep the current value
   },
   
   // Legacy function - update random factor
